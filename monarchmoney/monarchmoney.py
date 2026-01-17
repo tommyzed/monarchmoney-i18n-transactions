@@ -62,7 +62,7 @@ class MonarchMoney(object):
             "Accept": "application/json",
             "Client-Platform": "web",
             "Content-Type": "application/json",
-            "User-Agent": "MonarchMoneyAPI (https://github.com/hammem/monarchmoney)",
+            "User-Agent": "MonarchMoneyAPI (https://github.com/bradleyseanf/monarchmoneycommunity)",
         }
         if token:
             self._headers["Authorization"] = f"Token {token}"
