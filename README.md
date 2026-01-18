@@ -112,16 +112,17 @@ As of writing this README, the following methods are supported:
 
 - `get_accounts` - gets all the accounts linked to Monarch Money
 - `get_account_holdings` - gets all of the securities in a brokerage or similar type of account
-- `get_account_type_options` - all account types and their subtypes available in Monarch Money- 
+- `get_account_type_options` - all account types and their subtypes available in Monarch Money
 - `get_account_history` - gets all daily account history for the specified account
-- `get_institutions` -- gets institutions linked to Monarch Money
-- `get_budgets` — all the budgets and the corresponding actual amounts
+- `get_institutions` - gets institutions linked to Monarch Money
+- `get_budgets` - all the budgets and the corresponding actual amounts
+- `get_credit_history` - gets credit score snapshots and Spinwheel user details
 - `get_subscription_details` - gets the Monarch Money account's status (e.g. paid or trial)
 - `get_recurring_transactions` - gets the future recurring transactions, including merchant and account details
 - `get_transactions_summary` - gets the transaction summary data from the transactions page
 - `get_transactions` - gets transaction data, defaults to returning the last 100 transactions; can also be searched by date range
 - `get_transaction_categories` - gets all of the categories configured in the account
-- `get_transaction_category_groups` all category groups configured in the account- 
+- `get_transaction_category_groups` - all category groups configured in the account
 - `get_transaction_details` - gets detailed transaction data for a single transaction
 - `get_transaction_splits` - gets transaction splits for a single transaction
 - `get_transaction_tags` - gets all of the tags configured in the account
@@ -150,7 +151,7 @@ As of writing this README, the following methods are supported:
 
 # Contributing
 
-Any and all contributions -- code, documentation, feature requests, feedback -- are welcome!
+Any and all contributions - code, documentation, feature requests, feedback - are welcome!
 
 If you plan to submit up a pull request, you can expect a timely review.  There aren't any strict requirements around the environment you'll need.
 

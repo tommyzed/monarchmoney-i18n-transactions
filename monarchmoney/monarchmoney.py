@@ -2841,6 +2841,66 @@ class MonarchMoney(object):
             "Web_GetUpcomingRecurringTransactionItems", query, variables
         )
 
+    async def get_credit_history(self) -> Dict[str, Any]:
+        """
+        Gets credit score history and related user details.
+        """
+        query = gql(
+            """
+            query Common_GetSpinwheelCreditScoreSnapshots {
+              me {
+                id
+                __typename
+              }
+              myHousehold {
+                id
+                users {
+                  id
+                  name
+                  displayName
+                  profilePictureUrl
+                  __typename
+                }
+                __typename
+              }
+              spinwheelUser {
+                id
+                user {
+                  id
+                  name
+                  displayName
+                  __typename
+                }
+                onboardingStatus
+                onboardingErrorMessage
+                ...Common_SpinwheelUserFields
+                __typename
+              }
+              creditScoreSnapshots {
+                reportedDate
+                score
+                user {
+                  id
+                  __typename
+                }
+                __typename
+              }
+            }
+
+            fragment Common_SpinwheelUserFields on SpinwheelUser {
+              id
+              spinwheelUserId
+              creditScoreRefreshSubscriptionId
+              creditScoreTrackingStatus
+              isBillSyncTrackingEnabled
+              __typename
+            }
+        """
+        )
+        return await self.gql_call(
+            operation="Common_GetSpinwheelCreditScoreSnapshots", graphql_query=query
+        )
+
     def _get_current_date(self) -> str:
         """
         Returns the current date as a string formatted like %Y-%m-%d.
