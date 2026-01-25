@@ -170,7 +170,8 @@ If you currently use Google or 'Continue with Google' to access your Monarch acc
 Don't forget to use a password unique to your Monarch account and to enable multi-factor authentication!
 
 # Projects Using This Library
+*Open a PR adjusting the README if you would like to be added to this list*
 
 *Disclaimer: These projects are neither affiliated nor endorsed by Monarch Money.*
 
-None yet, but please start an issue if you would like to add your project to this list.
+[mmoney-cli](https://github.com/theFong/mmoney-cli) - Access your MonarchMoney data via CLI
