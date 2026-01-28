@@ -25,7 +25,8 @@ async def process_transaction(content: bytes, db: AsyncSession):
     data = extract_transaction_data(content)
     
     # LOGGING FOR VISIBILITY
-    print(f"\n\n--- EXTRACTED DATA ---\n{data}\n------------------------\n\n")
+    # LOGGING FOR VISIBILITY
+    # print(f"\n\n--- EXTRACTED DATA ---\n{data}\n------------------------\n\n")
     
     
     # 3b. Currency Conversion
@@ -55,7 +56,8 @@ async def process_transaction(content: bytes, db: AsyncSession):
         print(f"Skipping conversion: '{raw_currency}' is not EUR.")
 
     # Log final payload
-    print(f"FINAL PAYLOAD TO MONARCH: {data}")
+    # Log final payload
+    # print(f"FINAL PAYLOAD TO MONARCH: {data}")
 
     if not data or "error" in data:
         error_msg = data.get("error", "Unknown OCR error") if data else "Empty OCR response"

@@ -53,7 +53,8 @@ async def upload_receipt(
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error processing transaction: {e}") # Log internal error
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get("/job/{job_id}")
 async def get_job_status(job_id: str):
@@ -265,6 +266,7 @@ async def handle_share(
         </html>
         """)
     except Exception as e:
-        return HTMLResponse(content=f"Error starting job: {e}", status_code=500)
+        print(f"Error starting job: {e}")
+        return HTMLResponse(content="Error starting job", status_code=500)
 
 app.mount("/", StaticFiles(directory="bridge_app/static", html=True), name="static")
