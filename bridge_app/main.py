@@ -102,7 +102,7 @@ async def handle_share(
                         color: #333;
                     }}
                     .card {{ 
-                        background: rgba(255, 255, 255, 0.95);
+                        background: rgba(230, 255, 240, 0.98);
                         padding: 2.5rem;
                         border-radius: 20px;
                         box-shadow: 0 10px 25px rgba(0,0,0,0.2);
@@ -130,9 +130,18 @@ async def handle_share(
                         transition: transform 0.2s;
                     }}
                     .btn:hover {{ transform: translateY(-2px); }}
-                    .detail-row {{ display: flex; justify-content: space-between; margin: 0.5rem auto; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; max-width: 260px; width: 100%; }}
+                    .detail-row {{ display: flex; justify-content: space-between; align-items: center; margin: 0.5rem auto; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; max-width: 320px; width: 100%; gap: 1rem; }}
                     .label {{ color: #666; }}
                     .value {{ font-weight: 600; }}
+                    
+                    /* Mobile Optimizations */
+                    @media (max-width: 480px) {{
+                        body {{
+                            padding: 1rem;
+                            justify-content: flex-start;
+                            padding-top: 15vh;
+                        }}
+                    }}
                     
                     /* Loading Animation */
                     #loadingOverlay {{
@@ -144,7 +153,6 @@ async def handle_share(
                         justify-content: center; 
                         align-items: center; 
                         flex-direction: column;
-                        padding-bottom: 10vh; /* Visual balance */
                     }}
                     .bouncer {{ font-size: 4rem; animation: bounce 1s infinite alternate; }}
                     #loadingOverlay h3 {{ color: #fff; margin-top: 20px; }}
@@ -233,7 +241,7 @@ async def handle_share(
                             }});
                         }}
                         
-                        document.getElementById('amountValue').textContent = `${{data.amount}} ${{data.currency}}`;
+                        document.getElementById('amountValue').textContent = `${{parseFloat(data.amount).toFixed(2)}} ${{data.currency}}`;
                         document.getElementById('merchantValue').textContent = data.merchant;
                     }}
                     
