@@ -24,6 +24,25 @@ The system is built as a lightweight **FastAPI** application designed to run loc
 *   **Transactions**: Stores hashes of processed images to prevent duplicate uploads.
 *   **Credentials**: Securely stores your Monarch login session (encrypted).
 
+## 📂 Project Structure
+
+```text
+bridge_app/
+├── main.py              # FastAPI entry point
+├── database.py          # Database connection
+├── models.py            # SQLAlchemy models
+├── services/
+├── gemini.py        # OCR with Gemini
+├── monarch.py       # Monarch API wrapper
+└── orchestrator.py  # Core logic
+├── utils/
+└── crypto.py        # Fernet encryption
+└── static/
+├── manifest.json    # PWA Manifest
+├── index.html       # Landing page / Install Prompt
+└── sw.js            # Service Worker
+```
+
 ## 🚀 Setup & Usage
 
 ### 1. Prerequisites
@@ -35,19 +54,23 @@ The system is built as a lightweight **FastAPI** application designed to run loc
 ### 2. Environment Variables
 Create a `.env` file in the root directory:
 
-```env
+```bash
 # Database
-DATABASE_URL="postgresql+asyncpg://user:pass@localhost/dbname"
+export DATABASE_URL="postgresql+asyncpg://user:pass@localhost/dbname"
 
 # Security (Encryption key for credentials)
-FERNET_KEY="<run python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'>"
+export FERNET_KEY="<generated_key>"
 
 # AI
-GEMINI_API_KEY="<your_gemini_api_key>"
+export GEMINI_API_KEY="<your_gemini_api_key>"
 
-# Monarch Credential Shortcuts (Optional, for fast login)
-MM_EMAIL="your@email.com"
-MM_PWD="your_password"
+# Monarch Configuration
+export MM_ACCOUNT="Euro Transactions" # Optional: Defaults to "Euro Transactions"
+```
+
+To generate a secure `FERNET_KEY`, run the helper script:
+```bash
+python scripts/generate_key.py
 ```
 
 ### 3. Installation
@@ -94,6 +117,27 @@ The app is designed to be a PWA or simple web target.
 *   **Login**: Refreshes session.
     ```bash
     python scripts/interactive_login.py
+    ```
+*   **Seeding Credentials Manually**:
+    If you need to seed credentials via script (e.g. on a headless server without interactive input):
+    ```python
+    # seed_creds.py
+    import asyncio
+    from bridge_app.database import get_db
+    from bridge_app.models import Credentials
+    from bridge_app.utils.crypto import encrypt
+    import json
+    
+    async def seed():
+        async for db in get_db():
+            payload = json.dumps({"password": "YOUR_PASS", "mfa_secret": "YOUR_SECRET"})
+            c = Credentials(email="your@email.com", encrypted_payload=encrypt(payload))
+            db.add(c)
+            await db.commit()
+    
+    if __name__ == "__main__":
+        import asyncio
+        asyncio.run(seed())
     ```
 
 ## 🔮 Roadmap (Productionize)
