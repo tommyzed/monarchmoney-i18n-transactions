@@ -128,3 +128,7 @@ bridge_app/
     ├── sw.js            # Service Worker (Offline & Share Target)
     └── manifest.json    # App Manifest
 ```
+
+## 🙏 Acknowledgements
+
+This project is a fork of [monarchmoneycommunity](https://github.com/bradleyseanf/monarchmoneycommunity). Huge thanks to **BradleySeanF** and all contributors for building the foundation of the Monarch Money API wrapper and community tools! 🚀
