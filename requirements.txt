@@ -1,3 +1,14 @@
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart
+sqlalchemy
+asyncpg
+greenlet
+google-genai
+monarchmoney
 aiohttp>=3.8.4
 gql>=4.0
 oathtool>=2.3.1
+python-dotenv
+pillow
+pyotp

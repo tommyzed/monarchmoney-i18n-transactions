@@ -1,20 +1,16 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
 from PIL import Image
 import io
 
-# Verify API Key
-api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
-
 def extract_transaction_data(image_bytes: bytes) -> dict:
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        # Fallback for testing or if key missing
         return {"error": "GEMINI_API_KEY not set"}
 
-    model = genai.GenerativeModel("gemini-3-flash-preview")
+    # Initialize Client
+    client = genai.Client(api_key=api_key)
     
     # Prompt engineering
     prompt = """
@@ -29,11 +25,18 @@ def extract_transaction_data(image_bytes: bytes) -> dict:
     
     try:
         image = Image.open(io.BytesIO(image_bytes))
-        response = model.generate_content([prompt, image])
+        
+        # New SDK call
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview", 
+            contents=[prompt, image]
+        )
         
         # Clean response to ensure it's JSON
+        # The new SDK response object also has a .text property
         text_response = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(text_response)
     except Exception as e:
         print(f"Gemini Extraction Error: {e}")
-        raise e
+        # Return error dict instead of raising to avoid crashing the whole request if just OCR fails
+        return {"error": str(e)}
