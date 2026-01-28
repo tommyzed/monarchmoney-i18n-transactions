@@ -7,7 +7,7 @@ Monarch Money is amazing, but it lacks native support for European banks and cur
 ## ✨ Features
 
 *   **🇪🇺 Automatic Currency Conversion**: Detects EUR amounts and converts them to USD using historical exchange rates (via Frankfurter API) for the exact transaction date.
-*   **🧙‍♂️ AI-Powered OCR**: Uses **Google Gemini 2.0 Flash** to instantly extract Merchant, Date, and Amount from receipt photos with high accuracy.
+*   **🧙‍♂️ AI-Powered OCR**: Uses **Google Gemini 3 Flash** to instantly extract Merchant, Date, and Amount from receipt photos with high accuracy.
 *   **📱 Native-Like PWA Experience**:
     *   **Installable**: Add to your home screen as a standalone app.
     *   **Share Target**: Appears in your phone's native "Share" sheet for images.
@@ -19,7 +19,7 @@ Monarch Money is amazing, but it lacks native support for European banks and cur
 *   **🤖 Smart Monarch Integration**:
     *   Auto-tags transactions (`Imported by MM Euro Bridge`).
     *   Marks as `Needs Review` for easy workflows.
-    *   Stores `Original Amount: €XX.XX` in the notes.
+    *   Stores `Original Amount: €XX.XX` and the ForEx Rate in the notes.
 
 ## 🏗 Architecture
 
@@ -66,8 +66,11 @@ export FERNET_KEY="<your_generated_key>"
 
 # AI (Google Gemini)
 export GEMINI_API_KEY="<your_gemini_api_key>"
+export GEMINI_MODEL="gemini-3-flash-preview"
 
 # Monarch Settings
+export MM_EMAIL="<your_monarch_email>"
+export MM_PWD="<your_monarch_password>"
 export MM_ACCOUNT="Euro Transactions" # The name of the manual cash account in Monarch
 ```
 
@@ -76,7 +79,13 @@ export MM_ACCOUNT="Euro Transactions" # The name of the manual cash account in M
 Run the interactive login script to authenticate with Monarch. This will verify your credentials and store a secure session token.
 
 ```bash
-python scripts/interactive_login.py
+venv/bin/python3 scripts/interactive_login.py
+```
+
+- or -
+
+```bash
+venv/bin/python3 scripts/seed_session_token.py
 ```
 
 ### 5. Start the Server
