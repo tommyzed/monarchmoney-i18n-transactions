@@ -4,8 +4,6 @@
 
 Monarch Money is amazing, but it lacks native support for European banks and currencies. This application bridges that gap by allowing you to "Share" a receipt image from your phone directly to your Monarch account, automatically handling OCR, currency conversion, and upload.
 
-![App Screenshot](https://via.placeholder.com/800x400?text=App+Screenshot+Placeholder)
-
 ## ✨ Features
 
 *   **🇪🇺 Automatic Currency Conversion**: Detects EUR amounts and converts them to USD using historical exchange rates (via Frankfurter API) for the exact transaction date.
