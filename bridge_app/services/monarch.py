@@ -54,7 +54,7 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     # Logic to pick account
     # We look for a specific account named "Euro Transactions"
     target_account = None
-    target_name = "Euro Transactions"
+    target_name = os.environ.get("MM_ACCOUNT", "Euro Transactions")
     
     for acc in accounts['accounts']:
         if acc['displayName'] == target_name:
