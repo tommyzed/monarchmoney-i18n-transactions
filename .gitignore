@@ -39,3 +39,7 @@ npm_output.log
 .env
 .env.local
 .env.*.local
+
+# Database
+*.db
+bridge.db
