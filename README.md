@@ -1,79 +1,48 @@
 # Monarch Euro Bridge 🇪🇺🌉🇺🇸
 
-A bridge application to import international (EUR) transactions into Monarch Money.
+**Seamlessly import international (EUR) transaction receipts into Monarch Money.**
 
-Since Monarch Money currently focuses on the US/Canada markets, it lacks native support for European banks and currencies. This bridge allows you to "Share" a receipt image (or upload it) to a local server, which parses the details, converts the currency to USD, and pushes it to Monarch as a manual transaction.
+Monarch Money is amazing, but it lacks native support for European banks and currencies. This application bridges that gap by allowing you to "Share" a receipt image from your phone directly to your Monarch account, automatically handling OCR, currency conversion, and upload.
 
-## 🏗 Architecture & Components
+## ✨ Features
 
-The system is built as a lightweight **FastAPI** application designed to run locally or on a personal server.
+*   **🇪🇺 Automatic Currency Conversion**: Detects EUR amounts and converts them to USD using historical exchange rates (via Frankfurter API) for the exact transaction date.
+*   **🧙‍♂️ AI-Powered OCR**: Uses **Google Gemini 3 Flash** to instantly extract Merchant, Date, and Amount from receipt photos with high accuracy.
+*   **📱 Native-Like PWA Experience**:
+    *   **Installable**: Add to your home screen as a standalone app.
+    *   **Share Target**: Appears in your phone's native "Share" sheet for images.
+    *   **Instant UI**: Service Worker interception ensures you see the "Processing" animation instantly, even used continuously offline or on slow networks.
+*   **🔒 Secure & Private**:
+    *   Runs locally on your server/computer.
+    *   Credentials encrypted at rest (Fernet).
+    *   No logs of sensitive financial data.
+*   **🤖 Smart Monarch Integration**:
+    *   Auto-tags transactions (`Imported by MM Euro Bridge`).
+    *   Marks as `Needs Review` for easy workflows.
+    *   Stores `Original Amount: €XX.XX` and the ForEx Rate in the notes.
 
-### Core Services (`bridge_app/services/`)
-1.  **Gemini OCR (`gemini.py`)**: Uses Google's Gemini 2.0 Flash model to extract structured data (Date, Amount, Merchant, Currency) from receipt images.
-2.  **Currency Converter (`currency.py`)**: Automatically detects EUR transactions and converts them to USD using historical rates from the **Frankfurter API** for the specific transaction date.
-3.  **Monarch Integration (`monarch.py`)**:
-    *   Uses a modified `monarchmoney` library to interact with the private GraphQL API.
-    *   Handling **Interactive Login** (MFA support).
-    *   **Session Persistence**: Stores auth session in the local database to avoid repeated logins.
-    *   **Auto-Tagging**: Tags Imported transactions with "Imported by MM Euro Bridge".
-    *   **Needs Review**: Marks new transactions as "Needs Review" for easy finding.
-4.  **Orchestrator (`orchestrator.py`)**: Ties it all together: Hash Image -> Check Duplicate -> OCR -> Convert -> Push -> Save Record.
+## 🏗 Architecture
 
-### Data Storage (`bridge_app/models.py`)
-*   **PostgreSQL**: Used for robustness (compatible with Neon/cloud providers).
-*   **Transactions**: Stores hashes of processed images to prevent duplicate uploads.
-*   **Credentials**: Securely stores your Monarch login session (encrypted).
+The system is a lightweight **FastAPI** application backed by **PostgreSQL**.
 
-## 📂 Project Structure
+### Core Services
+1.  **Orchestrator**: The brain. Hashing -> De-duplication -> OCR -> Conversion -> Push.
+2.  **Monarch Service**: Handles authentication (including MFA), session persistence, and GraphQL interactions.
+3.  **Gemini Service**: Interacts with Google's GenAI SDK for image parsing.
+4.  **Currency Service**: Fetches historical forex rates.
 
-```text
-bridge_app/
-├── main.py              # FastAPI entry point
-├── database.py          # Database connection
-├── models.py            # SQLAlchemy models
-├── services/
-├── gemini.py        # OCR with Gemini
-├── monarch.py       # Monarch API wrapper
-└── orchestrator.py  # Core logic
-├── utils/
-└── crypto.py        # Fernet encryption
-└── static/
-├── manifest.json    # PWA Manifest
-├── index.html       # Landing page / Install Prompt
-└── sw.js            # Service Worker
-```
-
-## 🚀 Setup & Usage
+## 🚀 Getting Started
 
 ### 1. Prerequisites
 *   Python 3.10+
-*   A Monarch Money account
-*   A Google Cloud Project with **Gemini API** access
-*   PostgreSQL (local or remote, e.g. Neon)
+*   PostgreSQL (Local or Cloud like Neon.tech)
+*   Google Cloud API Key (with Gemini API access)
+*   Monarch Money Account
 
-### 2. Environment Variables
-Create a `.env` file in the root directory:
+### 2. Installation
 
-```bash
-# Database
-export DATABASE_URL="postgresql+asyncpg://user:pass@localhost/dbname"
+Clone the repo and set up the environment:
 
-# Security (Encryption key for credentials)
-export FERNET_KEY="<generated_key>"
-
-# AI
-export GEMINI_API_KEY="<your_gemini_api_key>"
-
-# Monarch Configuration
-export MM_ACCOUNT="Euro Transactions" # Optional: Defaults to "Euro Transactions"
-```
-
-To generate a secure `FERNET_KEY`, run the helper script:
-```bash
-python scripts/generate_key.py
-```
-
-### 3. Installation
 ```bash
 # Create virtual environment
 python3 -m venv venv
@@ -83,67 +52,90 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. First Run (Authentication)
-Run the interactive login script to verify your Monarch credentials and save the session to the database.
-```bash
-python scripts/interactive_login.py
-```
-*   It will ask for your MFA code (if enabled).
-*   It handles Rate Limit (429) warnings gracefully.
+### 3. Configuration
 
-### 5. Running the Server
-```bash
-uvicorn bridge_app.main:app --reload
-```
-The server will start at `http://127.0.0.1:8000`.
+Create a `.env` file in the root directory:
 
-### 6. Usage (Mobile Share Target)
-The app is designed to be a PWA or simple web target.
-1.  Navigate to `http://127.0.0.1:8000` on your phone (if exposed via Tailscale/Ngrok).
-2.  "Add to Home Screen" to install it.
-3.  Go to your Photos -> Share Receipt Image -> Select "Monarch Bridge".
-4.  **Result**: 
-    *   ✅ Parsed & Converted
-    *   ✅ Uploaded to "Euro Transactions" account (USD)
-    *   ✅ Original amount in Notes
-    *   ✅ Tagged "Imported by MM Euro Bridge"
+```bash
+# Database Connection
+export DATABASE_URL="postgresql+asyncpg://user:pass@localhost/dbname"
+
+# Security (Encryption key for credentials)
+# Generate one with: python scripts/generate_key.py
+export FERNET_KEY="<your_generated_key>"
+
+# AI (Google Gemini)
+export GEMINI_API_KEY="<your_gemini_api_key>"
+export GEMINI_MODEL="gemini-3-flash-preview"
+
+# Monarch Settings
+export MM_EMAIL="<your_monarch_email>"
+export MM_PWD="<your_monarch_password>"
+export MM_ACCOUNT="Euro Transactions" # The name of the manual cash account in Monarch
+```
+
+### 4. First Run
+
+Run the interactive login script to authenticate with Monarch. This will verify your credentials and store a secure session token.
+
+```bash
+venv/bin/python3 scripts/interactive_login.py
+```
+
+- or -
+
+```bash
+venv/bin/python3 scripts/seed_session_token.py
+```
+
+### 5. Start the Server
+
+```bash
+venv/bin/uvicorn bridge_app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+## 📱 Mobile Setup (PWA)
+
+1.  **Expose the Server**: Ensure your phone can reach the server (e.g., via local Wi-Fi IP `http://192.168.1.X:8000`, Tailscale, or a tunnel like Ngrok).
+    *   *Note: For the Service Worker and PWA install features to work fully, you usually need HTTPS unless using localhost.*
+2.  **Visit in Browser**: Open the URL on your mobile browser (Chrome/Safari).
+3.  **Install**: Tap "Add to Home Screen" in your browser menu.
+4.  **Use**: 
+    *   Open your **Photos** or **Gallery** app.
+    *   Select a receipt.
+    *   Tap **Share**.
+    *   Select **Monarch Bridge**.
+    *   🚀 Watch the magic happen!
 
 ## 🛠 Management Scripts
 
-*   **Reset History**: Clears the local duplicate cache (allowing re-uploads) without logging you out.
-    ```bash
-    python scripts/reset_transactions.py
-    ```
-*   **Login**: Refreshes session.
-    ```bash
-    python scripts/interactive_login.py
-    ```
-*   **Seeding Credentials Manually**:
-    If you need to seed credentials via script (e.g. on a headless server without interactive input):
-    ```python
-    # seed_creds.py
-    import asyncio
-    from bridge_app.database import get_db
-    from bridge_app.models import Credentials
-    from bridge_app.utils.crypto import encrypt
-    import json
-    
-    async def seed():
-        async for db in get_db():
-            payload = json.dumps({"password": "YOUR_PASS", "mfa_secret": "YOUR_SECRET"})
-            c = Credentials(email="your@email.com", encrypted_payload=encrypt(payload))
-            db.add(c)
-            await db.commit()
-    
-    if __name__ == "__main__":
-        import asyncio
-        asyncio.run(seed())
-    ```
+*   **`python scripts/reset_transactions.py`**: Clears the local "processed" cache. Useful if you want to re-upload a receipt that was previously marked as duplicate.
+*   **`python scripts/interactive_login.py`**: Re-authenticate if your session expires.
 
-## 🔮 Roadmap (Productionize)
+## 🔮 Roadmap
 
-*   [ ] **Docker Image**: Containerize the app for easy deployment on a NAS or VPS.
-*   [ ] **Secure Remote Access**: Currently relies on `localhost` or VPN (Tailscale). Adding basic HTTP Auth for valid endpoints would be safer for public exposure.
-*   [ ] **Alembic Migrations**: Currently uses `Base.metadata.create_all`, which is fine for dev but bad for schema changes.
-*   [ ] **Frontend Polish**: Improve the "Success" screen to show more details or a history of recent uploads.
-*   [ ] **Multi-User Support**: Currently optimized for a single household.
+*   [ ] **Docker Support**: Containerize for easy NAS deployment.
+*   [ ] **Alembic Migrations**: Proper database schema management.
+*   [ ] **Multi-User Support**: Support multiple Monarch accounts/users.
+*   [ ] **Secure Remote Access**: Add Basic Auth or OAuth for the web interface.
+
+## 📂 Project Structure
+
+```text
+bridge_app/
+├── main.py              # FastAPI entry point & API routes
+├── database.py          # Database connection & session info
+├── models.py            # SQLAlchemy database models
+├── services/            # Business logic modules
+│   ├── gemini.py        # OCR logic
+│   ├── monarch.py       # Monarch API interaction
+│   └── orchestrator.py  # Pipeline coordination
+└── static/              # Frontend assets
+    ├── index.html       # PWA entry point
+    ├── sw.js            # Service Worker (Offline & Share Target)
+    └── manifest.json    # App Manifest
+```
+
+## 🙏 Acknowledgements
+
+This project is a fork of [monarchmoneycommunity](https://github.com/bradleyseanf/monarchmoneycommunity). Huge thanks to **BradleySeanF** and all contributors for building the foundation of the Monarch Money API wrapper and community tools! 🚀
