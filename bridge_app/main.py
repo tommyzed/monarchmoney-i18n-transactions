@@ -182,7 +182,7 @@ async def handle_share(
             </head>
             <body>
                 <div class="card">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🤧</div>
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🐳</div>
                     <p class="error">Oops! Something went wrong.</p>
                     <p style="color: #666; margin: 1rem 0;">{str(e)}</p>
                     <a href="/" class="btn">Try Again</a>
