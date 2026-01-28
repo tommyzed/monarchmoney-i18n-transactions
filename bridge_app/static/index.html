@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monarch Bridge</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; text-align: center; }
+        .btn { background: #000; color: #fff; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; display: inline-block; margin-top: 1rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Monarch Euro Bridge</h1>
+    <p>Install this app to your Android device to share receipts directly to Monarch Money.</p>
+    
+    <div style="margin-top: 2rem; border: 1px dashed #ccc; padding: 1rem;">
+        <h3>Manual Upload</h3>
+        <form action="/share" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*">
+            <br><br>
+            <button type="submit" class="btn">Upload</button>
+        </form>
+    </div>
+</body>
+</html>
