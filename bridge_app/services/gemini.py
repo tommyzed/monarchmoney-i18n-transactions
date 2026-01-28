@@ -28,7 +28,7 @@ def extract_transaction_data(image_bytes: bytes) -> dict:
         
         # New SDK call
         response = client.models.generate_content(
-            model="gemini-2.0-flash", 
+            model="gemini-3-flash-preview", 
             contents=[prompt, image]
         )
         
