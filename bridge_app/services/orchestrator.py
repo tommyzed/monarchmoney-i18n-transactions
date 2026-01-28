@@ -6,9 +6,9 @@ from ..models import Transaction
 from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, push_transaction
 
-async def process_transaction(file: UploadFile, db: AsyncSession):
+async def process_transaction(content: bytes, db: AsyncSession):
     # 1. Read and Hash
-    content = await file.read()
+    # content passed directly
     image_hash = hashlib.sha256(content).hexdigest()
     
     # 2. Deduplication Check
