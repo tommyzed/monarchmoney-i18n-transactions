@@ -4,7 +4,7 @@ python-multipart
 sqlalchemy
 asyncpg
 greenlet
-google-generativeai
+google-genai
 monarchmoney
 aiohttp>=3.8.4
 gql>=4.0

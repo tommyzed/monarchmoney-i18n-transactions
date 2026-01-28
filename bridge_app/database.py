@@ -10,6 +10,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./bridge.db")
 connect_args = {}
 import urllib.parse
 
+import ssl
+
 # Fix driver and sslmode for asyncpg
 if DATABASE_URL.startswith("postgresql"):
     # Ensure correct driver
@@ -31,9 +33,20 @@ if DATABASE_URL.startswith("postgresql"):
         
         DATABASE_URL = urllib.parse.urlunparse(parsed._replace(query=new_query))
         
-        # Enforce SSL for Neon/Cloud Postgres
-        # asyncpg requires True or an SSLContext, not string "require"
-        connect_args = {"ssl": True}
+        # Enforce SSL for Neon/Cloud Postgres with explicit context to avoid hangs
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        
+        # Increase connection timeout to 300s (5m) to handle Neon cold starts/latency
+        connect_args = {
+            "ssl": ssl_ctx,
+            "timeout": 300,
+            "command_timeout": 300
+        }
+
+print(f"DEBUG: Connecting to {DATABASE_URL.split('@')[-1]}")
+print(f"DEBUG: connect_args={connect_args}")
 
 engine = create_async_engine(DATABASE_URL, echo=True, connect_args=connect_args)
 
