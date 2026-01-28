@@ -265,6 +265,7 @@ async def handle_share(
             </body>
         </html>
         """)
+    except Exception as e:
         print(f"Error starting job: {e}")
         return HTMLResponse(content="Error starting job", status_code=500)
 
