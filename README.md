@@ -97,7 +97,7 @@ venv/bin/python3 scripts/seed_session_token.py
 venv/bin/uvicorn bridge_app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-## �️ Security & Ghost Mode 👻
+## 🔒 Security & Ghost Mode 👻
 
 To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
 
@@ -107,7 +107,7 @@ To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
 3.  **Unlock**: You will see a "Device Activated" screen. This sets a secure cookie valid for 10 years.
 4.  **Ghosting**: Any subsequent request *without* this cookie (e.g. random scanners) will receive a `404 Not Found`, making the server appear non-existent.
 
-## �📱 Mobile Setup (PWA)
+## 📱 Mobile Setup (PWA)
 
 1.  **Expose the Server**: Ensure your phone can reach the server (e.g., via local Wi-Fi IP `http://192.168.1.X:8000`, Tailscale, or a tunnel like Ngrok).
     *   *Note: For the Service Worker and PWA install features to work fully, you usually need HTTPS unless using localhost.*
