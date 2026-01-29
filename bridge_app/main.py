@@ -73,6 +73,8 @@ async def activate(s: str):
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link rel="manifest" href="/manifest.json">
+            <link rel="icon" type="image/png" href="/icon.png">
             <style>
                 body { font-family: sans-serif; text-align: center; padding: 2rem; background: #f0fdf4; color: #166534; }
                 .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
@@ -169,6 +171,8 @@ async def handle_share(
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
+                <link rel="manifest" href="/manifest.json">
+                <link rel="icon" type="image/png" href="/icon.png">
                 <title>Monarch Money Bridge</title>
                 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
                 <style>
