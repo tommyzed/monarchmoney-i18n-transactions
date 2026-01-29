@@ -59,6 +59,7 @@ function getSharePageHTML(jobId) {
     return `
     <html>
         <head>
+            <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>Monarch Money Bridge</title>
             <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>

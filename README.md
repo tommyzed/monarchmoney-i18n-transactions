@@ -72,6 +72,9 @@ export GEMINI_MODEL="gemini-3-flash-preview"
 export MM_EMAIL="<your_monarch_email>"
 export MM_PWD="<your_monarch_password>"
 export MM_ACCOUNT="Euro Transactions" # The name of the manual cash account in Monarch
+
+# Security (Ghost Mode)
+export UNLOCK_SECRET="<random_secret>" # Set this to a secret string
 ```
 
 ### 4. First Run
@@ -94,7 +97,17 @@ venv/bin/python3 scripts/seed_session_token.py
 venv/bin/uvicorn bridge_app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-## 📱 Mobile Setup (PWA)
+## �️ Security & Ghost Mode 👻
+
+To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
+
+1.  **Configure**: Set `UNLOCK_SECRET` in your `.env` file.
+2.  **Activate**: On your phone, visit:
+    `http://<your-server>:8000/s?s=<YOUR_SECRET>`
+3.  **Unlock**: You will see a "Device Activated" screen. This sets a secure cookie valid for 10 years.
+4.  **Ghosting**: Any subsequent request *without* this cookie (e.g. random scanners) will receive a `404 Not Found`, making the server appear non-existent.
+
+## �📱 Mobile Setup (PWA)
 
 1.  **Expose the Server**: Ensure your phone can reach the server (e.g., via local Wi-Fi IP `http://192.168.1.X:8000`, Tailscale, or a tunnel like Ngrok).
     *   *Note: For the Service Worker and PWA install features to work fully, you usually need HTTPS unless using localhost.*
