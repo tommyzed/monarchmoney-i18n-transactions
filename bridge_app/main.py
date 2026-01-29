@@ -35,11 +35,15 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/s":
             return await call_next(request)
             
-        # Allow static assets (manifest, icon) so "Add to Home Screen" might still work 
-        # partially, OR block them too. Block them for true "Ghost" mode.
-        # But checking headers/cookie for static might be tricky if browser doesn't send them 
-        # for manifest requests immediately? Usually cookies go with all requests.
-        # Let's be strict: Block everything.
+        # Allow static assets (manifest, Service Worker, icons) to support PWA installation.
+        # Browsers often fetch these without credentials or in a separate context.
+        # This exposes the *existence* of the app (if you guess the URL), but protects the functionality.
+        if request.url.path in ["/manifest.json", "/sw.js", "/favicon.ico"]:
+            return await call_next(request)
+            
+        # Allow images and styles
+        if request.url.path.endswith((".png", ".jpg", ".css", ".js")):
+             return await call_next(request)
         
         # Check for cookie
         token = request.cookies.get(DEVICE_TOKEN_COOKIE)
