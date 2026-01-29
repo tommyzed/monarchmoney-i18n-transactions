@@ -35,11 +35,15 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/s":
             return await call_next(request)
             
-        # Allow static assets (manifest, icon) so "Add to Home Screen" might still work 
-        # partially, OR block them too. Block them for true "Ghost" mode.
-        # But checking headers/cookie for static might be tricky if browser doesn't send them 
-        # for manifest requests immediately? Usually cookies go with all requests.
-        # Let's be strict: Block everything.
+        # Allow static assets (manifest, Service Worker, icons) to support PWA installation.
+        # Browsers often fetch these without credentials or in a separate context.
+        # This exposes the *existence* of the app (if you guess the URL), but protects the functionality.
+        if request.url.path in ["/manifest.json", "/sw.js", "/favicon.ico"]:
+            return await call_next(request)
+            
+        # Allow images and styles
+        if request.url.path.endswith((".png", ".jpg", ".css", ".js")):
+             return await call_next(request)
         
         # Check for cookie
         token = request.cookies.get(DEVICE_TOKEN_COOKIE)
@@ -69,6 +73,8 @@ async def activate(s: str):
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link rel="manifest" href="/manifest.json">
+            <link rel="icon" type="image/png" href="/icon.png">
             <style>
                 body { font-family: sans-serif; text-align: center; padding: 2rem; background: #f0fdf4; color: #166534; }
                 .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
@@ -165,6 +171,8 @@ async def handle_share(
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
+                <link rel="manifest" href="/manifest.json">
+                <link rel="icon" type="image/png" href="/icon.png">
                 <title>Monarch Money Bridge</title>
                 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
                 <style>
