@@ -1,9 +1,11 @@
 import uuid
 import asyncio
 import os
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+import hashlib
 from sqlalchemy.ext.asyncio import AsyncSession
 from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
@@ -16,6 +18,83 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+# --- Security Configuration (Ghost Cookie) ---
+UNLOCK_SECRET = os.environ.get("UNLOCK_SECRET")
+DEVICE_TOKEN_COOKIE = "device_token"
+# Token value is a hash of the secret to avoid exposing it directly in the cookie if inspected
+COOKIE_VALUE = hashlib.sha256(UNLOCK_SECRET.encode()).hexdigest() if UNLOCK_SECRET else None
+
+class GhostSecurityMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # If no secret is configured, bypass security (or you could choose to block)
+        if not UNLOCK_SECRET:
+            return await call_next(request)
+
+        # Allow activation endpoint
+        if request.url.path == "/s":
+            return await call_next(request)
+            
+        # Allow static assets (manifest, icon) so "Add to Home Screen" might still work 
+        # partially, OR block them too. Block them for true "Ghost" mode.
+        # But checking headers/cookie for static might be tricky if browser doesn't send them 
+        # for manifest requests immediately? Usually cookies go with all requests.
+        # Let's be strict: Block everything.
+        
+        # Check for cookie
+        token = request.cookies.get(DEVICE_TOKEN_COOKIE)
+        if token == COOKIE_VALUE:
+            return await call_next(request)
+            
+        # GHOST MODE: Return 404 Not Found if unauthorized
+        return Response(status_code=404, content="Not Found")
+
+app.add_middleware(GhostSecurityMiddleware)
+
+@app.get("/s")
+async def activate(s: str):
+    """
+    Sets the Ghost Cookie to unlock the device.
+    Usage: /s?s=YOUR_SECRET
+    """
+    if not UNLOCK_SECRET:
+        return Response(status_code=500, content="Security not configured on server.")
+        
+    if s != UNLOCK_SECRET:
+        # Fake a 404 if secret is wrong to prevent guessing
+        return Response(status_code=404, content="Not Found")
+    
+    html_content = """
+    <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body { font-family: sans-serif; text-align: center; padding: 2rem; background: #f0fdf4; color: #166534; }
+                .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h1>🔓 Device Activated</h1>
+                <p>You have successfully unlocked access to the bridge.</p>
+                <p>You can now close this window and use the app.</p>
+                <a href="/" style="display:inline-block; margin-top:1rem; padding:0.5rem 1rem; background:#166534; color:white; text-decoration:none; border-radius:0.5rem;">Go to App</a>
+            </div>
+        </body>
+    </html>
+    """
+    
+    response = HTMLResponse(content=html_content)
+    response.set_cookie(
+        key=DEVICE_TOKEN_COOKIE,
+        value=COOKIE_VALUE,
+        max_age=60*60*24*365*10, # 10 years
+        httponly=True,
+        samesite="lax",
+        secure=False  # Set to True if running behind HTTPS
+    )
+    return response
 
 # Simple in-memory job store
 # Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str } }
@@ -84,6 +163,7 @@ async def handle_share(
         return HTMLResponse(content=f"""
         <html>
             <head>
+                <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <title>Monarch Money Bridge</title>
                 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
