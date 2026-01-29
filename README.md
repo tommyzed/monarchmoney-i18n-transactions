@@ -118,7 +118,7 @@ To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
     *   Select a receipt.
     *   Tap **Share**.
     *   Select **Monarch Bridge**.
-    *   🚀 Watch the magic happen!
+    *   🦄 Watch the magic happen!
 
 ## 🛠 Management Scripts
 
