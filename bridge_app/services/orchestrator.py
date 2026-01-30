@@ -5,13 +5,21 @@ from fastapi import UploadFile, HTTPException
 from ..models import Transaction
 from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, push_transaction
+from starlette.concurrency import run_in_threadpool
 
-async def process_transaction(content: bytes, db: AsyncSession):
+async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None):
+    async def report(msg):
+        print(f"Progress: {msg}") # Log to console as requested
+        if progress_callback:
+            await progress_callback(msg)
+
     # 1. Read and Hash
+    await report("Computing image hash...")
     # content passed directly
     image_hash = hashlib.sha256(content).hexdigest()
     
     # 2. Deduplication Check
+    await report("Checking for duplicates...")
     stmt = select(Transaction).where(Transaction.image_hash == image_hash)
     result = await db.execute(stmt)
     existing = result.scalar_one_or_none()
@@ -22,7 +30,9 @@ async def process_transaction(content: bytes, db: AsyncSession):
         return {"status": "duplicate", "data": existing.parsed_data}
     
     # 3. OCR Extraction
-    data = extract_transaction_data(content)
+    await report("Scanning receipt with Gemini AI...")
+    # Gemini SDK is synchronous, so we run it in a threadpool to avoid blocking the event loop
+    data = await run_in_threadpool(extract_transaction_data, content)
     
     # LOGGING FOR VISIBILITY
     # LOGGING FOR VISIBILITY
@@ -37,6 +47,7 @@ async def process_transaction(content: bytes, db: AsyncSession):
     
     if raw_currency in ["EUR", "EURO", "€"]:
         try:
+            await report(f"Converting {raw_currency} to USD...")
             from .currency import get_eur_to_usd_rate
             rate = await get_eur_to_usd_rate(data["date"])
             original_amount = data["amount"]
@@ -66,6 +77,7 @@ async def process_transaction(content: bytes, db: AsyncSession):
         raise HTTPException(status_code=500, detail=error_msg)
         
     # 4. Monarch Push
+    await report("Connecting to Monarch Money...")
     from ..models import Credentials
     creds_result = await db.execute(select(Credentials))
     creds = creds_result.scalars().first()
@@ -75,12 +87,14 @@ async def process_transaction(content: bytes, db: AsyncSession):
         raise HTTPException(status_code=400, detail="No Monarch credentials configured")
         
     try:
+        await report("Creating transaction in Monarch...")
         mm = await get_monarch_client(db, creds.id)
         await push_transaction(mm, data)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Monarch Error: {str(e)}")
     
     # 5. Save Record
+    await report("Finalizing...")
     new_tx = Transaction(image_hash=image_hash, parsed_data=data)
     db.add(new_tx)
     await db.commit()

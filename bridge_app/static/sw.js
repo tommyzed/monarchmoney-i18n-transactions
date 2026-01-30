@@ -1,14 +1,8 @@
 const JOBS = new Map();
 
 self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
-    // Intercept Share Target POST to show UI immediately
-    if (url.pathname === '/share' && event.request.method === 'POST') {
-        event.respondWith(handleShare(event));
-    } else {
-        // Network-only for everything else
-        event.respondWith(fetch(event.request));
-    }
+    // Network-only for all requests
+    event.respondWith(fetch(event.request));
 });
 
 async function handleShare(event) {
@@ -50,7 +44,8 @@ self.addEventListener('message', event => {
             jobId: event.data.jobId,
             status: job ? job.status : 'not_found',
             result: job ? (job.result || null) : null,
-            error: job ? (job.error || null) : null
+            error: job ? (job.error || null) : null,
+            step: job ? (job.step || null) : null
         });
     }
 });
@@ -179,7 +174,7 @@ function getSharePageHTML(jobId) {
 
             <script>
                 const jobId = "${jobId}";
-                const pollInterval = 1000;
+                const pollInterval = 500;
                 
                 function checkStatus() {
                     if (navigator.serviceWorker.controller) {
@@ -198,6 +193,10 @@ function getSharePageHTML(jobId) {
                         } else if (data.status === 'failed') {
                                 showError(data.error);
                         } else {
+                                // Update progress text
+                                if (data.step) {
+                                    document.getElementById('loadingSubtitle').textContent = data.step;
+                                }
                                 // Still processing
                                 setTimeout(checkStatus, pollInterval);
                         }
@@ -242,7 +241,7 @@ function getSharePageHTML(jobId) {
                 }
                 
                 // Start polling
-                setTimeout(checkStatus, 500);
+                setTimeout(checkStatus, 100);
             </script>
         </body>
     </html>
