@@ -1,4 +1,5 @@
 import hashlib
+import asyncio
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import UploadFile, HTTPException
@@ -31,8 +32,33 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     
     # 3. OCR Extraction
     await report("Scanning receipt with Gemini AI...")
-    # Gemini SDK is synchronous, so we run it in a threadpool to avoid blocking the event loop
-    data = await run_in_threadpool(extract_transaction_data, content)
+    
+    # Retry logic for overloaded Gemini API
+    max_retries = 2
+    for attempt in range(max_retries + 1):
+        # Gemini SDK is synchronous, so we run it in a threadpool to avoid blocking the event loop
+        data = await run_in_threadpool(extract_transaction_data, content)
+        
+        # Check for error
+        if data and "error" in data:
+            err_str = str(data["error"])
+            # Check if it's a 503 / Overloaded error
+            if "503" in err_str or "overloaded" in err_str.lower():
+                if attempt < max_retries:
+                    await report(f"Gemini overloaded, cooling down ({attempt+1}/{max_retries})... 🧊")
+                    await asyncio.sleep(2) # Wait 2 seconds
+                    await report("Retrying Gemini scan...")
+                    continue
+                else:
+                    # Final failure after retries
+                    await report("Gemini is too busy. Please wait a minute and try again.")
+                    # We will raise the error below
+            else:
+                # Other error, don't retry
+                break
+        else:
+            # Success
+            break
     
     # LOGGING FOR VISIBILITY
     # LOGGING FOR VISIBILITY
