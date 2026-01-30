@@ -41,8 +41,7 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         if request.url.path in ["/manifest.json", "/sw.js", "/favicon.ico"]:
             return await call_next(request)
             
-        # Allow images and styles
-        if request.url.path.endswith((".png", ".jpg", ".css", ".js")):
+        if request.url.path.endswith((".png", ".jpg", ".css", ".js", ".gif")):
              return await call_next(request)
         
         # Check for cookie
@@ -263,7 +262,7 @@ async def handle_share(
             <body>
                 <!-- Loading State (Visible initially) -->
                 <div id="loadingOverlay">
-                    <div class="bouncer">🧾</div>
+                    <img src="/elf.gif" alt="Dancing Elf" style="height: 120px; margin-bottom: 20px;">
                     <h3 id="loadingTitle">Crunching the numbers...</h3>
                     <p id="loadingSubtitle">Our AI elves are reading your receipt! 🧙‍♂️</p>
                 </div>

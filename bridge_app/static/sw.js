@@ -144,7 +144,7 @@ function getSharePageHTML(jobId) {
         <body>
             <!-- Loading State (Visible initially) -->
             <div id="loadingOverlay">
-                <div class="bouncer">🧾</div>
+                <img src="/elf.gif" alt="Dancing Elf" style="height: 120px; margin-bottom: 20px;">
                 <h3 id="loadingTitle">Crunching the numbers...</h3>
                 <p id="loadingSubtitle">Our AI elves are reading your receipt! 🧙‍♂️</p>
             </div>
