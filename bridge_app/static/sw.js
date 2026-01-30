@@ -50,7 +50,8 @@ self.addEventListener('message', event => {
             jobId: event.data.jobId,
             status: job ? job.status : 'not_found',
             result: job ? (job.result || null) : null,
-            error: job ? (job.error || null) : null
+            error: job ? (job.error || null) : null,
+            step: job ? (job.step || null) : null
         });
     }
 });
@@ -198,6 +199,10 @@ function getSharePageHTML(jobId) {
                         } else if (data.status === 'failed') {
                                 showError(data.error);
                         } else {
+                                // Update progress text
+                                if (data.step) {
+                                    document.getElementById('loadingSubtitle').textContent = data.step;
+                                }
                                 // Still processing
                                 setTimeout(checkStatus, pollInterval);
                         }

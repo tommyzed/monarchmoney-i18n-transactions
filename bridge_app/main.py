@@ -112,9 +112,13 @@ async def process_background_job(job_id: str, content: bytes):
     """
     print(f"Starting background job {job_id}")
     try:
-        jobs[job_id] = {"status": "processing"}
+        jobs[job_id] = {"status": "processing", "step": "Initializing..."}
+        
+        async def progress_callback(step_msg):
+            jobs[job_id]["step"] = step_msg
+            
         async with AsyncSessionLocal() as db:
-            result = await process_transaction(content, db)
+            result = await process_transaction(content, db, progress_callback=progress_callback)
         
         jobs[job_id] = {"status": "completed", "result": result}
         print(f"Job {job_id} completed successfully")
@@ -300,6 +304,10 @@ async def handle_share(
                                 }} else if (data.status === 'failed') {{
                                     showError(data.error);
                                 }} else {{
+                                    // Update progress text
+                                    if (data.step) {{
+                                        document.getElementById('loadingSubtitle').textContent = data.step;
+                                    }}
                                     // Still processing
                                     setTimeout(checkStatus, pollInterval);
                                 }}
