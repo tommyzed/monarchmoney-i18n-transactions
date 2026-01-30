@@ -1,14 +1,8 @@
 const JOBS = new Map();
 
 self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
-    // Intercept Share Target POST to show UI immediately
-    if (url.pathname === '/share' && event.request.method === 'POST') {
-        event.respondWith(handleShare(event));
-    } else {
-        // Network-only for everything else
-        event.respondWith(fetch(event.request));
-    }
+    // Network-only for all requests
+    event.respondWith(fetch(event.request));
 });
 
 async function handleShare(event) {
@@ -180,7 +174,7 @@ function getSharePageHTML(jobId) {
 
             <script>
                 const jobId = "${jobId}";
-                const pollInterval = 1000;
+                const pollInterval = 500;
                 
                 function checkStatus() {
                     if (navigator.serviceWorker.controller) {
@@ -247,7 +241,7 @@ function getSharePageHTML(jobId) {
                 }
                 
                 // Start polling
-                setTimeout(checkStatus, 500);
+                setTimeout(checkStatus, 100);
             </script>
         </body>
     </html>

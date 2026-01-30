@@ -293,7 +293,7 @@ async def handle_share(
 
                 <script>
                     const jobId = "{job_id}";
-                    const pollInterval = 2000; // 2 seconds
+                    const pollInterval = 500; // 0.5 seconds
                     
                     function checkStatus() {{
                         fetch(`/job/${{jobId}}`)
@@ -354,9 +354,9 @@ async def handle_share(
                         document.getElementById('errorContainer').style.display = 'block';
                         document.getElementById('errorMessage').textContent = msg;
                     }}
-                    
+
                     // Start polling
-                    setTimeout(checkStatus, 1000);
+                    setTimeout(checkStatus, 100);
                 </script>
             </body>
         </html>

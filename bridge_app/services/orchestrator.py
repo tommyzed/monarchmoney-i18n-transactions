@@ -5,9 +5,11 @@ from fastapi import UploadFile, HTTPException
 from ..models import Transaction
 from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, push_transaction
+from starlette.concurrency import run_in_threadpool
 
 async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None):
     async def report(msg):
+        print(f"Progress: {msg}") # Log to console as requested
         if progress_callback:
             await progress_callback(msg)
 
@@ -29,7 +31,8 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     
     # 3. OCR Extraction
     await report("Scanning receipt with Gemini AI...")
-    data = extract_transaction_data(content)
+    # Gemini SDK is synchronous, so we run it in a threadpool to avoid blocking the event loop
+    data = await run_in_threadpool(extract_transaction_data, content)
     
     # LOGGING FOR VISIBILITY
     # LOGGING FOR VISIBILITY
