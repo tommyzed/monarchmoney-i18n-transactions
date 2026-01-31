@@ -272,7 +272,7 @@ async def handle_share(
                         flex-direction: column;
                     }}
                     .bouncer {{ font-size: 4rem; animation: bounce 1s infinite alternate; }}
-                    #loadingOverlay h3 {{ color: #fff; margin-top: 20px; }}
+                    #loadingTitle {{ color: #fff; margin-top: 20px; font-size: 1rem; }}
                     #loadingOverlay p {{ color: #ddd; }}
                     
                     @keyframes bounce {{
@@ -299,6 +299,19 @@ async def handle_share(
                         transition: width 0.5s ease-out;
                         border-radius: 9999px;
                     }}
+                    
+                    @keyframes spin {{
+                        from {{ transform: rotate(0deg); }}
+                        to {{ transform: rotate(360deg); }}
+                    }}
+
+                    .spinning-emoji {{
+                        display: inline-block;
+                        animation: spin 2s linear infinite;
+                        font-size: 30px; /* Size of emoji */
+                        margin-left: 10px;
+                        vertical-align: middle;
+                    }}
                 </style>
             </head>
             <body>
@@ -310,7 +323,7 @@ async def handle_share(
                     <div class="progress-container" id="progressContainer">
                         <div class="progress-bar" id="progressBar"></div>
                     </div>
-                    <h3 id="loadingTitle">Crunching the numbers...</h3>
+                    <h4 id="loadingTitle">Our AI Elves are hard at work! <span class="spinning-emoji">🧙‍♂️</span></h4>
                     <p id="loadingSubtitle">Our AI elves are reading your receipt! 🧙‍♂️</p>
                 </div>
                 
