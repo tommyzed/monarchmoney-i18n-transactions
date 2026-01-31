@@ -45,8 +45,8 @@ if DATABASE_URL.startswith("postgresql"):
             "command_timeout": 300
         }
 
-print(f"DEBUG: Connecting to {DATABASE_URL.split('@')[-1]}")
-print(f"DEBUG: connect_args={connect_args}")
+print(f"🧱 LIFESPAN: Connecting to {DATABASE_URL.split('@')[-1]}")
+print(f"🧱 LIFESPAN: connect_args={connect_args}")
 
 engine = create_async_engine(DATABASE_URL, echo=False, connect_args=connect_args)
 

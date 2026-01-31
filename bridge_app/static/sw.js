@@ -139,13 +139,26 @@ function getSharePageHTML(jobId) {
                 
                 /* Error State */
                 .error-text { color: #e53e3e; font-weight: bold; font-size: 1.5rem; }
+                
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+
+                .spinning-emoji {
+                    display: inline-block;
+                    animation: spin 2s linear infinite;
+                    font-size: 30px; /* Size of emoji */
+                    margin-left: 10px;
+                    vertical-align: middle;
+                }
             </style>
         </head>
         <body>
             <!-- Loading State (Visible initially) -->
             <div id="loadingOverlay">
                 <img src="/elf.gif" alt="Dancing Elf" style="height: 120px; margin-bottom: 20px;">
-                <h3 id="loadingTitle">Crunching the numbers...</h3>
+                <h3 id="loadingTitle">Our AI Elves are hard at work! <span class="spinning-emoji">🧙‍♂️</span></h3>
                 <p id="loadingSubtitle">Our AI elves are reading your receipt! 🧙‍♂️</p>
             </div>
             
