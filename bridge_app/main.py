@@ -13,8 +13,17 @@ from .services.orchestrator import process_transaction
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    print("🚀 LIFESPAN: Starting application startup...")
+    print("📦 LIFESPAN: Initializing database tables (this might take a moment if connecting remotely)...")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("✅ LIFESPAN: Database tables created/verified.")
+    except Exception as e:
+        print(f"❌ LIFESPAN: Database initialization failed: {e}")
+        # We might want to re-raise or continue depending on severity, but for diagnosis, printing is key.
+        raise e
+    print("✨ LIFESPAN: Startup complete.")
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -111,19 +120,35 @@ async def process_background_job(job_id: str, content: bytes):
     """
     print(f"Starting background job {job_id}")
     try:
-        jobs[job_id] = {"status": "processing", "step": "Initializing..."}
+        jobs[job_id] = {"status": "processing", "step": "Initializing...", "progress": 0}
         
-        async def progress_callback(step_msg):
+        async def progress_callback(step_msg, percent=None):
             jobs[job_id]["step"] = step_msg
+            if percent is not None:
+                jobs[job_id]["progress"] = percent
             
         async with AsyncSessionLocal() as db:
             result = await process_transaction(content, db, progress_callback=progress_callback)
         
-        jobs[job_id] = {"status": "completed", "result": result}
+        jobs[job_id] = {"status": "completed", "result": result, "progress": 100}
         print(f"Job {job_id} completed successfully")
     except Exception as e:
-        print(f"Job {job_id} failed: {e}")
-        jobs[job_id] = {"status": "failed", "error": str(e)}
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ Job {job_id} FAILED:\n{error_details}")
+        
+        # User-friendly error mapping
+        err_msg = str(e)
+        if "Connection" in err_msg or "timeout" in err_msg.lower():
+            display_error = "Database connection timed out. Please try again later."
+        elif "GEMINI_API_KEY" in err_msg:
+            display_error = "Server configuration error: Gemini API Key missing."
+        elif "Monarch" in err_msg:
+            display_error = f"Monarch Error: {err_msg}"
+        else:
+            display_error = f"I hit a snag: {err_msg}"
+
+        jobs[job_id] = {"status": "failed", "error": display_error, "progress": 0}
 
 @app.get("/health")
 async def health():
@@ -257,12 +282,34 @@ async def handle_share(
                     
                     /* Error State */
                     .error-text {{ color: #e53e3e; font-weight: bold; font-size: 1.5rem; }}
+                    /* Progress Bar */
+                    .progress-container {{
+                        width: 100%;
+                        background-color: #e0e7ff;
+                        border-radius: 9999px;
+                        height: 8px;
+                        margin-bottom: 20px;
+                        overflow: hidden;
+                        max-width: 300px;
+                    }}
+                    .progress-bar {{
+                        height: 100%;
+                        background-color: #4f46e5;
+                        width: 0%;
+                        transition: width 0.5s ease-out;
+                        border-radius: 9999px;
+                    }}
                 </style>
             </head>
             <body>
                 <!-- Loading State (Visible initially) -->
                 <div id="loadingOverlay">
                     <img src="/elf.gif" alt="Dancing Elf" style="height: 120px; margin-bottom: 20px;">
+                    
+                    <!-- Progress Bar -->
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
                     <h3 id="loadingTitle">Crunching the numbers...</h3>
                     <p id="loadingSubtitle">Our AI elves are reading your receipt! 🧙‍♂️</p>
                 </div>
@@ -307,6 +354,12 @@ async def handle_share(
                                     if (data.step) {{
                                         document.getElementById('loadingSubtitle').textContent = data.step;
                                     }}
+                                    // Update progress bar
+                                    if (data.progress !== undefined) {{
+                                        const bar = document.getElementById('progressBar');
+                                        if (bar) bar.style.width = data.progress + '%';
+                                    }}
+                                    
                                     // Still processing
                                     setTimeout(checkStatus, pollInterval);
                                 }}
@@ -360,6 +413,8 @@ async def handle_share(
             </body>
         </html>
         """)
+
+
     except Exception as e:
         print(f"Error starting job: {e}")
         return HTMLResponse(content="Error starting job", status_code=500)

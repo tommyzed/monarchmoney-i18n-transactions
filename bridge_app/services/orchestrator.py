@@ -9,18 +9,18 @@ from .monarch import get_monarch_client, push_transaction
 from starlette.concurrency import run_in_threadpool
 
 async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None):
-    async def report(msg):
-        print(f"Progress: {msg}") # Log to console as requested
+    async def report(msg, percent=None):
+        print(f"Progress: {msg} ({percent}%)") # Log to console as requested
         if progress_callback:
-            await progress_callback(msg)
+            await progress_callback(msg, percent)
 
     # 1. Read and Hash
-    await report("Computing image hash...")
+    await report("Computing image hash...", 10)
     # content passed directly
     image_hash = hashlib.sha256(content).hexdigest()
     
     # 2. Deduplication Check
-    await report("Checking for duplicates...")
+    await report("Checking for duplicates...", 20)
     stmt = select(Transaction).where(Transaction.image_hash == image_hash)
     result = await db.execute(stmt)
     existing = result.scalar_one_or_none()
@@ -31,27 +31,29 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
         return {"status": "duplicate", "data": existing.parsed_data}
     
     # 3. OCR Extraction
-    await report("Scanning receipt with Gemini AI...")
+    await report("Scanning receipt with Gemini AI...", 30)
     
     # Retry logic for overloaded Gemini API
     max_retries = 2
     for attempt in range(max_retries + 1):
         # Gemini SDK is synchronous, so we run it in a threadpool to avoid blocking the event loop
+        # Check for error
+        if attempt > 0:
+             await report(f"Retrying Gemini scan (Attempt {attempt+1})...", 35)
+
         data = await run_in_threadpool(extract_transaction_data, content)
         
-        # Check for error
         if data and "error" in data:
             err_str = str(data["error"])
             # Check if it's a 503 / Overloaded error
             if "503" in err_str or "overloaded" in err_str.lower():
                 if attempt < max_retries:
-                    await report(f"Gemini overloaded, cooling down ({attempt+1}/{max_retries})... 🧊")
+                    await report(f"Gemini overloaded, cooling down ({attempt+1}/{max_retries})... 🧊", 35)
                     await asyncio.sleep(2) # Wait 2 seconds
-                    await report("Retrying Gemini scan...")
                     continue
                 else:
                     # Final failure after retries
-                    await report("Gemini is too busy. Please wait a minute and try again.")
+                    await report("Gemini is too busy. Please wait a minute and try again.", 35)
                     # We will raise the error below
             else:
                 # Other error, don't retry
@@ -73,7 +75,7 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     
     if raw_currency in ["EUR", "EURO", "€"]:
         try:
-            await report(f"Converting {raw_currency} to USD...")
+            await report(f"Converting {raw_currency} to USD...", 60)
             from .currency import get_eur_to_usd_rate
             rate = await get_eur_to_usd_rate(data["date"])
             original_amount = data["amount"]
@@ -103,7 +105,7 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
         raise HTTPException(status_code=500, detail=error_msg)
         
     # 4. Monarch Push
-    await report("Connecting to Monarch Money...")
+    await report("Connecting to Monarch Money...", 70)
     from ..models import Credentials
     creds_result = await db.execute(select(Credentials))
     creds = creds_result.scalars().first()
@@ -113,14 +115,14 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
         raise HTTPException(status_code=400, detail="No Monarch credentials configured")
         
     try:
-        await report("Creating transaction in Monarch...")
+        await report("Creating transaction in Monarch...", 85)
         mm = await get_monarch_client(db, creds.id)
         await push_transaction(mm, data)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Monarch Error: {str(e)}")
     
     # 5. Save Record
-    await report("Finalizing...")
+    await report("Finalizing...", 95)
     new_tx = Transaction(image_hash=image_hash, parsed_data=data)
     db.add(new_tx)
     await db.commit()
