@@ -189,6 +189,7 @@ async def handle_share(
         # Read file immediately before response closes
         content = await file.read()
         job_id = str(uuid.uuid4())
+        mm_account = os.environ.get("MM_ACCOUNT", "Default Account")
         
         # Start background task
         background_tasks.add_task(process_background_job, job_id, content)
@@ -219,11 +220,11 @@ async def handle_share(
                         color: #333;
                     }}
                     .card {{ 
-                        background: rgba(230, 255, 240, 0.98);
+                        background: rgba(209, 250, 229, 0.98);
                         padding: 2.5rem;
                         border-radius: 20px;
                         box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-                        max-width: 400px;
+                        max-width: 500px;
                         width: 100%;
                         backdrop-filter: blur(10px);
                         display: none; /* Hidden by default */
@@ -247,9 +248,9 @@ async def handle_share(
                         transition: transform 0.2s;
                     }}
                     .btn:hover {{ transform: translateY(-2px); }}
-                    .detail-row {{ display: flex; justify-content: space-between; align-items: center; margin: 0.5rem auto; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; max-width: 320px; width: 100%; gap: 1rem; }}
+                    .detail-row {{ display: flex; justify-content: space-between; align-items: center; margin: 0.25rem auto; border-bottom: 1px solid #eee; padding-bottom: 0.25rem; width: 100%; gap: 1rem; }}
                     .label {{ color: #666; }}
-                    .value {{ font-weight: 600; }}
+                    .value {{ font-weight: 600; text-align: right; }}
                     
                     /* Mobile Optimizations */
                     @media (max-width: 480px) {{
@@ -312,6 +313,17 @@ async def handle_share(
                         margin-left: 10px;
                         vertical-align: middle;
                     }}
+
+                    #detailsContainer {{
+                        background: #ffffff;
+                        border-radius: 16px;
+                        padding: 1.5rem;
+                        width: 100%;
+                        margin-top: 1rem;
+                        box-sizing: border-box;
+                        border: 1px solid rgba(0, 0, 0, 0.05);
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                    }}
                 </style>
             </head>
             <body>
@@ -340,6 +352,14 @@ async def handle_share(
                         <div class="detail-row">
                             <span class="label">Merchant</span>
                             <span id="merchantValue" class="value">--</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Date</span>
+                            <span id="dateValue" class="value">--</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Added to</span>
+                            <span id="accountValue" class="value">{mm_account}</span>
                         </div>
                     </div>
                     
@@ -403,8 +423,14 @@ async def handle_share(
                             }});
                         }}
                         
-                        document.getElementById('amountValue').textContent = `${{parseFloat(data.amount).toFixed(2)}} ${{data.currency}}`;
+                        let amountHtml = `${{parseFloat(data.amount).toFixed(2)}} ${{data.currency}}`;
+                        if (data.original_amount && data.original_currency) {{
+                            amountHtml += `<br><span style="font-size: 0.8em; color: #777;">(${{parseFloat(data.original_amount).toFixed(2)}} ${{data.original_currency}})</span>`;
+                        }}
+                        
+                        document.getElementById('amountValue').innerHTML = amountHtml;
                         document.getElementById('merchantValue').textContent = data.merchant;
+                        document.getElementById('dateValue').textContent = data.date;
                     }}
                     
                     function showError(msg) {{
