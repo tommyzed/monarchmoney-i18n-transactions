@@ -152,10 +152,10 @@ async def push_transaction(mm: MonarchMoney, data: dict):
             tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
             print(f"Created new tag: {tag_name} with ID: {tag_id}")
             
-            # 3. Apply tag
-            if tag_id:
-                await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=[tag_id])
-                print(f"Tagged transaction {tx_id} with '{tag_name}'")
+        # 3. Apply tag
+        if tag_id:
+            await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=[tag_id])
+            print(f"Tagged transaction {tx_id} with '{tag_name}'")
         
         return tx_id
             
