@@ -425,7 +425,11 @@ async def handle_share(
                         
                         let amountHtml = `${{parseFloat(data.amount).toFixed(2)}} ${{data.currency}}`;
                         if (data.original_amount && data.original_currency) {{
-                            amountHtml += `<br><span style="font-size: 0.8em; color: #777;">(${{parseFloat(data.original_amount).toFixed(2)}} ${{data.original_currency}})</span>`;
+                            let rateInfo = "";
+                            if (data.exchange_rate) {{
+                                rateInfo = ` @ ${{parseFloat(data.exchange_rate).toFixed(3)}}`;
+                            }}
+                            amountHtml += `<br><span style="font-size: 0.8em; color: #777;">(${{parseFloat(data.original_amount).toFixed(2)}} ${{data.original_currency}}${{rateInfo}})</span>`;
                         }}
                         
                         document.getElementById('amountValue').innerHTML = amountHtml;
