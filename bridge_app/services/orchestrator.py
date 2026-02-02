@@ -117,7 +117,9 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     try:
         await report("Creating transaction in Monarch...", 85)
         mm = await get_monarch_client(db, creds.id)
-        await push_transaction(mm, data)
+        tx_id = await push_transaction(mm, data)
+        if tx_id:
+            data['monarch_tx_id'] = tx_id
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Monarch Error: {str(e)}")
     

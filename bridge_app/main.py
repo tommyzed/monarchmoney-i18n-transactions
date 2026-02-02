@@ -424,6 +424,13 @@ async def handle_share(
                         }}
                         
                         let amountHtml = `${{parseFloat(data.amount).toFixed(2)}} ${{data.currency}}`;
+                        
+                        // Add Deep Link if ID exists
+                        if (data.monarch_tx_id) {{
+                            const deepLink = `intent://transactions/${{data.monarch_tx_id}}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${{data.monarch_tx_id}};end`;
+                            amountHtml = `<a href="${{deepLink}}" style="text-decoration:none; color:inherit; border-bottom: 1px dotted #666;">${{amountHtml}}</a>`;
+                        }}
+                        
                         if (data.original_amount && data.original_currency) {{
                             let rateInfo = "";
                             if (data.exchange_rate) {{
