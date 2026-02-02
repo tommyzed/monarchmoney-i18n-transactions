@@ -150,10 +150,16 @@ async def push_transaction(mm: MonarchMoney, data: dict):
             new_tag_res = await mm.create_transaction_tag(name=tag_name, color=tag_color)
             tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
             
-        # 3. Apply tag
-        if tag_id:
-            await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=[tag_id])
-            print(f"Tagged transaction {tx_id} with '{tag_name}'")
+            
+            # 3. Apply tag
+            if tag_id:
+                await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=[tag_id])
+                print(f"Tagged transaction {tx_id} with '{tag_name}'")
+        
+        return tx_id
             
     except Exception as e:
         print(f"Failed to apply post-creation updates (Needs Review / Tags): {e}")
+        # If we created the transaction but failed updates, we should still return the ID if we have it
+        if 'tx_id' in locals():
+            return tx_id
