@@ -8,7 +8,7 @@ from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, push_transaction
 from starlette.concurrency import run_in_threadpool
 
-async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None):
+async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None, user_currency: str = None):
     async def report(msg, percent=None):
         print(f"Progress: {msg} ({percent}%)") # Log to console as requested
         if progress_callback:
@@ -71,28 +71,42 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     
     # 3b. Currency Conversion
     raw_currency = str(data.get("currency", "")).upper().strip()
-    print(f"Currency detection: Raw='{data.get('currency')}' Normalized='{raw_currency}'")
     
-    if raw_currency in ["EUR", "EURO", "€"]:
+    # Determine the effective original currency
+    target_original = user_currency if user_currency else raw_currency
+    
+    # Normalize simplified symbols/names if coming from OCR
+    if target_original in ["EURO", "€"]: target_original = "EUR"
+    if target_original in ["£", "POUND"]: target_original = "GBP"
+    if target_original in ["¥", "YEN"]: target_original = "JPY"
+    
+    print(f"Currency Check: User='{user_currency}' OCR='{raw_currency}' -> Effective='{target_original}'")
+    
+    if target_original == "USD":
+        data["currency"] = "USD"
+        
+    elif target_original in ["EUR", "GBP", "JPY"]:
         try:
-            await report(f"Converting {raw_currency} to USD...", 60)
-            from .currency import get_eur_to_usd_rate
-            rate = await get_eur_to_usd_rate(data["date"])
+            await report(f"Converting {target_original} to USD...", 60)
+            from .currency import get_exchange_rate
+            
+            rate = await get_exchange_rate(target_original, "USD", data["date"])
             original_amount = data["amount"]
             converted_amount = round(original_amount * rate, 2)
             
-            print(f"Converting EUR {original_amount} to USD {converted_amount} (Rate: {rate})")
+            print(f"Converting {target_original} {original_amount} to USD {converted_amount} (Rate: {rate})")
             
-            # Update data for Monarch
             data["original_amount"] = original_amount
-            data["original_currency"] = "EUR"
+            data["original_currency"] = target_original
             data["amount"] = converted_amount
-            data["currency"] = "USD" # Make it appear as USD to Monarch wrapper
+            data["currency"] = "USD"
             data["exchange_rate"] = rate
         except Exception as e:
-             print(f"Conversion failed, proceeding with original currency: {e}")
+             print(f"Conversion failed, using original: {e}")
+             data["currency"] = target_original
     else:
-        print(f"Skipping conversion: '{raw_currency}' is not EUR.")
+        print(f"Skipping conversion: '{target_original}' not in supported list.")
+        data["currency"] = target_original
 
     # Log final payload
     # Log final payload

@@ -114,7 +114,7 @@ async def activate(s: str):
 # Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str } }
 jobs = {}
 
-async def process_background_job(job_id: str, content: bytes):
+async def process_background_job(job_id: str, content: bytes, user_currency: str = None):
     """
     Background task to process the transaction using a fresh DB session.
     """
@@ -136,7 +136,7 @@ async def process_background_job(job_id: str, content: bytes):
                     print(f"Job {job_id}: Attempt {attempt+1}...")
                 
                 async with AsyncSessionLocal() as db:
-                    result = await process_transaction(content, db, progress_callback=progress_callback)
+                    result = await process_transaction(content, db, progress_callback=progress_callback, user_currency=user_currency)
                 
                 # Success
                 jobs[job_id] = {"status": "completed", "result": result, "progress": 100}
@@ -185,11 +185,12 @@ async def health():
 @app.post("/upload")
 async def upload_receipt(
     file: UploadFile = File(...),
+    currency: str = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     try:
         content = await file.read()
-        result = await process_transaction(content, db)
+        result = await process_transaction(content, db, user_currency=currency)
         return {"status": "success", "data": result}
     except HTTPException as e:
         raise e
@@ -207,6 +208,7 @@ async def get_job_status(job_id: str):
 @app.post("/share")
 async def handle_share(
     background_tasks: BackgroundTasks,
+    currency: str = Form(None),
     file: UploadFile = File(...)
 ):
     """
@@ -220,7 +222,7 @@ async def handle_share(
         mm_account = os.environ.get("MM_ACCOUNT", "Default Account")
         
         # Start background task
-        background_tasks.add_task(process_background_job, job_id, content)
+        background_tasks.add_task(process_background_job, job_id, content, currency)
         
         # Return Loading HTML
         return HTMLResponse(content=f"""

@@ -79,7 +79,8 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         # Apply notes for non-USD that wasn't converted
         notes = f"Original Price: {data['currency']} {abs(amount):.2f}"
     else:
-        notes = ""
+        # User requested redundancy for USD
+        notes = f"Original Price: {data['currency']} {abs(amount):.2f}"
 
     # Fetch categories to find a valid category_id (required by API)
     # We'll default to "Uncategorized"
