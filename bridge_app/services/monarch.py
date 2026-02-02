@@ -136,25 +136,26 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         tag_name = "Imported by MM Euro Bridge"
         tag_color = "#2196F3" # Material Blue
         tag_id = None
+        print(f"Applying tag: {tag_name}")
         
         # 1. Find existing tag
         existing_tags = await mm.get_transaction_tags()
         for tag in existing_tags.get("householdTransactionTags", []):
             if tag["name"] == tag_name:
                 tag_id = tag["id"]
+                print(f"Found existing tag: {tag_name} with ID: {tag_id}")
                 break
         
         # 2. Create if missing
         if not tag_id:
-            print(f"Creating new tag: {tag_name}")
             new_tag_res = await mm.create_transaction_tag(name=tag_name, color=tag_color)
             tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
+            print(f"Created new tag: {tag_name} with ID: {tag_id}")
             
-            
-            # 3. Apply tag
-            if tag_id:
-                await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=[tag_id])
-                print(f"Tagged transaction {tx_id} with '{tag_name}'")
+        # 3. Apply tag
+        if tag_id:
+            await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=[tag_id])
+            print(f"Tagged transaction {tx_id} with '{tag_name}'")
         
         return tx_id
             
