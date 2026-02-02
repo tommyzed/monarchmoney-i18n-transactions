@@ -119,19 +119,47 @@ async def process_background_job(job_id: str, content: bytes):
     Background task to process the transaction using a fresh DB session.
     """
     print(f"Starting background job {job_id}")
+    print(f"Starting background job {job_id}")
+    
+    jobs[job_id] = {"status": "processing", "step": "Initializing...", "progress": 0}
+    
+    async def progress_callback(step_msg, percent=None):
+        jobs[job_id]["step"] = step_msg
+        if percent is not None:
+            jobs[job_id]["progress"] = percent
+
     try:
-        jobs[job_id] = {"status": "processing", "step": "Initializing...", "progress": 0}
-        
-        async def progress_callback(step_msg, percent=None):
-            jobs[job_id]["step"] = step_msg
-            if percent is not None:
-                jobs[job_id]["progress"] = percent
-            
-        async with AsyncSessionLocal() as db:
-            result = await process_transaction(content, db, progress_callback=progress_callback)
-        
-        jobs[job_id] = {"status": "completed", "result": result, "progress": 100}
-        print(f"Job {job_id} completed successfully")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    print(f"Job {job_id}: Attempt {attempt+1}...")
+                
+                async with AsyncSessionLocal() as db:
+                    result = await process_transaction(content, db, progress_callback=progress_callback)
+                
+                # Success
+                jobs[job_id] = {"status": "completed", "result": result, "progress": 100}
+                print(f"Job {job_id} completed successfully")
+                return # Exit function on success
+                
+            except Exception as e:
+                # Check for DB connection errors
+                error_str = str(e)
+                is_db_error = "InterfaceError" in str(type(e).__name__) or "connection is closed" in error_str
+                
+                if is_db_error and attempt < max_retries - 1:
+                    print(f"⚠️ DB Connection Error (Attempt {attempt+1}): {e}")
+                    print("Turning the database snooze button... 💤⏰")
+                    
+                    # Update UI to inform user
+                    jobs[job_id]["step"] = "Waking up database... 🥱"
+                    await asyncio.sleep(2) # Wait for DB to wake up
+                    continue
+                else:
+                    # Not a DB error or out of retries, raise to outer handler
+                    raise e
+                    
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
