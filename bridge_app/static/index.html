@@ -156,15 +156,110 @@
                     <span id="fileName">📁 Tap to Choose Receipt</span>
                 </label>
 
-                <div style="margin-top: 1.5rem; text-align: left;">
-                    <label for="currencySelect" style="color: #555; font-weight: 500; display: block; margin-bottom: 0.5rem; margin-left: 0.5rem;">Original Currency:</label>
-                    <select name="currency" id="currencySelect" style="width: 100%; padding: 1rem; border-radius: 12px; border: 1px solid #ddd; background: #fff; color: #333; font-size: 1rem; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1rem;">
-                        <option value="EUR" selected>💶 EUR (Euro) - Default</option>
-                        <option value="USD">💵 USD (US Dollar)</option>
-                        <option value="GBP">💷 GBP (British Pound)</option>
-                        <option value="JPY">💴 JPY (Japanese Yen)</option>
-                    </select>
+                <!-- Magical Currency Selector -->
+                <div style="margin-top: 1.5rem; position: relative;">
+                    <div id="currencyWrapper" style="font-size: 1.1rem; color: #555;">
+                        Original Currency:
+                        <span id="currencyTrigger"
+                            style="color: #667eea; font-weight: bold; cursor: pointer; border-bottom: 2px dashed #667eea; padding-bottom: 2px; transition: all 0.2s;">EUR</span>
+                    </div>
+
+                    <input type="hidden" name="currency" id="hiddenCurrencyInput" value="EUR">
+
+                    <div id="magicDropdown" style="
+                        display: none;
+                        position: absolute;
+                        top: 100%;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: white;
+                        border-radius: 16px;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                        width: 250px;
+                        margin-top: 10px;
+                        z-index: 100;
+                        overflow: hidden;
+                        opacity: 0;
+                        transition: opacity 0.3s ease, margin-top 0.3s ease;
+                    ">
+                        <div class="magic-option" data-value="EUR"
+                            style="padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.2rem;">💶</span> <span>EUR (Euro)</span>
+                        </div>
+                        <div class="magic-option" data-value="USD"
+                            style="padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.2rem;">💵</span> <span>USD (US Dollar)</span>
+                        </div>
+                        <div class="magic-option" data-value="GBP"
+                            style="padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.2rem;">💷</span> <span>GBP (Pound)</span>
+                        </div>
+                        <div class="magic-option" data-value="JPY"
+                            style="padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.2rem;">💴</span> <span>JPY (Yen)</span>
+                        </div>
+                    </div>
                 </div>
+
+                <style>
+                    .magic-option:hover {
+                        background-color: #f8faff;
+                        color: #667eea;
+                    }
+                </style>
+
+                <script>
+                    const trigger = document.getElementById('currencyTrigger');
+                    const dropdown = document.getElementById('magicDropdown');
+                    const input = document.getElementById('hiddenCurrencyInput');
+                    const options = document.querySelectorAll('.magic-option');
+
+                    // Toggle Dropdown
+                    trigger.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (dropdown.style.display === 'none') {
+                            dropdown.style.display = 'block';
+                            // Small delay to allow transition
+                            setTimeout(() => {
+                                dropdown.style.opacity = '1';
+                                dropdown.style.marginTop = '15px';
+                            }, 10);
+                        } else {
+                            closeDropdown();
+                        }
+                    });
+
+                    // Close when clicking outside
+                    document.addEventListener('click', (e) => {
+                        if (!dropdown.contains(e.target) && e.target !== trigger) {
+                            closeDropdown();
+                        }
+                    });
+
+                    function closeDropdown() {
+                        dropdown.style.opacity = '0';
+                        dropdown.style.marginTop = '10px';
+                        setTimeout(() => {
+                            dropdown.style.display = 'none';
+                        }, 300);
+                    }
+
+                    // Handle Selection
+                    options.forEach(option => {
+                        option.addEventListener('click', () => {
+                            const value = option.getAttribute('data-value');
+                            input.value = value;
+                            trigger.textContent = value;
+                            closeDropdown();
+
+                            // Visual feedback on trigger
+                            trigger.style.color = '#764ba2';
+                            setTimeout(() => {
+                                trigger.style.color = '#667eea';
+                            }, 300);
+                        });
+                    });
+                </script>
 
                 <button type="submit" class="btn">🚀 Upload Receipt</button>
             </form>
