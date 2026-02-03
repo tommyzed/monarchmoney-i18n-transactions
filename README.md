@@ -21,14 +21,13 @@ Monarch Money is amazing, but it lacks native support for European banks and cur
     *   Marks as `Needs Review` for easy workflows.
     *   Stores `Original Amount: €XX.XX` and the ForEx Rate in the notes.
 
-## 🖼 Screenshots
-<img width="125" height="280" alt="Screenshot_20260127-223044" src="https://github.com/user-attachments/assets/3253a592-4479-4d75-8610-af21a0a57dea" /> 
-<img width="125" height="280" alt="Screenshot_20260127-223044" src="https://github.com/user-attachments/assets/718a7ec0-b122-4f31-a3a9-de46ed2f40c4" />  
-<img width="125" height="280" alt="Screenshot_20260127-223044" src="https://github.com/user-attachments/assets/f15f1821-3083-449a-b179-458383d2103c" /> 
-<img width="125" height="280" alt="Screenshot_20260127-223044" src="https://github.com/user-attachments/assets/372631a6-ab94-4b60-a445-d364780ddb9b" /> 
-<img width="125" height="280" alt="Screenshot_20260127-223044" src="https://github.com/user-attachments/assets/38dda35f-6d34-4541-bbe1-6fc0e84aa8d2" /> 
-https://github.com/user-attachments/assets/dee51831-0da3-47e6-b30f-b2045876ce46
-
+## 🖼 Demo
+<video src="https://github.com/user-attachments/assets/dee51831-0da3-47e6-b30f-b2045876ce46" 
+       autoplay 
+       loop 
+       muted 
+       width="400">
+</video>
 
 ## 🏗 Architecture
 
