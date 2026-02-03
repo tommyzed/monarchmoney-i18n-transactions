@@ -263,8 +263,143 @@
 
                 <button type="submit" class="btn">🚀 Upload Receipt</button>
             </form>
+
+            <!-- Manual Entry Link -->
+            <div style="margin-top: 2rem;">
+                <span id="manualEntryLink"
+                    style="color: #667eea; cursor: pointer; text-decoration: underline; font-size: 0.9rem;">
+                    Or enter manually ✍️
+                </span>
+            </div>
         </div>
     </div>
+
+    <!-- Manual Entry Modal -->
+    <div id="manualModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:900; justify-content:center; align-items:center;">
+        <div class="container" style="position:relative; margin: 1rem;">
+            <span id="closeModal"
+                style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #aaa;">&times;</span>
+            <h2 style="color: #4a4a4a; margin-top: 0;">Manual Entry ✍️</h2>
+
+            <form action="/manual" method="post" id="manualForm">
+                <div style="text-align: left; margin-bottom: 1rem;">
+                    <label style="color: #666; font-size: 0.9rem;">Amount</label>
+                    <input type="number" step="0.01" name="amount" required
+                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
+                </div>
+
+                <!-- Reusing Magic Dropdown Logic Structure for Manual -->
+                <div style="text-align: left; margin-bottom: 1rem;">
+                    <label style="color: #666; font-size: 0.9rem;">Currency</label>
+                    <div style="position: relative; margin-top: 0.3rem;">
+                        <input type="hidden" name="currency" id="manualCurrencyInput" value="EUR">
+                        <div id="manualCurrencyTrigger"
+                            style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                            <span>EUR (Euro)</span>
+                            <span>▼</span>
+                        </div>
+
+                        <div id="manualCurrencyDropdown" style="
+                            display: none;
+                            position: absolute;
+                            top: 100%;
+                            left: 0;
+                            width: 100%;
+                            background: white;
+                            border-radius: 8px;
+                            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                            z-index: 100;
+                            max-height: 200px;
+                            overflow-y: auto;
+                            margin-top: 5px;
+                        ">
+                            <div class="manual-currency-option" data-value="EUR"
+                                style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💶 EUR (Euro)
+                            </div>
+                            <div class="manual-currency-option" data-value="USD"
+                                style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💵 USD (US
+                                Dollar)</div>
+                            <div class="manual-currency-option" data-value="GBP"
+                                style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💷 GBP (Pound)
+                            </div>
+                            <div class="manual-currency-option" data-value="JPY"
+                                style="padding: 10px; cursor: pointer;">💴 JPY (Yen)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: left; margin-bottom: 1rem;">
+                    <label style="color: #666; font-size: 0.9rem;">Date</label>
+                    <input type="date" name="date" required id="dateInput"
+                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; font-family: inherit; box-sizing: border-box;">
+                </div>
+
+                <div style="text-align: left; margin-bottom: 1rem;">
+                    <label style="color: #666; font-size: 0.9rem;">Merchant</label>
+                    <input type="text" name="merchant" required placeholder="e.g. Starbucks"
+                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
+                </div>
+
+                <button type="submit" class="btn" style="margin-top: 1rem;">Submit Transaction</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Modal Logic
+        const modal = document.getElementById('manualModal');
+        const openBtn = document.getElementById('manualEntryLink');
+        const closeBtn = document.getElementById('closeModal');
+
+        openBtn.onclick = function () {
+            modal.style.display = "flex";
+            // Default date to today
+            document.getElementById('dateInput').valueAsDate = new Date();
+        }
+
+        closeBtn.onclick = function () {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // Manual Currency Dropdown Logic
+        const mTrigger = document.getElementById('manualCurrencyTrigger');
+        const mDropdown = document.getElementById('manualCurrencyDropdown');
+        const mInput = document.getElementById('manualCurrencyInput');
+
+        mTrigger.onclick = function (e) {
+            e.stopPropagation();
+            mDropdown.style.display = mDropdown.style.display === 'block' ? 'none' : 'block';
+        };
+
+        document.addEventListener('click', function (e) {
+            if (!mTrigger.contains(e.target)) {
+                mDropdown.style.display = 'none';
+            }
+        });
+
+        document.querySelectorAll('.manual-currency-option').forEach(option => {
+            option.addEventListener('click', function () {
+                const val = this.getAttribute('data-value');
+                const text = this.textContent;
+                mInput.value = val;
+                mTrigger.querySelector('span:first-child').textContent = text;
+                mDropdown.style.display = 'none';
+            });
+        });
+
+        // Handle Submit to show loader
+        document.getElementById('manualForm').onsubmit = function () {
+            document.getElementById('manualModal').style.display = 'none';
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        };
+    </script>
 
     <div id="loadingOverlay"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:1000; justify-content:center; align-items:center; flex-direction:column;">

@@ -73,7 +73,7 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     if "original_amount" in data:
         notes = (
             f"Original Price: {data['original_currency']} {data['original_amount']:.2f}\n"
-            f"Exchange Rate: {data.get('exchange_rate', '?')} USD/EUR"
+            f"Exchange Rate: {data.get('exchange_rate', '?')} USD/{data['original_currency']}"
         )
     elif data['currency'] != 'USD':
         # Apply notes for non-USD that wasn't converted
