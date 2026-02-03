@@ -286,7 +286,7 @@
                 <div style="text-align: left; margin-bottom: 1rem;">
                     <label style="color: #666; font-size: 0.9rem;">Amount</label>
                     <input type="number" step="0.01" name="amount" required
-                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem;">
+                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
                 </div>
 
                 <!-- Reusing Magic Dropdown Logic Structure for Manual -->
@@ -295,7 +295,7 @@
                     <div style="position: relative; margin-top: 0.3rem;">
                         <input type="hidden" name="currency" id="manualCurrencyInput" value="EUR">
                         <div id="manualCurrencyTrigger"
-                            style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                            style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
                             <span>EUR (Euro)</span>
                             <span>▼</span>
                         </div>
@@ -332,13 +332,13 @@
                 <div style="text-align: left; margin-bottom: 1rem;">
                     <label style="color: #666; font-size: 0.9rem;">Date</label>
                     <input type="date" name="date" required id="dateInput"
-                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; font-family: inherit;">
+                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; font-family: inherit; box-sizing: border-box;">
                 </div>
 
                 <div style="text-align: left; margin-bottom: 1rem;">
                     <label style="color: #666; font-size: 0.9rem;">Merchant</label>
                     <input type="text" name="merchant" required placeholder="e.g. Starbucks"
-                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem;">
+                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
                 </div>
 
                 <button type="submit" class="btn" style="margin-top: 1rem;">Submit Transaction</button>
