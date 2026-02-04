@@ -43,3 +43,4 @@ npm_output.log
 # Database
 *.db
 bridge.db
+venv/

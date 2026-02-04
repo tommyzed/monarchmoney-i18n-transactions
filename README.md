@@ -7,6 +7,7 @@ Monarch Money is amazing, but it lacks native support for European banks and cur
 ## ✨ Features
 
 *   **🇪🇺 Automatic Currency Conversion**: Detects EUR amounts and converts them to USD using historical exchange rates (via Frankfurter API) for the exact transaction date.
+*   **✍️ Manual Entry Mode**: Quickly add transactions manually (Amount, Currency, Date, Merchant) without needing a receipt image. Supports any currency.
 *   **🧙‍♂️ AI-Powered OCR**: Uses **Google Gemini 3 Flash** to instantly extract Merchant, Date, and Amount from receipt photos with high accuracy.
 *   **📱 Native-Like PWA Experience**:
     *   **Installable**: Add to your home screen as a standalone app.
@@ -19,7 +20,7 @@ Monarch Money is amazing, but it lacks native support for European banks and cur
 *   **🤖 Smart Monarch Integration**:
     *   Auto-tags transactions (`Imported by MM Euro Bridge`).
     *   Marks as `Needs Review` for easy workflows.
-    *   Stores `Original Amount: €XX.XX` and the ForEx Rate in the notes.
+    *   Stores `Original Amount: €XX.XX` and the ForEx Rate in the notes (e.g., `USD/GBP`).
 
 ## 🖼 Demo
 ![MMBridgeDemoFinal](https://github.com/user-attachments/assets/a873bf2a-2ada-4cc2-bb85-fc50b736bcef)
@@ -29,7 +30,9 @@ Monarch Money is amazing, but it lacks native support for European banks and cur
 The system is a lightweight **FastAPI** application backed by **PostgreSQL**.
 
 ### Core Services
-1.  **Orchestrator**: The brain. Hashing -> De-duplication -> OCR -> Conversion -> Push.
+1.  **Orchestrator**: The brain. Handles two flows:
+    *   **Image Flow**: Hashing -> De-duplication -> OCR -> Conversion -> Push.
+    *   **Manual Flow**: Form Data -> Hashing -> Conversion -> Push.
 2.  **Monarch Service**: Handles authentication (including MFA), session persistence, and GraphQL interactions.
 3.  **Gemini Service**: Interacts with Google's GenAI SDK for image parsing.
 4.  **Currency Service**: Fetches historical forex rates.
@@ -110,18 +113,20 @@ To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
 3.  **Unlock**: You will see a "Device Activated" screen. This sets a secure cookie valid for 10 years.
 4.  **Ghosting**: Any subsequent request *without* this cookie (e.g. random scanners) will receive a `404 Not Found`, making the server appear non-existent.
 
-## 📱 Mobile Setup (PWA)
+## 📱 Mobile Usage
 
-1.  **Expose the Server**: Ensure your phone can reach the server (e.g., via local Wi-Fi IP `http://192.168.1.X:8000`, Tailscale, or a tunnel like Ngrok).
-    *   *Note: For the Service Worker and PWA install features to work fully, you usually need HTTPS unless using localhost.*
-2.  **Visit in Browser**: Open the URL on your mobile browser (Chrome/Safari).
-3.  **Install**: Tap "Add to Home Screen" in your browser menu.
-4.  **Use**: 
-    *   Open your **Photos** or **Gallery** app.
-    *   Select a receipt.
-    *   Tap **Share**.
-    *   Select **Monarch Bridge**.
-    *   🦄 Watch the magic happen!
+### Option A: Share Sheet (Images)
+1.  Open your **Photos** or **Gallery** app.
+2.  Select a receipt.
+3.  Tap **Share**.
+4.  Select **Monarch Bridge**.
+5.  🦄 Watch the magic happen!
+
+### Option B: Manual Entry
+1.  Open the app in your browser (or PWA).
+2.  Tap **"Or enter manually ✍️"** on the home screen.
+3.  Enter amount, select currency, date, and merchant.
+4.  Tap **Submit**.
 
 ## 🛠 Management Scripts
 
