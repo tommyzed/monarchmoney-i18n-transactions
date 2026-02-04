@@ -23,7 +23,7 @@ Monarch Money is amazing, but it lacks native support for European banks and cur
     *   Stores `Original Amount: €XX.XX` and the ForEx Rate in the notes (e.g., `USD/GBP`).
 
 ## 🖼 Demo
-![MMBridgeDemoFinal](https://github.com/user-attachments/assets/a873bf2a-2ada-4cc2-bb85-fc50b736bcef)
+![LatestMMDemo-ezgif com-speed](https://github.com/user-attachments/assets/b4fefae9-ff0d-4cf5-a2b3-71befc6e29d8)
 
 ## 🏗 Architecture
 
