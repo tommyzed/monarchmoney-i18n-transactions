@@ -18,7 +18,7 @@ Monarch Money is amazing, but it lacks native support for European banks and cur
     *   Credentials encrypted at rest (Fernet).
     *   No logs of sensitive financial data.
 *   **🤖 Smart Monarch Integration**:
-    *   Auto-tags transactions (`Imported by MM Euro Bridge`).
+    *   Auto-tags transactions (`Imported by MM Bridge`).
     *   Marks as `Needs Review` for easy workflows.
     *   Stores `Original Amount: €XX.XX` and the ForEx Rate in the notes (e.g., `USD/GBP`).
 

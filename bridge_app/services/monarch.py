@@ -134,7 +134,7 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         print(f"Marked transaction {tx_id} as 'Needs Review'")
         
         # Apply Tag
-        tag_name = "Imported by MM Euro Bridge"
+        tag_name = "Imported by MM Bridge"
         tag_color = "#2196F3" # Material Blue
         tag_id = None
         print(f"Applying tag: {tag_name}")
