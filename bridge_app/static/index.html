@@ -42,6 +42,62 @@
             /* Ensure padding doesn't overflow width */
         }
 
+
+
+        .deep-link-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+        }
+
+        .deep-link-trigger {
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            user-select: none;
+            display: inline-block;
+        }
+
+        .deep-link-trigger:hover {
+            transform: scale(1.1);
+        }
+
+        .deep-link-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            width: 180px;
+            overflow: hidden;
+            margin-top: 5px;
+            flex-direction: column;
+            text-align: left;
+            border: 1px solid #eee;
+        }
+
+        .deep-link-item {
+            padding: 12px 15px;
+            text-decoration: none;
+            color: #333;
+            display: block;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        .deep-link-item:last-child {
+            border-bottom: none;
+        }
+
+        .deep-link-item:hover {
+            background: #f8faff;
+            color: #667eea;
+        }
+
         h1 {
             margin-top: 0;
             color: #4a4a4a;
@@ -143,7 +199,19 @@
 </head>
 
 <body>
-    <div class="container">
+    <div class="container" style="position: relative;">
+        <!-- Deep Link Menu -->
+        <div class="deep-link-menu">
+            <div class="deep-link-trigger" id="deepLinkTrigger" title="Quick Links">🔗</div>
+            <div class="deep-link-dropdown" id="deepLinkDropdown">
+                <a href="https://app.monarch.com/accounts/details/217197821955556271" target="_blank"
+                    class="deep-link-item">N26 Account</a>
+                <a href="https://app.monarch.com/transactions?isPending=true" target="_blank"
+                    class="deep-link-item">Pending
+                    Txns</a>
+            </div>
+        </div>
+
         <h1>💶 MM Bridge 💶</h1>
         <p style="color: #666; line-height: 1.5;">Share a receipt image to automatically parse and sync it to Monarch
             Money.</p>
@@ -449,6 +517,25 @@
         document.querySelector('form').onsubmit = function () {
             document.getElementById('loadingOverlay').style.display = 'flex';
         };
+
+        // Deep Link Menu Logic
+        const dlTrigger = document.getElementById('deepLinkTrigger');
+        const dlDropdown = document.getElementById('deepLinkDropdown');
+
+        dlTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (dlDropdown.style.display === 'flex') {
+                dlDropdown.style.display = 'none';
+            } else {
+                dlDropdown.style.display = 'flex';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!dlTrigger.contains(e.target) && !dlDropdown.contains(e.target)) {
+                dlDropdown.style.display = 'none';
+            }
+        });
     </script>
 </body>
 
