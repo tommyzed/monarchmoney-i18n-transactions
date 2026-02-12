@@ -376,14 +376,14 @@
 
             <form action="/manual" method="post" id="manualForm">
                 <div style="text-align: left; margin-bottom: 1rem;">
-                    <label style="color: #666; font-size: 0.9rem;">Amount</label>
+                    <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Amount</label>
                     <input type="number" step="0.01" name="amount" required
                         style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
                 </div>
 
                 <!-- Reusing Magic Dropdown Logic Structure for Manual -->
                 <div style="text-align: left; margin-bottom: 1rem;">
-                    <label style="color: #666; font-size: 0.9rem;">Currency</label>
+                    <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Currency</label>
                     <div style="position: relative; margin-top: 0.3rem;">
                         <input type="hidden" name="currency" id="manualCurrencyInput" value="EUR">
                         <div id="manualCurrencyTrigger"
@@ -422,13 +422,13 @@
                 </div>
 
                 <div style="text-align: left; margin-bottom: 1rem;">
-                    <label style="color: #666; font-size: 0.9rem;">Date</label>
+                    <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Date</label>
                     <input type="date" name="date" required id="dateInput"
                         style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; font-family: inherit; box-sizing: border-box;">
                 </div>
 
                 <div style="text-align: left; margin-bottom: 1rem;">
-                    <label style="color: #666; font-size: 0.9rem;">Merchant</label>
+                    <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Merchant</label>
                     <input type="text" name="merchant" required placeholder="e.g. Starbucks"
                         style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
                 </div>
