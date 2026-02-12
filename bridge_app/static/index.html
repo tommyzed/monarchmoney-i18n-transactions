@@ -210,8 +210,6 @@
                     target="_blank" class="deep-link-item">Needs Review</a>
                 <a href="intent://transactions?isPending=true#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%3FisPending%3Dtrue;end"
                     target="_blank" class="deep-link-item">Pending Txns</a>
-                <a href="intent://accounts/detail/217197821955556271#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Faccounts;end"
-                    target="_blank" class="deep-link-item">N26</a>
             </div>
         </div>
 
@@ -538,6 +536,14 @@
             if (!dlTrigger.contains(e.target) && !dlDropdown.contains(e.target)) {
                 dlDropdown.style.display = 'none';
             }
+        });
+
+        // Close dropdown when a link is clicked
+        const dlLinks = document.querySelectorAll('.deep-link-item');
+        dlLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                dlDropdown.style.display = 'none';
+            });
         });
     </script>
 </body>
