@@ -111,11 +111,11 @@ async def activate(s: str):
     return response
 
 # Simple in-memory job store
-# Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str } }
+# Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str, "inputs": dict } }
 jobs = {}
 
 
-async def process_background_job(job_id: str, content: bytes, user_currency: str = None, manual_data: dict = None):
+async def process_background_job(job_id: str, content: bytes, user_currency: str = None, manual_data: dict = None, force_override: bool = False):
     """
     Background task to process the transaction using a fresh DB session.
     """
@@ -138,12 +138,22 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
                 async with AsyncSessionLocal() as db:
                     if manual_data:
                          from .services.orchestrator import process_manual_transaction
-                         result = await process_manual_transaction(manual_data, db, progress_callback=progress_callback)
+                         result = await process_manual_transaction(manual_data, db, progress_callback=progress_callback, force_override=force_override)
                     else:
-                         result = await process_transaction(content, db, progress_callback=progress_callback, user_currency=user_currency)
+                         result = await process_transaction(content, db, progress_callback=progress_callback, user_currency=user_currency, force_override=force_override)
                 
                 # Success
-                jobs[job_id] = {"status": "completed", "result": result, "progress": 100}
+                jobs[job_id] = {
+                    "status": "completed", 
+                    "result": result, 
+                    "progress": 100,
+                    # Store inputs for potential retry/force submit
+                    "inputs": {
+                        "content": content,
+                        "user_currency": user_currency,
+                        "manual_data": manual_data
+                    }
+                }
                 print(f"Job {job_id} completed successfully")
                 return # Exit function on success
                 
@@ -208,6 +218,35 @@ async def get_job_status(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+@app.post("/job/{job_id}/retry")
+async def retry_job(job_id: str, force: bool = False, background_tasks: BackgroundTasks = None):
+    job = jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    inputs = job.get("inputs")
+    if not inputs:
+        raise HTTPException(status_code=400, detail="Cannot retry this job (inputs not saved)")
+        
+    print(f"Retrying job {job_id} with force={force}")
+    
+    # Reset job status
+    jobs[job_id]["status"] = "processing"
+    jobs[job_id]["progress"] = 0
+    jobs[job_id]["step"] = "Retrying..."
+    
+    # Restart background task
+    background_tasks.add_task(
+        process_background_job, 
+        job_id, 
+        inputs.get("content"), 
+        inputs.get("user_currency"), 
+        inputs.get("manual_data"),
+        force_override=force
+    )
+    
+    return {"status": "ok"}
 
 # Reuse the loading page HTML for both routes
 LOADING_HTML = """
@@ -382,12 +421,29 @@ LOADING_HTML = """
                 <p id="errorMessage" style="color: #666; margin: 1rem 0;"></p>
             </div>
             
-            <a href="/" class="btn">Process Another</a>
+            <div style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem;">
+                <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
+                <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #f6ad55, #ed8936); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
+            </div>
         </div>
 
         <script>
             const jobId = "__JOB_ID__";
             const pollInterval = 500; // 0.5 seconds
+            
+            function forceSubmit() {
+                document.getElementById('resultCard').style.display = 'none';
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                document.getElementById('loadingSubtitle').textContent = "forcing submission...";
+                
+                fetch(`/job/${jobId}/retry?force=true`, { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        console.log("Retry started");
+                        setTimeout(checkStatus, pollInterval);
+                    })
+                    .catch(err => showError("Retry failed: " + err));
+            }
             
             function checkStatus() {
                 fetch(`/job/${jobId}`)
@@ -429,7 +485,14 @@ LOADING_HTML = """
                         document.getElementById('cardIcon').textContent = '⚠️';
                         document.getElementById('cardTitle').textContent = 'Already Processed';
                         document.getElementById('cardTitle').style.color = '#856404';
+                        document.getElementById('forceSubmitBtn').style.display = 'inline-block';
                 } else {
+                    // Reset to Success State
+                    document.getElementById('cardIcon').textContent = '🎉';
+                    document.getElementById('cardTitle').textContent = 'Transaction Processed';
+                    document.getElementById('cardTitle').style.color = 'green';
+                    document.getElementById('forceSubmitBtn').style.display = 'none';
+
                     // Confetti!
                     confetti({
                         particleCount: 150,

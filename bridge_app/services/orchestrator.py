@@ -9,7 +9,7 @@ from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, push_transaction
 from starlette.concurrency import run_in_threadpool
 
-async def process_manual_transaction(manual_data: dict, db: AsyncSession, progress_callback=None):
+async def process_manual_transaction(manual_data: dict, db: AsyncSession, progress_callback=None, force_override: bool = False):
     """
     Process a manually entered transaction.
     """
@@ -25,9 +25,9 @@ async def process_manual_transaction(manual_data: dict, db: AsyncSession, progre
     data_string = json.dumps(manual_data, sort_keys=True)
     image_hash = "manual_" + hashlib.sha256(data_string.encode()).hexdigest()
     
-    return await _process_transaction_data(manual_data, image_hash, db, report)
+    return await _process_transaction_data(manual_data, image_hash, db, report, force_override=force_override)
 
-async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None, user_currency: str = None):
+async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None, user_currency: str = None, force_override: bool = False):
     """
     Process a file-based transaction (OCR).
     """
@@ -41,15 +41,16 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     image_hash = hashlib.sha256(content).hexdigest()
     
     # 2. Deduplication Check (Fast check before OCR)
-    await report("Checking for duplicates...", 20)
-    stmt = select(Transaction).where(Transaction.image_hash == image_hash)
-    result = await db.execute(stmt)
-    existing = result.scalar_one_or_none()
-    
-    if existing:
-        print(f"DUPLICATE TRANSACTION DETECTED: Hash={image_hash}")
-        print(f"Existing Data: {existing.parsed_data}")
-        return {"status": "duplicate", "data": existing.parsed_data}
+    if not force_override:
+        await report("Checking for duplicates...", 20)
+        stmt = select(Transaction).where(Transaction.image_hash == image_hash)
+        result = await db.execute(stmt)
+        existing = result.scalar_one_or_none()
+        
+        if existing:
+            print(f"DUPLICATE TRANSACTION DETECTED: Hash={image_hash}")
+            print(f"Existing Data: {existing.parsed_data}")
+            return {"status": "duplicate", "data": existing.parsed_data}
     
     # 3. OCR Extraction
     await report("Scanning receipt with Gemini AI...", 30)
@@ -90,9 +91,9 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
         # Actually logic is in the shared block below.
         pass
 
-    return await _process_transaction_data(data, image_hash, db, report, user_currency)
+    return await _process_transaction_data(data, image_hash, db, report, user_currency, force_override=force_override)
 
-async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSession, report_func, user_currency_override: str = None):
+async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSession, report_func, user_currency_override: str = None, force_override: bool = False):
     """
     Shared logic for processing transaction data, converting currency, pushing to Monarch, and saving.
     """
@@ -101,7 +102,7 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     # For manual, we haven't checked yet. For File, we checked before OCR.
     # It doesn't hurt to check again, but for File it is redundant if we trust previous check.
     # Let's do a quick check if "manual_" prefix involves.
-    if image_hash.startswith("manual_"):
+    if image_hash.startswith("manual_") and not force_override:
         await report_func("Checking for duplicates...", 20)
         stmt = select(Transaction).where(Transaction.image_hash == image_hash)
         result = await db.execute(stmt)
@@ -170,6 +171,13 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     
     # 5. Save Record
     await report_func("Finalizing...", 95)
+    
+    # If forcing, we need to alter the hash to avoid unique constraint violation
+    # We still want to save the record of this specific run.
+    if force_override:
+        import uuid
+        image_hash = f"{image_hash}_forced_{uuid.uuid4().hex[:8]}"
+        
     new_tx = Transaction(image_hash=image_hash, parsed_data=data)
     db.add(new_tx)
     await db.commit()
