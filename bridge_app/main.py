@@ -217,7 +217,9 @@ async def get_job_status(job_id: str):
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return job
+    
+    # Exclude inputs (bytes) to avoid JSON serialization errors
+    return {k: v for k, v in job.items() if k != "inputs"}
 
 @app.post("/job/{job_id}/retry")
 async def retry_job(job_id: str, force: bool = False, background_tasks: BackgroundTasks = None):
