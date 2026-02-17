@@ -83,24 +83,27 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         notes = f"Original Price: {data['currency']} {abs(amount):.2f}"
 
     # Fetch categories to find a valid category_id (required by API)
-    # We'll default to "Uncategorized"
-    category_id = None
-    try:
-        categories_data = await mm.get_transaction_categories()
-        # Search for 'Uncategorized' in the response
-        # Structure is usually categories -> [ {id, name, ...} ]
-        for cat in categories_data.get('categories', []):
-            if cat['name'] == 'Uncategorized':
-                category_id = cat['id']
-                break
-        
-        if not category_id and categories_data.get('categories'):
-            # Fallback to first category if Uncategorized not found
-            category_id = categories_data['categories'][0]['id']
-            print(f"Warning: 'Uncategorized' category not found. Using fallback: {categories_data['categories'][0]['name']}")
+    # Check if provided in data first (from auto-mapping)
+    category_id = data.get('category_id')
 
-    except Exception as e:
-        print(f"Failed to fetch categories: {e}")
+    if not category_id:
+        # We'll default to "Uncategorized"
+        try:
+            categories_data = await mm.get_transaction_categories()
+            # Search for 'Uncategorized' in the response
+            # Structure is usually categories -> [ {id, name, ...} ]
+            for cat in categories_data.get('categories', []):
+                if cat['name'] == 'Uncategorized':
+                    category_id = cat['id']
+                    break
+            
+            if not category_id and categories_data.get('categories'):
+                # Fallback to first category if Uncategorized not found
+                category_id = categories_data['categories'][0]['id']
+                print(f"Warning: 'Uncategorized' category not found. Using fallback: {categories_data['categories'][0]['name']}")
+
+        except Exception as e:
+            print(f"Failed to fetch categories: {e}")
 
     if not category_id:
          raise ValueError("Could not determine a valid category_id for the transaction.")
