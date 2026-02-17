@@ -123,7 +123,8 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         amount=amount, # In account currency (assuming manual is USD/EUR?)
         merchant_name=data['merchant'],
         notes=notes,
-        category_id=category_id
+        category_id=category_id,
+        update_balance=True
     )
     
     # Mark as Needs Review
