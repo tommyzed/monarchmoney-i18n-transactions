@@ -136,6 +136,8 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
             data["merchant"] = mapping.monarch_merchant_name
             if mapping.category_id:
                 data["category_id"] = mapping.category_id
+        else:
+            print(f"No mapping found for '{current_merchant}'")
 
 
     # 3b. Currency Conversion
