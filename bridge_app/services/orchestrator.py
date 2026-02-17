@@ -1,10 +1,11 @@
 import hashlib
 import asyncio
 import json
+from sqlalchemy import func
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import UploadFile, HTTPException
-from ..models import Transaction
+from ..models import Transaction, MerchantMapping
 from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, push_transaction
 from starlette.concurrency import run_in_threadpool
@@ -109,6 +110,35 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
         existing = result.scalar_one_or_none()
         if existing:
             return {"status": "duplicate", "data": existing.parsed_data}
+
+    # 3a. Auto-Mapping Check
+    await report_func("Checking merchant mapping...", 25)
+    
+    # helper for case-insensitive lookup
+    # We do this in python or SQL? SQL is better.
+    # Note: SQLite 'LIKE' is case-insensitive for ASCII, but specific collation might be needed.
+    # ILIKE is postgres.
+    # Let's try to match exact first, then lower.
+    # Actually, we can just start with a simple select where we lower(receipt_merchant_name) == lower(target)
+    # But since we added a unique constraint on receipt_merchant_name, let's assume it's stored effectively.
+    # We can fetch all or just try to match.
+    
+    current_merchant = data.get("merchant", "").strip()
+    if current_merchant:
+        # Case insensitive search
+        stmt = select(MerchantMapping).where(func.lower(MerchantMapping.receipt_merchant_name) == current_merchant.lower())
+        result = await db.execute(stmt)
+        mapping = result.scalar_one_or_none()
+        
+        if mapping:
+            print(f"Applying auto-mapping: '{current_merchant}' -> '{mapping.monarch_merchant_name}'")
+            await report_func(f"Mapped to '{mapping.monarch_merchant_name}'...", 28)
+            data["merchant"] = mapping.monarch_merchant_name
+            if mapping.category_id:
+                data["category_id"] = mapping.category_id
+        else:
+            print(f"No mapping found for '{current_merchant}'")
+
 
     # 3b. Currency Conversion
     raw_currency = str(data.get("currency", "")).upper().strip()
