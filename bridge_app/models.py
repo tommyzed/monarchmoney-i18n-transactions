@@ -15,3 +15,10 @@ class Transaction(Base):
     image_hash = Column(String, unique=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     parsed_data = Column(JSON, nullable=True)
+
+class MerchantMapping(Base):
+    __tablename__ = "merchant_mappings"
+    id = Column(Integer, primary_key=True, index=True)
+    receipt_merchant_name = Column(String, unique=True, index=True)
+    monarch_merchant_name = Column(String)
+    category_id = Column(String, nullable=True)
