@@ -125,14 +125,16 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     
     current_merchant = data.get("merchant", "").strip()
     if current_merchant:
-        # Case insensitive search
-        stmt = select(MerchantMapping).where(func.lower(MerchantMapping.receipt_merchant_name) == current_merchant.lower())
+        # Case insensitive search / Lowercase lookup (since we standardized on lowercase keys)
+        stmt = select(MerchantMapping).where(MerchantMapping.receipt_merchant_name == current_merchant.lower())
         result = await db.execute(stmt)
-        mapping = result.scalar_one_or_none()
+        # Use first() to avoid MultipleResultsFound error if duplicates exist (though PK should prevent exact duplicates, case-insensitivity might match multiple)
+        mapping = result.scalars().first()
         
         if mapping:
             print(f"Applying auto-mapping: '{current_merchant}' -> '{mapping.monarch_merchant_name}'")
             await report_func(f"Mapped to '{mapping.monarch_merchant_name}'...", 28)
+            data["original_merchant_name"] = current_merchant
             data["merchant"] = mapping.monarch_merchant_name
             if mapping.category_name:
                 data["category_name"] = mapping.category_name

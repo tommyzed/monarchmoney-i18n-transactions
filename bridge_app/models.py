@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, JSON
+from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, JSON, Boolean
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -25,4 +25,6 @@ class MerchantMapping(Base):
 class Category(Base):
     __tablename__ = "categories"
     category_name = Column(String, primary_key=True, index=True)
+    monarch_category_id = Column(String, nullable=True) # New column
     category_emoji = Column(String)
+    is_hidden = Column(Boolean, default=False)
