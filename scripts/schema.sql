@@ -1,5 +1,4 @@
 -- Credentials Table
--- USE THIS! (the database.py file is not working)
 CREATE TABLE IF NOT EXISTS credentials (
     id SERIAL PRIMARY KEY,
     email VARCHAR NOT NULL UNIQUE,
@@ -21,10 +20,8 @@ CREATE INDEX IF NOT EXISTS ix_transactions_image_hash ON transactions (image_has
 
 -- Merchant Mappings Table
 CREATE TABLE IF NOT EXISTS merchant_mappings (
-    id SERIAL PRIMARY KEY,
-    receipt_merchant_name VARCHAR NOT NULL UNIQUE,
+    receipt_merchant_name VARCHAR PRIMARY KEY,
     monarch_merchant_name VARCHAR,
-    category_id VARCHAR,
     category_name VARCHAR
 );
 
@@ -32,7 +29,6 @@ CREATE INDEX IF NOT EXISTS ix_merchant_mappings_receipt_merchant_name ON merchan
 
 -- Categories Table
 CREATE TABLE IF NOT EXISTS categories (
-    category_id VARCHAR PRIMARY KEY,
-    category_name VARCHAR,
+    category_name VARCHAR PRIMARY KEY,
     category_emoji VARCHAR
 );

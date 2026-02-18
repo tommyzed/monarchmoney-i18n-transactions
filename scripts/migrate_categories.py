@@ -22,8 +22,7 @@ async def migrate_categories():
             
             await conn.execute(text("""
                 CREATE TABLE categories (
-                    category_id VARCHAR PRIMARY KEY,
-                    category_name VARCHAR,
+                    category_name VARCHAR PRIMARY KEY,
                     category_emoji VARCHAR
                 );
             """))

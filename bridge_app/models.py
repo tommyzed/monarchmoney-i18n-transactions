@@ -18,14 +18,11 @@ class Transaction(Base):
 
 class MerchantMapping(Base):
     __tablename__ = "merchant_mappings"
-    id = Column(Integer, primary_key=True, index=True)
-    receipt_merchant_name = Column(String, unique=True, index=True)
+    receipt_merchant_name = Column(String, unique=True, index=True, primary_key=True)
     monarch_merchant_name = Column(String)
-    category_id = Column(String, nullable=True)
     category_name = Column(String)
 
 class Category(Base):
     __tablename__ = "categories"
-    category_id = Column(String, primary_key=True, index=True)
-    category_name = Column(String)
+    category_name = Column(String, primary_key=True, index=True)
     category_emoji = Column(String)

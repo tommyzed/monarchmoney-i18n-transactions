@@ -17,10 +17,8 @@ async def migrate():
             print("Creating merchant_mappings table...")
             await conn.execute(text("""
                 CREATE TABLE merchant_mappings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    receipt_merchant_name VARCHAR NOT NULL UNIQUE,
+                    receipt_merchant_name VARCHAR PRIMARY KEY,
                     monarch_merchant_name VARCHAR,
-                    category_id VARCHAR,
                     category_name VARCHAR
                 );
             """))
