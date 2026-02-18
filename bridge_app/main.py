@@ -266,8 +266,9 @@ LOADING_HTML = """
         <title>💶 Monarch Money Bridge</title>
         <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
         <style>
+            * { box-sizing: border-box; }
             body { 
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;  
                 padding: 2rem; 
                 text-align: center; 
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -469,7 +470,7 @@ LOADING_HTML = """
 
         <!-- Mapping Modal -->
         <div id="mappingModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
-            <div class="card" style="display: flex; max-width: 400px; padding: 2rem;">
+            <div class="card" style="display: flex; width: 90%; max-width: 380px; padding: 1.5rem;">
                 <h3 style="margin-top: 0; color: #374151;">Edit Mapping</h3>
                 
                 <div style="width: 100%; text-align: left; margin-bottom: 1rem;">
