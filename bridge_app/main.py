@@ -10,6 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
+from .services.monarch import get_monarch_client
+from .models import Credentials, MerchantMapping, Category
+from sqlalchemy.future import select
+from pydantic import BaseModel
+from typing import Optional
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -380,6 +385,34 @@ LOADING_HTML = """
                 border: 1px solid rgba(0, 0, 0, 0.05);
                 box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             }
+            /* Toast Notification */
+            .toast {
+                visibility: hidden;
+                min-width: 250px;
+                background-color: #333;
+                color: #fff;
+                text-align: center;
+                border-radius: 8px;
+                padding: 12px;
+                position: fixed;
+                z-index: 3000;
+                left: 50%;
+                bottom: 30px;
+                transform: translateX(-50%);
+                font-size: 0.95rem;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                opacity: 0;
+                transition: opacity 0.3s, bottom 0.3s;
+            }
+
+            .toast.show {
+                visibility: visible;
+                opacity: 1;
+                bottom: 50px;
+            }
+            
+            .toast.success { background-color: #10B981; } /* Emerald 500 */
+            .toast.error { background-color: #EF4444; } /* Red 500 */
         </style>
     </head>
     <body>
@@ -428,15 +461,72 @@ LOADING_HTML = """
             </div>
             
             <div style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem;">
+                <button id="editMappingBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #4b5563, #374151);" onclick="openMappingModal()">Edit Mapping</button>
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #f6ad55, #ed8936); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
         </div>
 
+        <!-- Mapping Modal -->
+        <div id="mappingModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+            <div class="card" style="display: flex; max-width: 400px; padding: 2rem;">
+                <h3 style="margin-top: 0; color: #374151;">Edit Mapping</h3>
+                
+                <div style="width: 100%; text-align: left; margin-bottom: 1rem;">
+                    <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 4px;">Receipt Merchant (case insensitive)</label>
+                    <input type="text" id="mapReceiptMerchant" readonly style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f3f4f6; color: #6b7280;">
+                </div>
+
+                <div style="width: 100%; text-align: left; margin-bottom: 1rem;">
+                    <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 4px;">Monarch Merchant Name</label>
+                    <input type="text" id="mapMonarchMerchant" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                </div>
+
+                <div style="width: 100%; text-align: left; margin-bottom: 1.5rem;">
+                    <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 4px;">Category</label>
+                    <select id="mapCategory" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white;">
+                        <option value="">Loading categories...</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <button onclick="deleteMapping()" id="deleteMappingBtn" style="padding: 8px 16px; border: 1px solid #fee2e2; background: #fee2e2; border-radius: 6px; cursor: pointer; color: #991b1b; display: none;">Delete</button>
+                    <div style="display: flex; gap: 10px; margin-left: auto;">
+                        <button onclick="closeMappingModal()" style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; color: #374151;">Cancel</button>
+                        <button onclick="saveMapping()" style="padding: 8px 16px; border: none; background: #4f46e5; color: white; border-radius: 6px; cursor: pointer;">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteConfirmModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2001; justify-content: center; align-items: center;">
+            <div class="card" style="display: flex; max-width: 350px; padding: 2rem; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🗑️</div>
+                <h3 style="margin-top: 0; color: #1f2937; margin-bottom: 0.5rem;">Delete Mapping?</h3>
+                <p style="color: #6b7280; margin-bottom: 1.5rem;">Are you sure you want to delete this mapping rule? Future transactions from this merchant will not be auto-mapped.</p>
+                
+                <div style="display: flex; gap: 10px; width: 100%; justify-content: center;">
+                    <button onclick="closeDeleteConfirm()" style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; color: #374151;">Cancel</button>
+                    <button onclick="confirmDeleteMapping()" style="padding: 8px 16px; border: none; background: #ef4444; color: white; border-radius: 6px; cursor: pointer;">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast">Mapping saved!</div>
+
         <script>
             const jobId = "__JOB_ID__";
             const pollInterval = 500; // 0.5 seconds
             
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById("toast");
+                toast.textContent = message;
+                toast.className = "toast show " + type; // Reset class
+                setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+            }
+
             function forceSubmit() {
                 document.getElementById('resultCard').style.display = 'none';
                 document.getElementById('loadingOverlay').style.display = 'flex';
@@ -523,10 +613,202 @@ LOADING_HTML = """
                     amountHtml += `<br><span style="font-size: 0.8em; color: #777;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
                 }
                 
+                if (data.original_merchant_name) {
+                    document.getElementById('editMappingBtn').textContent = "Edit Mapping";
+                } else {
+                    document.getElementById('editMappingBtn').textContent = "Add Mapping";
+                }
+
                 document.getElementById('amountValue').innerHTML = amountHtml;
                 document.getElementById('merchantValue').textContent = data.merchant;
                 document.getElementById('dateValue').textContent = data.date;
-                document.getElementById('categoryValue').textContent = (data.category_emoji ? data.category_emoji + " " : "") + (data.category_name || "Uncategorized");
+                
+                // Emoji + Category Name
+                let catDisplay = data.category_name || "--";
+                if (data.category_emoji) {
+                    catDisplay = data.category_emoji + " " + catDisplay;
+                }
+                document.getElementById('categoryValue').textContent = catDisplay;
+                
+                window.currentTransactionData = data;
+                // Prefetch categories
+                fetchCategories();
+            }
+
+
+
+            async function confirmDeleteMapping() {
+                closeDeleteConfirm(); // Close confirmation
+                
+                const receiptName = document.getElementById('mapReceiptMerchant').value;
+                const btn = document.getElementById('deleteMappingBtn');
+                const origText = btn.textContent;
+                btn.textContent = "Deleting...";
+                btn.disabled = true;
+                
+                try {
+                     const res = await fetch('/api/mapping', {
+                        method: 'DELETE',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ receipt_merchant_name: receiptName })
+                    });
+                    
+                    if (res.ok) {
+                         showToast("Mapping deleted.", "success");
+                         closeMappingModal(); // Close main modal
+                         
+                         document.getElementById('editMappingBtn').textContent = "Add Mapping";
+                         if (window.currentTransactionData) {
+                             delete window.currentTransactionData.original_merchant_name;
+                         }
+                    } else {
+                        const err = await res.json();
+                        showToast("Error deleting: " + err.detail, "error");
+                    }
+                } catch (e) {
+                    showToast("Network error: " + e, "error");
+                } finally {
+                    btn.textContent = origText;
+                    btn.disabled = false;
+                }
+            }
+            
+            async function saveMapping() {
+
+                const payload = {
+                    receipt_merchant_name: document.getElementById('mapReceiptMerchant').value,
+                    monarch_merchant_name: document.getElementById('mapMonarchMerchant').value,
+                    category_name: document.getElementById('mapCategory').value
+                };
+
+                if (!payload.category_name) {
+                    showToast("Please select a category", "error");
+                    return;
+                }
+
+                const btn = document.querySelector('#mappingModal button:last-child');
+                const origText = btn.textContent;
+                btn.textContent = "Saving...";
+                btn.disabled = true;
+
+                try {
+                    const res = await fetch('/api/mapping', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        showToast("Mapping saved! Future transactions will be auto-mapped.", "success");
+                        closeMappingModal();
+                        
+                        // Update UI Data State
+                        if (!window.currentTransactionData.original_merchant_name) {
+                            window.currentTransactionData.original_merchant_name = payload.receipt_merchant_name;
+                        }
+                        window.currentTransactionData.merchant = payload.monarch_merchant_name;
+                        window.currentTransactionData.category_name = payload.category_name;
+                        
+                        // Update Edit/Add button text immediately
+                        document.getElementById('editMappingBtn').textContent = "Edit Mapping";
+
+                        // Update current UI text
+                        document.getElementById('merchantValue').textContent = payload.monarch_merchant_name;
+                        
+                        // Safe category lookup
+                        let emoji = "";
+                        if (cachedCategories) {
+                             const catObj = cachedCategories.find(c => c.name === payload.category_name);
+                             if (catObj) emoji = catObj.emoji;
+                        }
+                        document.getElementById('categoryValue').textContent = (emoji ? emoji + " " : "") + payload.category_name;
+                    } else {
+                        const err = await res.json();
+                        showToast("Error saving: " + err.detail, "error");
+                    }
+                } catch (e) {
+                    showToast("Network error: " + e, "error");
+                } finally {
+                    btn.textContent = origText;
+                    btn.disabled = false;
+                }
+            }
+            
+            // --- Mapping Logic ---
+            let cachedCategories = null;
+
+            async function fetchCategories() {
+                if (cachedCategories) return;
+                try {
+                    const res = await fetch('/api/categories');
+                    const data = await res.json();
+                    cachedCategories = data.categories;
+                    populateCategoryDropdown();
+                } catch (e) {
+                    console.error("Failed to fetch categories", e);
+                }
+            }
+
+            function populateCategoryDropdown() {
+                const select = document.getElementById('mapCategory');
+                select.innerHTML = '<option value="">Select Category</option>';
+                if (!cachedCategories) return;
+
+                cachedCategories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.name;
+                    opt.textContent = (cat.emoji ? cat.emoji + " " : "") + cat.name;
+                    select.appendChild(opt);
+                });
+            }
+
+            function openMappingModal() {
+                const data = window.currentTransactionData;
+                if (!data) return;
+
+                // Use the original merchant name if it exists (meaning it was auto-mapped), 
+                // otherwise use the current merchant name (OCR/Manual)
+                const receiptName = data.original_merchant_name || data.merchant;
+
+                document.getElementById('mapReceiptMerchant').value = receiptName;
+                document.getElementById('mapMonarchMerchant').value = data.merchant; // Default to current display name
+                
+                // Show Delete button mostly if we think a mapping exists (e.g. original name is present)
+                // Or we could check if mapping endpoint returns existence?
+                // Simpler: If original_merchant_name is present, it means it WAS mapped, so we can delete it.
+                // If it wasn't mapped, there's nothing to delete.
+                if (data.original_merchant_name) {
+                    document.getElementById('deleteMappingBtn').style.display = 'block';
+                } else {
+                    document.getElementById('deleteMappingBtn').style.display = 'none';
+                }
+                
+                // Select current category
+                if (data.category_name) {
+                     const select = document.getElementById('mapCategory');
+                     // Try to match exact
+                     for(let i=0; i<select.options.length; i++) {
+                         if (select.options[i].value === data.category_name) {
+                             select.selectedIndex = i;
+                             break;
+                         }
+                     }
+                }
+
+                document.getElementById('mappingModal').style.display = 'flex';
+            }
+
+            function deleteMapping() {
+                // Open Custom Confirmation Modal
+                document.getElementById('deleteConfirmModal').style.display = 'flex';
+            }
+            
+            function closeDeleteConfirm() {
+                document.getElementById('deleteConfirmModal').style.display = 'none';
+            }
+
+            function closeMappingModal() {
+                document.getElementById('mappingModal').style.display = 'none';
             }
             
             function showError(msg) {
@@ -606,5 +888,108 @@ async def handle_share(
     except Exception as e:
         print(f"Error starting job: {e}")
         return HTMLResponse(content="Error starting job", status_code=500)
+
+class MappingRequest(BaseModel):
+    receipt_merchant_name: str
+    monarch_merchant_name: str
+    category_name: str
+
+@app.get("/api/categories")
+async def get_categories(db: AsyncSession = Depends(get_db)):
+    """
+    Fetch categories from Monarch (using cached session) and local DB.
+    """
+    try:
+        # 1. Try to get from local DB first (faster)
+        local_cats_result = await db.execute(select(Category).where(Category.is_hidden == False))
+        local_cats = local_cats_result.scalars().all()
+        
+        if local_cats:
+             # Sort by name
+             local_cats.sort(key=lambda x: x.category_name.lower())
+             return {"categories": [{"name": c.category_name, "emoji": c.category_emoji} for c in local_cats]}
+
+        # 2. Fallback to Monarch API (if local empty)
+        creds_result = await db.execute(select(Credentials))
+        creds = creds_result.scalars().first()
+        if not creds:
+             raise HTTPException(status_code=400, detail="No credentials found")
+             
+        mm = await get_monarch_client(db, creds.id)
+        cat_data = await mm.get_transaction_categories()
+        
+        # Transform for frontend
+        categories = []
+        for c in cat_data.get('categories', []):
+             categories.append({"name": c['name'], "emoji": ""}) # API doesn't give emoji easily here?
+        
+        # Sort by name
+        categories.sort(key=lambda x: x['name'].lower())
+             
+        return {"categories": categories}
+    except Exception as e:
+        print(f"Error fetching categories: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/mapping")
+async def save_mapping(mapping: MappingRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Create or update a merchant mapping.
+    """
+    try:
+        # Enforce lowercase for the key
+        lower_receipt_name = mapping.receipt_merchant_name.lower()
+        
+        # Check if exists
+        stmt = select(MerchantMapping).where(MerchantMapping.receipt_merchant_name == lower_receipt_name)
+        result = await db.execute(stmt)
+        existing = result.scalar_one_or_none()
+        
+        if existing:
+            existing.monarch_merchant_name = mapping.monarch_merchant_name
+            existing.category_name = mapping.category_name
+        else:
+            new_mapping = MerchantMapping(
+                receipt_merchant_name=lower_receipt_name,
+                monarch_merchant_name=mapping.monarch_merchant_name,
+                category_name=mapping.category_name
+            )
+            db.add(new_mapping)
+            
+        await db.commit()
+        return {"status": "success"}
+    except Exception as e:
+        await db.rollback()
+        print(f"Error saving mapping: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class DeleteMappingRequest(BaseModel):
+    receipt_merchant_name: str
+
+@app.delete("/api/mapping")
+async def delete_mapping(req: DeleteMappingRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Delete a merchant mapping.
+    """
+    try:
+        # Enforce lowercase for the key
+        lower_receipt_name = req.receipt_merchant_name.lower()
+        
+        stmt = select(MerchantMapping).where(MerchantMapping.receipt_merchant_name == lower_receipt_name)
+        result = await db.execute(stmt)
+        existing = result.scalar_one_or_none()
+        
+        if existing:
+            await db.delete(existing)
+            await db.commit()
+            return {"status": "success", "message": "Mapping deleted"}
+        else:
+             raise HTTPException(status_code=404, detail="Mapping not found")
+             
+    except Exception as e:
+        await db.rollback()
+        print(f"Error deleting mapping: {e}")
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=str(e))
 
 app.mount("/", StaticFiles(directory="bridge_app/static", html=True), name="static")

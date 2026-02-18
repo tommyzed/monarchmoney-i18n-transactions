@@ -30,5 +30,7 @@ CREATE INDEX IF NOT EXISTS ix_merchant_mappings_receipt_merchant_name ON merchan
 -- Categories Table
 CREATE TABLE IF NOT EXISTS categories (
     category_name VARCHAR PRIMARY KEY,
-    category_emoji VARCHAR
+    monarch_category_id VARCHAR,
+    category_emoji VARCHAR,
+    is_hidden BOOLEAN DEFAULT FALSE
 );
