@@ -414,6 +414,10 @@ LOADING_HTML = """
                     <span id="dateValue" class="value">--</span>
                 </div>
                 <div class="detail-row">
+                    <span class="label">Category</span>
+                    <span id="categoryValue" class="value">--</span>
+                </div>
+                <div class="detail-row">
                     <span class="label">Added to</span>
                     <span id="accountValue" class="value">__MM_ACCOUNT__</span>
                 </div>
@@ -522,6 +526,7 @@ LOADING_HTML = """
                 document.getElementById('amountValue').innerHTML = amountHtml;
                 document.getElementById('merchantValue').textContent = data.merchant;
                 document.getElementById('dateValue').textContent = data.date;
+                document.getElementById('categoryValue').textContent = (data.category_emoji ? data.category_emoji + " " : "") + (data.category_name || "Uncategorized");
             }
             
             function showError(msg) {
