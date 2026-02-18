@@ -20,7 +20,8 @@ async def migrate():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     receipt_merchant_name VARCHAR NOT NULL UNIQUE,
                     monarch_merchant_name VARCHAR,
-                    category_id VARCHAR
+                    category_id VARCHAR,
+                    category_name VARCHAR
                 );
             """))
             await conn.execute(text("""

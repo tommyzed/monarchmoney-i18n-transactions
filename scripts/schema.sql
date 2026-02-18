@@ -24,7 +24,15 @@ CREATE TABLE IF NOT EXISTS merchant_mappings (
     id SERIAL PRIMARY KEY,
     receipt_merchant_name VARCHAR NOT NULL UNIQUE,
     monarch_merchant_name VARCHAR,
-    category_id VARCHAR
+    category_id VARCHAR,
+    category_name VARCHAR
 );
 
 CREATE INDEX IF NOT EXISTS ix_merchant_mappings_receipt_merchant_name ON merchant_mappings (receipt_merchant_name);
+
+-- Categories Table
+CREATE TABLE IF NOT EXISTS categories (
+    category_id VARCHAR PRIMARY KEY,
+    category_name VARCHAR,
+    category_emoji VARCHAR
+);

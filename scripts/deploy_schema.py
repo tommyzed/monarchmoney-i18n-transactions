@@ -18,7 +18,7 @@ if not url:
 print(f"Deploying schema to: {url.split('@')[-1]}") # Mask password
 
 from bridge_app.database import engine, Base
-from bridge_app.models import Credentials, Transaction
+from bridge_app.models import Credentials, Transaction, MerchantMapping, Category
 
 async def deploy():
     async with engine.begin() as conn:

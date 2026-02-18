@@ -136,6 +136,8 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
             data["merchant"] = mapping.monarch_merchant_name
             if mapping.category_id:
                 data["category_id"] = mapping.category_id
+            if mapping.category_name:
+                data["category_name"] = mapping.category_name
         else:
             print(f"No mapping found for '{current_merchant}'")
 
@@ -198,6 +200,19 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
             data['monarch_tx_id'] = tx_id
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Monarch Error: {str(e)}")
+    
+    
+    # 4b. Fetch Category Emoji
+    try:
+        if data.get("category_name"):
+            from ..models import Category
+            stmt = select(Category).where(Category.category_name == data["category_name"])
+            result = await db.execute(stmt)
+            cat = result.scalar_one_or_none()
+            if cat and cat.category_emoji:
+                data["category_emoji"] = cat.category_emoji
+    except Exception as e:
+        print(f"Failed to fetch category emoji: {e}")
     
     # 5. Save Record
     await report_func("Finalizing...", 95)
