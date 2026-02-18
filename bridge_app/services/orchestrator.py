@@ -134,8 +134,6 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
             print(f"Applying auto-mapping: '{current_merchant}' -> '{mapping.monarch_merchant_name}'")
             await report_func(f"Mapped to '{mapping.monarch_merchant_name}'...", 28)
             data["merchant"] = mapping.monarch_merchant_name
-            if mapping.category_id:
-                data["category_id"] = mapping.category_id
             if mapping.category_name:
                 data["category_name"] = mapping.category_name
         else:
