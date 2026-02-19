@@ -293,7 +293,7 @@ LOADING_HTML = """
                 flex-direction: column;
                 align-items: center;
             }
-            .title { font-weight: bold; font-size: 1.5rem; margin-bottom: 1rem; color: green; }
+            .title { font-weight: bold; font-size: 1.5rem; margin-top: 0; margin-bottom: 1rem; color: green; }
             .btn { 
                 background: linear-gradient(to right, #667eea, #764ba2); 
                 color: #fff; 
@@ -431,18 +431,19 @@ LOADING_HTML = """
         
         <!-- Success/duplicate/Error Card (Hidden initially) -->
         <div id="resultCard" class="card">
-            <div id="cardIcon" style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+            <div id="cardIcon" style="font-size: 3rem; margin-bottom: 0.2rem;">🎉</div>
             <p id="cardTitle" class="title">Transaction Processed</p>
             
             <div id="detailsContainer">
                 <div class="detail-row">
-                    <span class="label">Amount</span>
-                    <span id="amountValue" class="value">--</span>
-                </div>
-                <div class="detail-row">
                     <span class="label">Merchant</span>
                     <span id="merchantValue" class="value">--</span>
                 </div>
+                <div class="detail-row">
+                    <span class="label">Amount</span>
+                    <span id="amountValue" class="value">--</span>
+                </div>
+
                 <div class="detail-row">
                     <span class="label">Date</span>
                     <span id="dateValue" class="value">--</span>
@@ -462,9 +463,9 @@ LOADING_HTML = """
             </div>
             
             <div style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem;">
-                <button id="editMappingBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #4b5563, #374151);" onclick="openMappingModal()">Edit Mapping</button>
+                <button id="editMappingBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #fcad03, #f76b1c);" onclick="openMappingModal()">Edit Mapping</button>
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
-                <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #f6ad55, #ed8936); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
+                <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
         </div>
 
@@ -771,7 +772,7 @@ LOADING_HTML = """
                 // otherwise use the current merchant name (OCR/Manual)
                 const receiptName = data.original_merchant_name || data.merchant;
 
-                document.getElementById('mapReceiptMerchant').value = receiptName;
+                document.getElementById('mapReceiptMerchant').value = String(receiptName).toLowerCase();
                 document.getElementById('mapMonarchMerchant').value = data.merchant; // Default to current display name
                 
                 // Show Delete button mostly if we think a mapping exists (e.g. original name is present)
