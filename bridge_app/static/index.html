@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sriracha&display=swap" rel="stylesheet">
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
@@ -13,7 +16,7 @@
     </script>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Sriracha', cursive;
             padding: 2rem;
             text-align: center;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -100,8 +103,10 @@
 
         h1 {
             margin-top: 0;
-            color: #4a4a4a;
-            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: #d35400;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.3);
         }
 
         /* Custom File Input */
@@ -146,6 +151,10 @@
             width: 100%;
             /* Full width button on mobile */
             box-sizing: border-box;
+        }
+
+        #resultCard .btn {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .btn:hover {
@@ -222,7 +231,7 @@
                 <input type="file" name="file" id="fileInput" accept="image/*" required style="display: none;">
 
                 <label for="fileInput" class="file-label">
-                    <span id="fileName">📁 Tap to Choose Receipt</span>
+                    <span id="fileName">📂 Tap to Choose Receipt</span>
                 </label>
 
                 <!-- Magical Currency Selector -->

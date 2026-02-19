@@ -264,11 +264,14 @@ LOADING_HTML = """
         <link rel="manifest" href="/manifest.json">
         <link rel="icon" type="image/png" href="/icon.png">
         <title>💶 Monarch Money Bridge</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Sriracha&display=swap" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
         <style>
             * { box-sizing: border-box; }
             body { 
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;  
+                font-family: 'Sriracha', cursive;  
                 padding: 2rem; 
                 text-align: center; 
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -308,6 +311,10 @@ LOADING_HTML = """
                 font-weight: bold;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
                 transition: transform 0.2s;
+                font-family: inherit;
+            }
+            #resultCard .btn {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             }
             .btn:hover { transform: translateY(-2px); }
             .detail-row { display: flex; justify-content: space-between; align-items: center; margin: 0.25rem auto; border-bottom: 1px solid #eee; padding-bottom: 0.25rem; width: 100%; gap: 1rem; }
