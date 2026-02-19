@@ -18,9 +18,11 @@ Monarch Money is amazing, but it lacks native support for European banks and cur
     *   Credentials encrypted at rest (Fernet).
     *   No logs of sensitive financial data.
 *   **🤖 Smart Monarch Integration**:
-    *   Auto-tags transactions (`Imported by MM Bridge`).
-    *   Marks as `Needs Review` for easy workflows.
-    *   Stores `Original Amount: €XX.XX` and the ForEx Rate in the notes (e.g., `USD/GBP`).
+    *   **Auto-tags transactions** (`Imported by MM Bridge`).
+    *   **Auto-Mapping Engine**: Define rules to automatically rename merchants and assign categories.
+    *   **Edit Mapping**: Correct merchant names and categories on the fly via a new modal.
+    *   **Sync Categories**: Import your Monarch categories (including emojis 🍔) for easy mapping.
+    *   **Stores Metadata**: Saves `Original Amount: €XX.XX`, ForEx Rate, and original merchant name in notes.
 
 ## 🖼 Demo
 ![LatestMMDemo-ezgif com-speed](https://github.com/user-attachments/assets/b4fefae9-ff0d-4cf5-a2b3-71befc6e29d8)
@@ -132,6 +134,7 @@ To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
 
 *   **`python scripts/reset_transactions.py`**: Clears the local "processed" cache. Useful if you want to re-upload a receipt that was previously marked as duplicate.
 *   **`python scripts/interactive_login.py`**: Re-authenticate if your session expires.
+*   **`python scripts/sync_categories.py`**: Imports categories (and emojis) from your Monarch account to the local database for mapping.
 
 ## 🔮 Roadmap
 
