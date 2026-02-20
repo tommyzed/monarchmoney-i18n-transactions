@@ -285,7 +285,7 @@ LOADING_HTML = """
                 color: #333;
             }
             .card { 
-                background: rgba(209, 250, 229, 0.98);
+                background: linear-gradient(135deg, #fcc5a7 0%, #fcc5a7 100%);
                 padding: 2.5rem;
                 border-radius: 20px;
                 box-shadow: 0 10px 25px rgba(0,0,0,0.2);
@@ -419,8 +419,8 @@ LOADING_HTML = """
                 bottom: 50px;
             }
             
-            .toast.success { background-color: #10B981; } /* Emerald 500 */
-            .toast.error { background-color: #EF4444; } /* Red 500 */
+            .toast.success { background-color: #be185d; } /* Dark Pink */
+            .toast.error { background-color: #9f1239; } /* Darker Pink/Red for error */
         </style>
     </head>
     <body>
@@ -687,7 +687,8 @@ LOADING_HTML = """
                 const payload = {
                     receipt_merchant_name: document.getElementById('mapReceiptMerchant').value,
                     monarch_merchant_name: document.getElementById('mapMonarchMerchant').value,
-                    category_name: document.getElementById('mapCategory').value
+                    category_name: document.getElementById('mapCategory').value,
+                    monarch_tx_id: window.currentTransactionData?.monarch_tx_id
                 };
 
                 if (!payload.category_name) {
@@ -708,7 +709,7 @@ LOADING_HTML = """
                     });
 
                     if (res.ok) {
-                        showToast("Mapping saved! Future transactions will be auto-mapped.", "success");
+                        showToast("Mapping saved! Transaction updated in Monarch.", "success");
                         closeMappingModal();
                         
                         // Update UI Data State
@@ -902,6 +903,7 @@ class MappingRequest(BaseModel):
     receipt_merchant_name: str
     monarch_merchant_name: str
     category_name: str
+    monarch_tx_id: Optional[str] = None
 
 @app.get("/api/categories")
 async def get_categories(db: AsyncSession = Depends(get_db)):
@@ -966,6 +968,25 @@ async def save_mapping(mapping: MappingRequest, db: AsyncSession = Depends(get_d
             db.add(new_mapping)
             
         await db.commit()
+
+        if mapping.monarch_tx_id:
+            # Try to get the monarch_category_id from local DB
+            cat_stmt = select(Category).where(Category.category_name == mapping.category_name)
+            cat_result = await db.execute(cat_stmt)
+            category = cat_result.scalar_one_or_none()
+            
+            category_id = category.monarch_category_id if category else None
+
+            creds_result = await db.execute(select(Credentials))
+            creds = creds_result.scalars().first()
+            if creds:
+                mm = await get_monarch_client(db, creds.id)
+                await mm.update_transaction(
+                    transaction_id=mapping.monarch_tx_id,
+                    merchant_name=mapping.monarch_merchant_name,
+                    category_id=category_id
+                )
+
         return {"status": "success"}
     except Exception as e:
         await db.rollback()
