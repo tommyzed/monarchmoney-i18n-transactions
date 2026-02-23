@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, JSON, Boolean
+from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, JSON, Boolean, Float
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -28,3 +28,14 @@ class Category(Base):
     monarch_category_id = Column(String, nullable=True) # New column
     category_emoji = Column(String)
     is_hidden = Column(Boolean, default=False)
+
+class FireSettings(Base):
+    __tablename__ = "fire_settings"
+    id = Column(Integer, primary_key=True, default=1)
+    current_age = Column(Integer, default=30)
+    retirement_age = Column(Integer, default=55)
+    annual_contribution = Column(Integer, default=50000)
+    annual_retirement_spending = Column(Integer, default=40000)
+    risk_tolerance = Column(String, default="moderate")  # "lean", "moderate", "fat"
+    inflation_rate = Column(Float, default=0.03)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

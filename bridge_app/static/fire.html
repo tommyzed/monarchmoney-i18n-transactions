@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>🔥 Ignite — FIRE Dashboard</title>
+    <meta name="description"
+        content="Financial Independence, Retire Early — Monte Carlo retirement simulation powered by your Monarch Money data.">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sriracha&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --bg-card-hover: rgba(255, 255, 255, 0.07);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f0f0f5;
+            --text-secondary: rgba(255, 255, 255, 0.55);
+            --text-muted: rgba(255, 255, 255, 0.35);
+            --accent-fire: #ff6b35;
+            --accent-fire-glow: rgba(255, 107, 53, 0.3);
+            --accent-green: #4ade80;
+            --accent-blue: #60a5fa;
+            --accent-purple: #a78bfa;
+            --accent-amber: #fbbf24;
+            --accent-red: #f87171;
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Ambient background glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -40%;
+            left: -20%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(ellipse, rgba(255, 107, 53, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -30%;
+            right: -20%;
+            width: 70%;
+            height: 70%;
+            background: radial-gradient(ellipse, rgba(99, 102, 241, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header */
+        .header {
+            position: relative;
+            z-index: 10;
+            padding: 1.5rem 1.5rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+
+        .header-title {
+            font-family: 'Sriracha', cursive;
+            font-size: 1.4rem;
+            background: linear-gradient(135deg, #ff6b35, #ff8f65);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .settings-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .settings-btn:hover {
+            background: var(--bg-card-hover);
+            transform: rotate(30deg);
+        }
+
+        /* Main Content */
+        .main {
+            position: relative;
+            z-index: 10;
+            padding: 1.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Metric Cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.2rem 1rem;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+
+        .metric-card:nth-child(1)::before {
+            background: linear-gradient(90deg, var(--accent-green), transparent);
+        }
+
+        .metric-card:nth-child(2)::before {
+            background: linear-gradient(90deg, var(--accent-fire), transparent);
+        }
+
+        .metric-card:nth-child(3)::before {
+            background: linear-gradient(90deg, var(--accent-blue), transparent);
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .metric-sub {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .color-green {
+            color: var(--accent-green);
+        }
+
+        .color-fire {
+            color: var(--accent-fire);
+        }
+
+        .color-blue {
+            color: var(--accent-blue);
+        }
+
+        /* Chart Section */
+        .chart-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .chart-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        #coneChart {
+            width: 100%;
+            height: 350px;
+        }
+
+        /* Portfolio Summary */
+        .portfolio-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .portfolio-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .portfolio-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .portfolio-total {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-fire);
+        }
+
+        .account-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .account-row:last-child {
+            border-bottom: none;
+        }
+
+        .account-name {
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+
+        .account-type {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .account-balance {
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .balance-positive {
+            color: var(--accent-green);
+        }
+
+        .balance-negative {
+            color: var(--accent-red);
+        }
+
+        /* Spend Info */
+        .spend-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            color: var(--accent-amber);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Loading State */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-flame {
+            font-size: 4rem;
+            animation: flicker 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes flicker {
+            0% {
+                transform: scale(1) rotate(-2deg);
+                opacity: 0.9;
+            }
+
+            50% {
+                transform: scale(1.1) rotate(2deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1) rotate(-1deg);
+                opacity: 0.85;
+            }
+        }
+
+        .loading-text {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .loading-sub {
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .loading-bar-track {
+            width: 200px;
+            height: 3px;
+            background: var(--border);
+            border-radius: 4px;
+            margin-top: 1.5rem;
+            overflow: hidden;
+        }
+
+        .loading-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-fire), var(--accent-amber));
+            width: 0%;
+            border-radius: 4px;
+            animation: loading-shimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes loading-shimmer {
+            0% {
+                width: 0%;
+            }
+
+            50% {
+                width: 70%;
+            }
+
+            100% {
+                width: 100%;
+            }
+        }
+
+        /* Error State */
+        .error-container {
+            display: none;
+            text-align: center;
+            padding: 3rem 1.5rem;
+        }
+
+        .error-container .error-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .error-container .error-msg {
+            color: var(--accent-red);
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+
+        .retry-btn {
+            background: linear-gradient(135deg, var(--accent-fire), #ff8f65);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .retry-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Settings Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-card {
+            background: #1a1a2e;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+
+        .modal-title {
+            font-family: 'Sriracha', cursive;
+            font-size: 1.3rem;
+            color: var(--accent-fire);
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            border-color: var(--accent-fire);
+        }
+
+        .form-select option {
+            background: #1a1a2e;
+            color: var(--text-primary);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--accent-fire), #ff8f65);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px var(--accent-fire-glow);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .metrics-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .metric-value {
+                font-size: 1.4rem;
+            }
+
+            .metric-label {
+                font-size: 0.6rem;
+            }
+
+            .metric-sub {
+                font-size: 0.62rem;
+            }
+
+            .metric-card {
+                padding: 1rem 0.6rem;
+            }
+
+            #coneChart {
+                height: 280px;
+            }
+
+            .header-title {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Animate in */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.6s ease forwards;
+        }
+
+        .fade-up:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .fade-up:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .fade-up:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .fade-up:nth-child(4) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .footer a {
+            color: var(--accent-fire);
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-flame">🔥</div>
+        <div class="loading-text">Running 10,000 simulations...</div>
+        <div class="loading-sub">Crunching your Monarch data with Monte Carlo</div>
+        <div class="loading-bar-track">
+            <div class="loading-bar-fill"></div>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-container" id="errorContainer">
+        <div class="error-icon">💥</div>
+        <div class="error-msg" id="errorMsg">Something went wrong.</div>
+        <button class="retry-btn" onclick="runSimulation()">🔄 Retry Simulation</button>
+        <div style="margin-top: 1rem;">
+            <a href="/" style="color: var(--text-muted); font-size: 0.8rem; text-decoration: none;">← Back to Bridge</a>
+        </div>
+    </div>
+
+    <!-- Main Dashboard (hidden until data loads) -->
+    <div id="dashboard" style="display: none;">
+        <div class="header">
+            <div class="header-left">
+                <a href="/" class="back-btn" title="Back to Bridge">←</a>
+                <div class="header-title">🔥 Ignite</div>
+            </div>
+            <div class="settings-btn" id="settingsBtn" title="Settings">⚙️</div>
+        </div>
+
+        <div class="main">
+            <!-- Spend Badge -->
+            <div class="fade-up" style="text-align: center;">
+                <div class="spend-badge" id="spendBadge">
+                    📊 Avg monthly spend: <span id="monthlySpend">--</span>
+                </div>
+            </div>
+
+            <!-- Metric Cards -->
+            <div class="metrics-grid fade-up">
+                <div class="metric-card">
+                    <div class="metric-label">Retirement Score</div>
+                    <div class="metric-value color-green" id="probScore">--</div>
+                    <div class="metric-sub" id="probSub">out of 100%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">FIRE Date</div>
+                    <div class="metric-value color-fire" id="fireAge">--</div>
+                    <div class="metric-sub" id="fireSub">estimated year</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Safe Withdrawal</div>
+                    <div class="metric-value color-blue" id="swrValue">--</div>
+                    <div class="metric-sub" id="swrSub">annual rate</div>
+                </div>
+            </div>
+
+            <!-- Cone Chart -->
+            <div class="chart-section fade-up">
+                <div class="chart-title">📈 Portfolio Projections — Cone of Uncertainty</div>
+                <div id="coneChart"></div>
+            </div>
+
+            <!-- Account Breakdown -->
+            <div class="portfolio-section fade-up">
+                <div class="portfolio-header">
+                    <div class="portfolio-title">💼 Net Worth Breakdown</div>
+                    <div class="portfolio-total" id="portfolioTotal">--</div>
+                </div>
+                <div id="accountList"></div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                10,000 Monte Carlo iterations · Historical S&P 500 returns · <a href="#"
+                    onclick="document.getElementById('settingsModal').style.display='flex'; return false;">Edit
+                    assumptions</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-card">
+            <div class="modal-close" id="modalClose">✕</div>
+            <div class="modal-title">⚙️ Simulation Settings</div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Current Age</label>
+                    <input type="number" class="form-input" id="settAge" min="18" max="80">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Retirement Age</label>
+                    <input type="number" class="form-input" id="settRetireAge" min="25" max="90">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Annual Contribution ($)</label>
+                    <input type="number" class="form-input" id="settContrib" min="0" step="1000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Annual Spending ($)</label>
+                    <input type="number" class="form-input" id="settSpending" min="0" step="1000">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Risk Tolerance</label>
+                    <select class="form-select" id="settRisk">
+                        <option value="lean">🛡️ Lean (60/40)</option>
+                        <option value="moderate">⚖️ Moderate (80/20)</option>
+                        <option value="fat">🚀 Fat (100% Equity)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Inflation Rate (%)</label>
+                    <input type="number" class="form-input" id="settInflation" min="0" max="15" step="0.5">
+                </div>
+            </div>
+
+            <button class="save-btn" id="saveSettingsBtn" onclick="saveSettings()">
+                🔥 Save & Re-run Simulation
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ===== State =====
+        let chartInstance = null;
+        let simData = null;
+
+        // ===== Init =====
+        document.addEventListener('DOMContentLoaded', () => {
+            runSimulation();
+
+            // Settings modal
+            document.getElementById('settingsBtn').onclick = () => openSettings();
+            document.getElementById('modalClose').onclick = () => closeSettings();
+            document.getElementById('settingsModal').onclick = (e) => {
+                if (e.target === document.getElementById('settingsModal')) closeSettings();
+            };
+        });
+
+        // ===== API =====
+        async function runSimulation() {
+            showLoading();
+            try {
+                const res = await fetch('/api/fire/simulate', { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || `HTTP ${res.status}`);
+                }
+                simData = await res.json();
+                renderDashboard(simData);
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        async function saveSettings() {
+            const btn = document.getElementById('saveSettingsBtn');
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
+            const payload = {
+                current_age: parseInt(document.getElementById('settAge').value),
+                retirement_age: parseInt(document.getElementById('settRetireAge').value),
+                annual_contribution: parseInt(document.getElementById('settContrib').value),
+                annual_retirement_spending: parseInt(document.getElementById('settSpending').value),
+                risk_tolerance: document.getElementById('settRisk').value,
+                inflation_rate: parseFloat(document.getElementById('settInflation').value) / 100,
+            };
+
+            try {
+                await fetch('/api/fire/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                closeSettings();
+                runSimulation();
+            } catch (e) {
+                alert('Failed to save: ' + e.message);
+            } finally {
+                btn.textContent = '🔥 Save & Re-run Simulation';
+                btn.disabled = false;
+            }
+        }
+
+        // ===== UI State =====
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('errorContainer').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        function showError(msg) {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('errorContainer').style.display = 'block';
+            document.getElementById('errorMsg').textContent = msg;
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('errorContainer').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        // ===== Render =====
+        function renderDashboard(data) {
+            // Metrics
+            document.getElementById('probScore').textContent = data.retirement_probability + '%';
+            document.getElementById('probSub').textContent = probabilityLabel(data.retirement_probability);
+
+            document.getElementById('fireAge').textContent = 'Age ' + data.fire_date_age;
+            document.getElementById('fireSub').textContent = '~' + data.fire_date_year;
+
+            document.getElementById('swrValue').textContent = data.swr + '%';
+            document.getElementById('swrSub').textContent = data.risk_profile_label;
+
+            // Monthly spend
+            document.getElementById('monthlySpend').textContent = '$' + formatNum(data.monthly_spend_avg);
+
+            // Portfolio
+            document.getElementById('portfolioTotal').textContent = '$' + formatNum(data.current_portfolio);
+            renderAccounts(data.account_breakdown);
+
+            // Show dashboard before rendering chart so ECharts can get correct container width
+            showDashboard();
+
+            // Chart
+            renderConeChart(data);
+
+            // Color-code probability
+            const probEl = document.getElementById('probScore');
+            if (data.retirement_probability >= 90) {
+                probEl.className = 'metric-value color-green';
+            } else if (data.retirement_probability >= 60) {
+                probEl.className = 'metric-value color-fire';
+            } else {
+                probEl.className = 'metric-value';
+                probEl.style.color = 'var(--accent-red)';
+            }
+        }
+
+        function probabilityLabel(prob) {
+            if (prob >= 95) return '🟢 Excellent';
+            if (prob >= 80) return '🟢 Strong';
+            if (prob >= 60) return '🟡 Moderate';
+            if (prob >= 40) return '🟠 At Risk';
+            return '🔴 Needs Work';
+        }
+
+        function renderAccounts(accounts) {
+            const container = document.getElementById('accountList');
+            container.innerHTML = '';
+            accounts.forEach(acc => {
+                const isPositive = acc.balance >= 0;
+                const balClass = isPositive ? 'balance-positive' : 'balance-negative';
+                const sign = isPositive ? '' : '-';
+                const absVal = Math.abs(acc.balance);
+                container.innerHTML += `
+                    <div class="account-row">
+                        <div>
+                            <div class="account-name">${acc.name}</div>
+                            <div class="account-type">${acc.subtype || acc.type}</div>
+                        </div>
+                        <div class="account-balance ${balClass}">
+                            ${sign}$${formatNum(absVal)}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // ===== ECharts Cone =====
+        function renderConeChart(data) {
+            const container = document.getElementById('coneChart');
+            if (chartInstance) chartInstance.dispose();
+            chartInstance = echarts.init(container, null, { renderer: 'canvas' });
+
+            const years = data.years;
+            const retireAge = data.settings.retirement_age;
+            const retireIdx = years.indexOf(retireAge);
+
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(15, 15, 26, 0.95)',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    textStyle: { color: '#f0f0f5', fontSize: 12 },
+                    formatter: function (params) {
+                        const age = params[0].axisValue;
+                        let html = `<strong>Age ${age}</strong><br/>`;
+                        params.forEach(p => {
+                            if (p.seriesName && p.value !== undefined) {
+                                html += `${p.marker} ${p.seriesName}: <strong>$${formatNum(p.value)}</strong><br/>`;
+                            }
+                        });
+                        return html;
+                    }
+                },
+                grid: {
+                    top: 30,
+                    right: 20,
+                    bottom: 40,
+                    left: 15,
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: years,
+                    name: 'Age',
+                    nameLocation: 'middle',
+                    nameGap: 28,
+                    nameTextStyle: { color: 'rgba(255,255,255,0.4)', fontSize: 11 },
+                    axisLabel: {
+                        color: 'rgba(255,255,255,0.35)',
+                        fontSize: 10,
+                        interval: function (index) {
+                            return years[index] % 5 === 0;
+                        }
+                    },
+                    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+                    axisTick: { show: false },
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        color: 'rgba(255,255,255,0.35)',
+                        fontSize: 10,
+                        formatter: val => '$' + formatCompact(val)
+                    },
+                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+                    axisLine: { show: false },
+                },
+                series: [
+                    // 5th-95th band (bottom fill)
+                    {
+                        name: '5th Pctl',
+                        type: 'line',
+                        data: data.percentile_5,
+                        lineStyle: { opacity: 0 },
+                        stack: 'band-outer',
+                        symbol: 'none',
+                        areaStyle: { opacity: 0 },
+                    },
+                    {
+                        name: '95th Pctl',
+                        type: 'line',
+                        data: data.percentile_95.map((v, i) => v - data.percentile_5[i]),
+                        lineStyle: { opacity: 0 },
+                        stack: 'band-outer',
+                        symbol: 'none',
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(255, 107, 53, 0.12)' },
+                                { offset: 1, color: 'rgba(255, 107, 53, 0.02)' }
+                            ])
+                        },
+                    },
+                    // 25th-75th band
+                    {
+                        name: '25th Pctl',
+                        type: 'line',
+                        data: data.percentile_25,
+                        lineStyle: { opacity: 0 },
+                        stack: 'band-inner',
+                        symbol: 'none',
+                        areaStyle: { opacity: 0 },
+                    },
+                    {
+                        name: '75th Pctl',
+                        type: 'line',
+                        data: data.percentile_75.map((v, i) => v - data.percentile_25[i]),
+                        lineStyle: { opacity: 0 },
+                        stack: 'band-inner',
+                        symbol: 'none',
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(96, 165, 250, 0.18)' },
+                                { offset: 1, color: 'rgba(96, 165, 250, 0.04)' }
+                            ])
+                        },
+                    },
+                    // Median line
+                    {
+                        name: 'Median',
+                        type: 'line',
+                        data: data.percentile_50,
+                        lineStyle: { color: '#ff6b35', width: 2.5 },
+                        symbol: 'none',
+                        smooth: 0.2,
+                        z: 10,
+                    },
+                    // Retirement age marker
+                    ...(retireIdx >= 0 ? [{
+                        type: 'line',
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            lineStyle: { color: 'rgba(255, 107, 53, 0.5)', type: 'dashed', width: 1 },
+                            label: {
+                                formatter: '🔥 Retire',
+                                color: 'rgba(255,107,53,0.7)',
+                                fontSize: 10,
+                                position: 'start',
+                            },
+                            data: [{ xAxis: retireIdx }]
+                        },
+                        data: [],
+                    }] : []),
+                ]
+            };
+
+            chartInstance.setOption(option);
+
+            // Resize handler
+            window.addEventListener('resize', () => {
+                if (chartInstance) chartInstance.resize();
+            });
+        }
+
+        // ===== Settings Modal =====
+        function openSettings() {
+            // Populate from current sim data
+            if (simData?.settings) {
+                const s = simData.settings;
+                document.getElementById('settAge').value = s.current_age;
+                document.getElementById('settRetireAge').value = s.retirement_age;
+                document.getElementById('settContrib').value = s.annual_contribution;
+                document.getElementById('settSpending').value = s.annual_retirement_spending;
+                document.getElementById('settRisk').value = s.risk_tolerance;
+                document.getElementById('settInflation').value = (s.inflation_rate * 100).toFixed(1);
+            }
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        // ===== Helpers =====
+        function formatNum(n) {
+            return Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+        function formatCompact(n) {
+            if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+            return n.toString();
+        }
+    </script>
+</body>
+
+</html>

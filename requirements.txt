@@ -12,3 +12,4 @@ oathtool>=2.3.1
 python-dotenv
 pillow
 pyotp
+numpy
