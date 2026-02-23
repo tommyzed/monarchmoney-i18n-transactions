@@ -240,12 +240,35 @@
             font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-secondary);
-            margin-bottom: 1rem;
+        }
+
+        .chart-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .toggle-checkbox {
+            accent-color: var(--accent-fire);
+            cursor: pointer;
+            width: 14px;
+            height: 14px;
         }
 
         #coneChart {
             width: 100%;
             height: 350px;
+            margin-top: 1rem;
         }
 
         /* Portfolio Summary */
@@ -711,7 +734,16 @@
 
             <!-- Cone Chart -->
             <div class="chart-section fade-up">
-                <div class="chart-title">📈 Portfolio Projections — Cone of Uncertainty</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="chart-title">📈 Portfolio Projections — Cone of Uncertainty</div>
+                    <div class="chart-controls">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="logScaleToggle" class="toggle-checkbox"
+                                onchange="handleLogToggle()">
+                            Logarithmic
+                        </label>
+                    </div>
+                </div>
                 <div id="coneChart"></div>
             </div>
 
@@ -821,9 +853,11 @@
         let chartInstance = null;
         let swrChartInstance = null;
         let simData = null;
+        let useLogScale = false;
 
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
+            loadLogPreference();
             runSimulation();
 
             // Settings modal
@@ -1045,7 +1079,8 @@
                     axisTick: { show: false },
                 },
                 yAxis: {
-                    type: 'value',
+                    type: useLogScale ? 'log' : 'value',
+                    logBase: 10,
                     axisLabel: {
                         color: 'rgba(255,255,255,0.35)',
                         fontSize: 10,
@@ -1053,6 +1088,8 @@
                     },
                     splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
                     axisLine: { show: false },
+                    min: useLogScale ? function (value) { return Math.max(10000, value.min); } : null,
+                    max: useLogScale ? function (value) { return value.max * 1.5; } : null,
                 },
                 series: [
                     // 5th-95th band (bottom fill)
@@ -1299,6 +1336,23 @@
             if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
             if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
             return n.toString();
+        }
+
+        // ===== Preferences =====
+        function loadLogPreference() {
+            const saved = localStorage.getItem('fire_useLogScale');
+            if (saved !== null) {
+                useLogScale = saved === 'true';
+                document.getElementById('logScaleToggle').checked = useLogScale;
+            }
+        }
+
+        function handleLogToggle() {
+            useLogScale = document.getElementById('logScaleToggle').checked;
+            localStorage.setItem('fire_useLogScale', useLogScale);
+            if (simData) {
+                renderConeChart(simData);
+            }
         }
     </script>
 </body>
