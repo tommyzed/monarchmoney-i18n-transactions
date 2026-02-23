@@ -23,6 +23,10 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     *   **Edit Mapping**: Correct merchant names and categories on the fly via a new modal.
     *   **Sync Categories**: Import your Monarch categories (including emojis 🍔) for easy mapping.
     *   **Stores Metadata**: Saves `Original Amount: €XX.XX`, ForEx Rate, and original merchant name in notes.
+*   **🔥 Ignite FIRE Engine**:
+    *   **Monte Carlo Simulations**: Runs 10,000 real-time Monte Carlo simulations against your live Monarch portfolio.
+    *   **Dynamic Safe Withdrawal Rate**: Calculates the safest withdrawal amount by hunting for a ≥95% success rate over a 30-year horizon.
+    *   **Custom Assumptions**: Adjust inflation, expected market returns, retirement age, and risk volatility directly in the UI.
 
 ## 🖼 Demo
 ![LatestMMDemo-ezgif com-speed](https://github.com/user-attachments/assets/b4fefae9-ff0d-4cf5-a2b3-71befc6e29d8)

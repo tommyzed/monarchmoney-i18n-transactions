@@ -48,7 +48,13 @@ if DATABASE_URL.startswith("postgresql"):
 print(f"🧱 LIFESPAN: Connecting to {DATABASE_URL.split('@')[-1]}")
 print(f"🧱 LIFESPAN: connect_args={connect_args}")
 
-engine = create_async_engine(DATABASE_URL, echo=False, connect_args=connect_args)
+engine = create_async_engine(
+    DATABASE_URL, 
+    echo=False, 
+    connect_args=connect_args,
+    pool_pre_ping=True,  # Check connection liveness before checking out
+    pool_recycle=300     # Recycle connections older than 5 mins
+)
 
 AsyncSessionLocal = sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False

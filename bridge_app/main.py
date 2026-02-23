@@ -11,10 +11,11 @@ from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client
-from .models import Credentials, MerchantMapping, Category
+from .models import Credentials, MerchantMapping, Category, FireSettings
 from sqlalchemy.future import select
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime, timedelta
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -1022,4 +1023,171 @@ async def delete_mapping(req: DeleteMappingRequest, db: AsyncSession = Depends(g
         if isinstance(e, HTTPException): raise e
         raise HTTPException(status_code=500, detail=str(e))
 
+# =============================================================================
+# 🔥 IGNITE — FIRE Simulation Routes
+# =============================================================================
+
+@app.get("/fire", response_class=HTMLResponse)
+async def fire_page():
+    """Serve the Ignite FIRE dashboard page."""
+    import pathlib
+    fire_html = pathlib.Path("bridge_app/static/fire.html").read_text()
+    return HTMLResponse(content=fire_html)
+
+
+class FireSettingsUpdate(BaseModel):
+    current_age: Optional[int] = None
+    retirement_age: Optional[int] = None
+    annual_contribution: Optional[int] = None
+    annual_retirement_spending: Optional[int] = None
+    risk_tolerance: Optional[str] = None
+    inflation_rate: Optional[float] = None
+
+
+@app.get("/api/fire/settings")
+async def get_fire_settings(db: AsyncSession = Depends(get_db)):
+    """Get current FIRE simulation settings."""
+    result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
+    settings = result.scalar_one_or_none()
+
+    if not settings:
+        # Create default settings
+        settings = FireSettings(id=1)
+        db.add(settings)
+        await db.commit()
+        await db.refresh(settings)
+
+    return {
+        "current_age": settings.current_age,
+        "retirement_age": settings.retirement_age,
+        "annual_contribution": settings.annual_contribution,
+        "annual_retirement_spending": settings.annual_retirement_spending,
+        "risk_tolerance": settings.risk_tolerance,
+        "inflation_rate": settings.inflation_rate,
+    }
+
+
+@app.put("/api/fire/settings")
+async def update_fire_settings(
+    updates: FireSettingsUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update FIRE simulation settings."""
+    result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
+    settings = result.scalar_one_or_none()
+
+    if not settings:
+        settings = FireSettings(id=1)
+        db.add(settings)
+
+    # Apply updates
+    update_data = updates.model_dump(exclude_none=True)
+    for key, value in update_data.items():
+        setattr(settings, key, value)
+
+    await db.commit()
+    await db.refresh(settings)
+
+    return {
+        "status": "success",
+        "current_age": settings.current_age,
+        "retirement_age": settings.retirement_age,
+        "annual_contribution": settings.annual_contribution,
+        "annual_retirement_spending": settings.annual_retirement_spending,
+        "risk_tolerance": settings.risk_tolerance,
+        "inflation_rate": settings.inflation_rate,
+    }
+
+
+@app.post("/api/fire/simulate")
+async def run_fire_simulation(db: AsyncSession = Depends(get_db)):
+    """
+    Run a full FIRE Monte Carlo simulation using live Monarch data.
+    """
+    from .services.fire_engine import (
+        SimulationInput, simulate, filter_accounts, calc_monthly_spend
+    )
+
+    # 1. Get Monarch client
+    creds_result = await db.execute(select(Credentials))
+    creds = creds_result.scalars().first()
+    if not creds:
+        raise HTTPException(status_code=503, detail="No Monarch credentials configured.")
+
+    try:
+        mm = await get_monarch_client(db, creds.id)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Monarch connection failed: {e}")
+
+    # 2. Fetch accounts
+    try:
+        accounts_data = await mm.get_accounts()
+        total_portfolio, account_breakdown = filter_accounts(accounts_data)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch accounts: {e}")
+
+    # 3. Fetch cashflow (last 12 months)
+    monthly_spend = 0
+    try:
+        now = datetime.now()
+        end_date = now.strftime("%Y-%m-%d")
+        start_date = (now - timedelta(days=365)).strftime("%Y-%m-%d")
+        cashflow_data = await mm.get_cashflow_summary(
+            start_date=start_date, end_date=end_date
+        )
+        monthly_spend = calc_monthly_spend(cashflow_data)
+    except Exception as e:
+        print(f"⚠️ Could not fetch cashflow: {e}")
+
+    # 4. Load settings
+    settings_result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
+    settings = settings_result.scalar_one_or_none()
+    if not settings:
+        settings = FireSettings(id=1)
+
+    # 5. Build simulation input
+    sim_input = SimulationInput(
+        current_portfolio=total_portfolio,
+        current_age=settings.current_age,
+        retirement_age=settings.retirement_age,
+        annual_contribution=settings.annual_contribution,
+        annual_retirement_spending=settings.annual_retirement_spending,
+        risk_tolerance=settings.risk_tolerance,
+        inflation_rate=settings.inflation_rate,
+    )
+
+    # 6. Run simulation
+    try:
+        result = simulate(sim_input)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Simulation failed: {e}")
+
+    # 7. Return results
+    return {
+        "years": result.years,
+        "percentile_5": result.percentile_5,
+        "percentile_25": result.percentile_25,
+        "percentile_50": result.percentile_50,
+        "percentile_75": result.percentile_75,
+        "percentile_95": result.percentile_95,
+        "retirement_probability": result.retirement_probability,
+        "fire_date_age": result.fire_date_age,
+        "fire_date_year": result.fire_date_year,
+        "swr": result.swr,
+        "current_portfolio": result.current_portfolio,
+        "risk_profile_label": result.risk_profile_label,
+        "account_breakdown": account_breakdown,
+        "monthly_spend_avg": monthly_spend,
+        "settings": {
+            "current_age": settings.current_age,
+            "retirement_age": settings.retirement_age,
+            "annual_contribution": settings.annual_contribution,
+            "annual_retirement_spending": settings.annual_retirement_spending,
+            "risk_tolerance": settings.risk_tolerance,
+            "inflation_rate": settings.inflation_rate,
+        }
+    }
+
+
 app.mount("/", StaticFiles(directory="bridge_app/static", html=True), name="static")
+
