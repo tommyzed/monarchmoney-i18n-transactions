@@ -676,7 +676,7 @@
             <!-- Spend Badge -->
             <div class="fade-up" style="text-align: center;">
                 <div class="spend-badge" id="spendBadge">
-                    📊 Avg monthly spend: <span id="monthlySpend">--</span>
+                    📊 Avg monthly spend (last 12 months): <span id="monthlySpend">--</span>
                 </div>
             </div>
 
@@ -693,7 +693,17 @@
                     <div class="metric-sub" id="fireSub">estimated year</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-label">Safe Withdrawal</div>
+                    <div class="metric-label"
+                        style="display: flex; justify-content: center; align-items: center; gap: 4px;">
+                        Safe Withdrawal
+                        <svg onclick="openSwrInfoModal()"
+                            style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
                     <div class="metric-value color-blue" id="swrValue">--</div>
                     <div class="metric-sub" id="swrSub">annual rate</div>
                 </div>
@@ -722,9 +732,7 @@
 
             <!-- Footer -->
             <div class="footer">
-                10,000 Monte Carlo iterations · Historical S&P 500 returns · <a href="#"
-                    onclick="document.getElementById('settingsModal').style.display='flex'; return false;">Edit
-                    assumptions</a>
+                10,000 Monte Carlo iterations · Historical S&P 500 returns
             </div>
         </div>
     </div>
@@ -778,6 +786,36 @@
         </div>
     </div>
 
+    <!-- SWR Info Modal -->
+    <div class="modal-overlay" id="swrInfoModal">
+        <div class="modal-card">
+            <div class="modal-close" id="swrModalClose">✕</div>
+            <div class="modal-title" style="color: var(--accent-blue); margin-bottom: 1rem;">ℹ️ Safe Withdrawal Rate
+            </div>
+
+            <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
+                <p style="margin-bottom: 1rem;">
+                    The <strong>Safe Withdrawal Rate (SWR)</strong> is the maximum percentage of your portfolio you can
+                    withdraw in your first year of retirement without running out of money.
+                </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    <strong>How we calculate it:</strong> We run an aggressive binary search through 10,000 Monte Carlo
+                    simulations, hunting for the absolute highest withdrawal rate that still maintains a <strong
+                        style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) after 30 years.
+                </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    This rate automatically adjusts based on your configuration, tracking your chosen <strong>inflation
+                        rate</strong> over time, and simulating the exact <strong>risk tolerance</strong> volatility you
+                    picked in your settings!
+                </p>
+                <p style="color: var(--text-secondary);">
+                    The projected dollar amounts shown in the chart below apply this safety rate to your <strong>median
+                        (50th percentile)</strong> projected portfolio value.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ===== State =====
         let chartInstance = null;
@@ -793,6 +831,12 @@
             document.getElementById('modalClose').onclick = () => closeSettings();
             document.getElementById('settingsModal').onclick = (e) => {
                 if (e.target === document.getElementById('settingsModal')) closeSettings();
+            };
+
+            // SWR Info modal
+            document.getElementById('swrModalClose').onclick = () => closeSwrInfoModal();
+            document.getElementById('swrInfoModal').onclick = (e) => {
+                if (e.target === document.getElementById('swrInfoModal')) closeSwrInfoModal();
             };
         });
 
@@ -949,9 +993,28 @@
                     formatter: function (params) {
                         const age = params[0].axisValue;
                         let html = `<strong>Age ${age}</strong><br/>`;
-                        params.forEach(p => {
-                            if (p.seriesName && p.value !== undefined) {
-                                html += `${p.marker} ${p.seriesName}: <strong>$${formatNum(p.value)}</strong><br/>`;
+
+                        // Map to absolute values since the chart uses stacked deltas
+                        const absoluteParams = params.map(p => {
+                            let val = p.value;
+                            if (p.seriesName === '95th Pctl') val = data.percentile_95[p.dataIndex];
+                            else if (p.seriesName === '75th Pctl') val = data.percentile_75[p.dataIndex];
+                            else if (p.seriesName === 'Median') val = data.percentile_50[p.dataIndex];
+                            else if (p.seriesName === '25th Pctl') val = data.percentile_25[p.dataIndex];
+                            else if (p.seriesName === '5th Pctl') val = data.percentile_5[p.dataIndex];
+                            return { ...p, absoluteValue: val };
+                        });
+
+                        // Sort by absolute value descending
+                        absoluteParams.sort((a, b) => {
+                            const valA = a.absoluteValue === undefined ? Number.NEGATIVE_INFINITY : a.absoluteValue;
+                            const valB = b.absoluteValue === undefined ? Number.NEGATIVE_INFINITY : b.absoluteValue;
+                            return valB - valA;
+                        });
+
+                        absoluteParams.forEach(p => {
+                            if (p.seriesName && p.absoluteValue !== undefined) {
+                                html += `${p.marker} ${p.seriesName}: <strong>$${formatNum(p.absoluteValue)}</strong><br/>`;
                             }
                         });
                         return html;
@@ -1090,6 +1153,15 @@
             const swrRate = data.swr / 100;
             const swrAmounts = p50.map(p => p * swrRate);
 
+            // Calculate Projected Annual Spending (adjusted for inflation)
+            const baseSpending = data.settings.annual_retirement_spending;
+            const inflation = data.settings.inflation_rate;
+            const projectedSpending = years.map((_, i) => baseSpending * Math.pow(1 + inflation, i));
+
+            // Calculate Historical Annual Spending (adjusted for inflation)
+            const historicalAnnualSpend = data.monthly_spend_avg * 12;
+            const projectedHistorical = years.map((_, i) => historicalAnnualSpend * Math.pow(1 + inflation, i));
+
             const option = {
                 backgroundColor: 'transparent',
                 tooltip: {
@@ -1099,8 +1171,11 @@
                     textStyle: { color: '#f0f0f5', fontSize: 12 },
                     formatter: function (params) {
                         const age = params[0].axisValue;
-                        const val = params[0].value;
-                        return `<strong>Age ${age}</strong><br/>${params[0].marker} Safe Withdrawal: <strong>$${formatNum(val)}/yr</strong>`;
+                        let tooltipText = `<strong>Age ${age}</strong><br/>`;
+                        params.forEach(param => {
+                            tooltipText += `${param.marker} ${param.seriesName}: <strong>$${formatNum(param.value)}/yr</strong><br/>`;
+                        });
+                        return tooltipText;
                     }
                 },
                 grid: {
@@ -1134,18 +1209,52 @@
                     splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
                     axisLine: { show: false },
                 },
-                series: [{
-                    name: 'SWR Amount',
-                    type: 'bar',
-                    data: swrAmounts,
-                    itemStyle: {
-                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            { offset: 0, color: '#60a5fa' },
-                            { offset: 1, color: 'rgba(96, 165, 250, 0.2)' }
-                        ]),
-                        borderRadius: [4, 4, 0, 0]
+                series: [
+                    {
+                        name: 'Safe Withdrawal',
+                        type: 'bar',
+                        data: swrAmounts,
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#60a5fa' },
+                                { offset: 1, color: 'rgba(96, 165, 250, 0.2)' }
+                            ]),
+                            borderRadius: [4, 4, 0, 0]
+                        }
+                    },
+                    {
+                        name: 'Target Spend',
+                        type: 'line',
+                        data: projectedSpending,
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        itemStyle: {
+                            color: '#ff6b35'
+                        },
+                        lineStyle: {
+                            color: '#ff6b35',
+                            width: 2,
+                            type: 'dashed'
+                        },
+                        z: 10 // Ensure it renders on top of bars
+                    },
+                    {
+                        name: 'Historical Spend',
+                        type: 'line',
+                        data: projectedHistorical,
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        itemStyle: {
+                            color: '#a78bfa' // Purple accent
+                        },
+                        lineStyle: {
+                            color: '#a78bfa',
+                            width: 2,
+                            type: 'dotted'
+                        },
+                        z: 10
                     }
-                }]
+                ]
             };
 
             swrChartInstance.setOption(option);
@@ -1172,6 +1281,14 @@
         }
         function closeSettings() {
             document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        // ===== SWR Info Modal =====
+        function openSwrInfoModal() {
+            document.getElementById('swrInfoModal').style.display = 'flex';
+        }
+        function closeSwrInfoModal() {
+            document.getElementById('swrInfoModal').style.display = 'none';
         }
 
         // ===== Helpers =====
