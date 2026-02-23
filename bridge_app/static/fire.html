@@ -705,6 +705,12 @@
                 <div id="coneChart"></div>
             </div>
 
+            <!-- SWR Chart -->
+            <div class="chart-section fade-up" style="animation-delay: 0.5s;">
+                <div class="chart-title">💵 Projected Safe Withdrawal Amounts (Next 10 Years)</div>
+                <div id="swrChart" style="width: 100%; height: 250px;"></div>
+            </div>
+
             <!-- Account Breakdown -->
             <div class="portfolio-section fade-up">
                 <div class="portfolio-header">
@@ -775,6 +781,7 @@
     <script>
         // ===== State =====
         let chartInstance = null;
+        let swrChartInstance = null;
         let simData = null;
 
         // ===== Init =====
@@ -879,6 +886,7 @@
 
             // Chart
             renderConeChart(data);
+            renderSwrChart(data);
 
             // Color-code probability
             const probEl = document.getElementById('probScore');
@@ -1067,6 +1075,84 @@
             // Resize handler
             window.addEventListener('resize', () => {
                 if (chartInstance) chartInstance.resize();
+            });
+        }
+
+        function renderSwrChart(data) {
+            const container = document.getElementById('swrChart');
+            if (swrChartInstance) swrChartInstance.dispose();
+            swrChartInstance = echarts.init(container, null, { renderer: 'canvas' });
+
+            // SWR Amounts for next 10 years
+            const limit = Math.min(10, data.years.length);
+            const years = data.years.slice(0, limit);
+            const p50 = data.percentile_50.slice(0, limit);
+            const swrRate = data.swr / 100;
+            const swrAmounts = p50.map(p => p * swrRate);
+
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(15, 15, 26, 0.95)',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    textStyle: { color: '#f0f0f5', fontSize: 12 },
+                    formatter: function (params) {
+                        const age = params[0].axisValue;
+                        const val = params[0].value;
+                        return `<strong>Age ${age}</strong><br/>${params[0].marker} Safe Withdrawal: <strong>$${formatNum(val)}/yr</strong>`;
+                    }
+                },
+                grid: {
+                    top: 30,
+                    right: 20,
+                    bottom: 40,
+                    left: 15,
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: years,
+                    name: 'Age',
+                    nameLocation: 'middle',
+                    nameGap: 28,
+                    nameTextStyle: { color: 'rgba(255,255,255,0.4)', fontSize: 11 },
+                    axisLabel: {
+                        color: 'rgba(255,255,255,0.35)',
+                        fontSize: 10
+                    },
+                    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+                    axisTick: { show: false },
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        color: 'rgba(255,255,255,0.35)',
+                        fontSize: 10,
+                        formatter: val => '$' + formatCompact(val)
+                    },
+                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+                    axisLine: { show: false },
+                },
+                series: [{
+                    name: 'SWR Amount',
+                    type: 'bar',
+                    data: swrAmounts,
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#60a5fa' },
+                            { offset: 1, color: 'rgba(96, 165, 250, 0.2)' }
+                        ]),
+                        borderRadius: [4, 4, 0, 0]
+                    }
+                }]
+            };
+
+            swrChartInstance.setOption(option);
+
+            // Resize handler
+            window.addEventListener('resize', () => {
+                if (swrChartInstance) swrChartInstance.resize();
             });
         }
 
