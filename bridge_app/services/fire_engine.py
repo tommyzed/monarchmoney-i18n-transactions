@@ -212,8 +212,11 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
             )
             portfolios[:, yr + 1] = np.maximum(portfolios[:, yr + 1], 0)
 
+        # If the earliest possible age we check (current age) works,
+        # our FIRE date is RIGHT NOW!
         survived = np.sum(portfolios[:, -1] > 0) / inp.iterations
-        if survived >= 0.95:
+        # Round to align with the UI's probability display (which rounds to 1 decimal, i.e 94.95% -> 95.0%)
+        if round(survived, 3) >= 0.950:
             best_age = test_age
             break
 
@@ -279,7 +282,7 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
             port = np.maximum(port, 0)
 
         survival_rate = np.sum(port > 0) / inp.iterations
-        if survival_rate >= 0.95:
+        if round(survival_rate, 3) >= 0.950:
             best_swr = mid
             low = mid
         else:

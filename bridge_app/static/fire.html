@@ -736,6 +736,20 @@
                 </div>
                 <div class="metric-card">
                     <div class="metric-label"
+                        style="display: flex; justify-content: center; align-items: center; gap: 4px;">Anticipated Spend
+                        <svg onclick="openSpendInfoModal()"
+                            style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="metric-value color-amber" id="monthlySpend">--</div>
+                    <div class="metric-sub" id="historicalSpendSub">--</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label"
                         style="display: flex; justify-content: center; align-items: center; gap: 4px;">
                         Safe Withdrawal
                         <svg onclick="openSwrInfoModal()"
@@ -748,21 +762,6 @@
                     </div>
                     <div class="metric-value color-blue" id="swrValue">--</div>
                     <div class="metric-sub" id="swrSub">annual rate</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label"
-                        style="display: flex; justify-content: center; align-items: center; gap: 4px;">Historical
-                        Spend
-                        <svg onclick="openSpendInfoModal()"
-                            style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
-                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <div class="metric-value color-amber" id="monthlySpend">--</div>
-                    <div class="metric-sub">last 12 months</div>
                 </div>
             </div>
 
@@ -952,26 +951,26 @@
         </div>
     </div>
 
-    <!-- Historical Spend Info Modal -->
+    <!-- Anticipated Spend Info Modal -->
     <div class="modal-overlay" id="spendInfoModal">
         <div class="modal-card">
             <div class="modal-close" id="spendModalClose">✕</div>
-            <div class="modal-title" style="color: var(--accent-amber); margin-bottom: 1rem;">ℹ️ Historical Spend
+            <div class="modal-title" style="color: var(--accent-amber); margin-bottom: 1rem;">ℹ️ Anticipated Spend
             </div>
             <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
                 <p style="margin-bottom: 1rem;">
-                    <strong>Historical Spend</strong> is an annualized view of your actual recent spending habits,
-                    calculated directly from your past Monarch Money transactions.
+                    <strong>Anticipated Spend</strong> is exactly the value you input in your Simulation Settings
+                    representing how much you plan to withdraw each year for living expenses post-retirement.
                 </p>
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                    <strong>How we calculate it:</strong> We sum up all of your total expenses over the last 12 months
-                    of detailed cash flow history in Monarch, compute the monthly average, and then multiply by 12 to
-                    generate an annualized run-rate.
+                    <strong>How we calculate it:</strong> This is a passthrough of your manual "Annual Spending ($)"
+                    configuration. Underneath it, your <strong>Historical Spend</strong> is automatically calculated by
+                    summing your last 12 months of living expenses in Monarch.
                 </p>
                 <p style="color: var(--text-secondary);">
-                    <strong>How to interpret it:</strong> Use this as a reality check against your configured "Annual
-                    Spending" in the simulation settings. If you plan to spend only $40k/yr in retirement but your
-                    Historical Spend is $90k/yr, you may need a stricter budget!
+                    <strong>How to interpret it:</strong> This card exists so you can perform a quick reality check! If
+                    your Anticipated Spend is 40k but your Historical Spend is 90k, your goals may need adjusting.
+                    Ensure your simulation represents what you actually plan to spend.
                 </p>
             </div>
         </div>
@@ -1139,8 +1138,9 @@
             document.getElementById('swrValue').textContent = '$' + formatNum(portfolioAtRetire * data.swr / 100) + '/yr';
             document.getElementById('swrSub').textContent = data.swr + '% of $' + formatCompact(portfolioAtRetire) + ' (5th pctl)';
 
-            // Annual spend
-            document.getElementById('monthlySpend').textContent = '$' + formatNum(data.monthly_spend_avg * 12);
+            // Anticipated spend
+            document.getElementById('monthlySpend').textContent = '$' + formatNum(data.settings.annual_retirement_spending);
+            document.getElementById('historicalSpendSub').textContent = 'vs $' + formatCompact(data.monthly_spend_avg * 12) + ' historical (MM)';
 
             // Portfolio
             document.getElementById('portfolioTotal').textContent = '$' + formatNum(data.current_portfolio);
