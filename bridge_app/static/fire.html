@@ -707,12 +707,30 @@
             <!-- Metric Cards -->
             <div class="metrics-grid fade-up">
                 <div class="metric-card">
-                    <div class="metric-label">Retirement Score</div>
+                    <div class="metric-label"
+                        style="display: flex; justify-content: center; align-items: center; gap: 4px;">Retirement Score
+                        <svg onclick="openScoreInfoModal()"
+                            style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
                     <div class="metric-value color-green" id="probScore">--</div>
                     <div class="metric-sub" id="probSub">out of 100%</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-label">FIRE Date</div>
+                    <div class="metric-label"
+                        style="display: flex; justify-content: center; align-items: center; gap: 4px;">FIRE Date
+                        <svg onclick="openFireDateInfoModal()"
+                            style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
                     <div class="metric-value color-fire" id="fireAge">--</div>
                     <div class="metric-sub" id="fireSub">estimated year</div>
                 </div>
@@ -734,7 +752,15 @@
                 <div class="metric-card">
                     <div class="metric-label"
                         style="display: flex; justify-content: center; align-items: center; gap: 4px;">Historical
-                        Spend</div>
+                        Spend
+                        <svg onclick="openSpendInfoModal()"
+                            style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
                     <div class="metric-value color-amber" id="monthlySpend">--</div>
                     <div class="metric-sub">last 12 months</div>
                 </div>
@@ -858,22 +884,94 @@
             <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
                 <p style="margin-bottom: 1rem;">
                     The <strong>Safe Withdrawal Rate (SWR)</strong> is the maximum percentage of your portfolio you can
-                    withdraw in your first year of retirement without running out of money.
+                    withdraw in your first year of retirement to cover living expenses, adjusting for inflation every
+                    year thereafter.
                 </p>
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                    <strong>How we calculate it:</strong> We run an aggressive binary search through 10,000 Monte Carlo
-                    simulations, hunting for the absolute highest withdrawal rate that still maintains a <strong
-                        style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) until Age 85.
-                </p>
-                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                    This rate automatically adjusts based on your configuration, tracking your chosen <strong>inflation
-                        rate</strong> over time, and simulating the exact <strong>risk tolerance</strong> volatility you
-                    picked in your settings!
+                    <strong>How we calculate it:</strong> We run a binary search through 10,000 Monte Carlo simulations
+                    at your target retirement age, hunting for the absolute highest withdrawal rate that still maintains
+                    a <strong style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) until Age
+                    85.
                 </p>
                 <p style="color: var(--text-secondary);">
-                    The projected dollar amounts shown in the chart below represent the <strong>initial withdrawal
-                        amount</strong> (Portfolio at Retirement × SWR), continuously adjusted upwards for inflation
-                    each subsequent year.
+                    <strong>How to interpret it:</strong> A higher SWR (e.g. 4-5%) means you can pull more money out
+                    each year relative to your balance, usually implying high confidence. The chart below graphs these
+                    projected withdrawal amounts mapping to the "5th percentile" safety line.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Score Info Modal -->
+    <div class="modal-overlay" id="scoreInfoModal">
+        <div class="modal-card">
+            <div class="modal-close" id="scoreModalClose">✕</div>
+            <div class="modal-title" style="color: var(--accent-green); margin-bottom: 1rem;">ℹ️ Retirement Score
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
+                <p style="margin-bottom: 1rem;">
+                    The <strong>Retirement Score</strong> represents your overall probability of success based on your
+                    current trajectory and settings.
+                </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    <strong>How we calculate it:</strong> We project your portfolio out to Age 85 across 10,000 Monte
+                    Carlo simulations. The score is exactly the percentage of those simulations where your portfolio
+                    survives (stays above $0) until Age 85.
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>How to interpret it:</strong> Aim for a score of <strong>95% or higher (🟢
+                        Excellent)</strong> to be completely "FIRE ready". If your score is lower, consider manually
+                    adjusting your retirement age, spending, or savings rate.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIRE Date Info Modal -->
+    <div class="modal-overlay" id="fireDateInfoModal">
+        <div class="modal-card">
+            <div class="modal-close" id="fireDateModalClose">✕</div>
+            <div class="modal-title" style="color: var(--accent-fire); margin-bottom: 1rem;">ℹ️ FIRE Date
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
+                <p style="margin-bottom: 1rem;">
+                    Your <strong>FIRE Date</strong> is the earliest estimated age and year you can safely retire while
+                    maintaining your desired lifestyle.
+                </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    <strong>How we calculate it:</strong> We iteratively simulate retiring at every age between now and
+                    85. Your FIRE date is the youngest potential age that still results in a mathematically-safe
+                    <strong>≥95% success rate</strong> (portfolio > $0 until Age 85).
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>How to interpret it:</strong> This is a dynamic target that adjusts to your settings. If it
+                    says "🥶 No FIRE Date", your current savings and planned expenses are incompatible with early
+                    retirement.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historical Spend Info Modal -->
+    <div class="modal-overlay" id="spendInfoModal">
+        <div class="modal-card">
+            <div class="modal-close" id="spendModalClose">✕</div>
+            <div class="modal-title" style="color: var(--accent-amber); margin-bottom: 1rem;">ℹ️ Historical Spend
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
+                <p style="margin-bottom: 1rem;">
+                    <strong>Historical Spend</strong> is an annualized view of your actual recent spending habits,
+                    calculated directly from your past Monarch Money transactions.
+                </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    <strong>How we calculate it:</strong> We sum up all of your total expenses over the last 12 months
+                    of detailed cash flow history in Monarch, compute the monthly average, and then multiply by 12 to
+                    generate an annualized run-rate.
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>How to interpret it:</strong> Use this as a reality check against your configured "Annual
+                    Spending" in the simulation settings. If you plan to spend only $40k/yr in retirement but your
+                    Historical Spend is $90k/yr, you may need a stricter budget!
                 </p>
             </div>
         </div>
@@ -903,6 +1001,24 @@
             document.getElementById('swrModalClose').onclick = () => closeSwrInfoModal();
             document.getElementById('swrInfoModal').onclick = (e) => {
                 if (e.target === document.getElementById('swrInfoModal')) closeSwrInfoModal();
+            };
+
+            // Score Info modal
+            document.getElementById('scoreModalClose').onclick = () => closeScoreInfoModal();
+            document.getElementById('scoreInfoModal').onclick = (e) => {
+                if (e.target === document.getElementById('scoreInfoModal')) closeScoreInfoModal();
+            };
+
+            // FIRE Date Info modal
+            document.getElementById('fireDateModalClose').onclick = () => closeFireDateInfoModal();
+            document.getElementById('fireDateInfoModal').onclick = (e) => {
+                if (e.target === document.getElementById('fireDateInfoModal')) closeFireDateInfoModal();
+            };
+
+            // Spend Info modal
+            document.getElementById('spendModalClose').onclick = () => closeSpendInfoModal();
+            document.getElementById('spendInfoModal').onclick = (e) => {
+                if (e.target === document.getElementById('spendInfoModal')) closeSpendInfoModal();
             };
         });
 
@@ -1497,12 +1613,33 @@
             document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
         }
 
-        // ===== SWR Info Modal =====
+        // ===== Info Modals =====
         function openSwrInfoModal() {
             document.getElementById('swrInfoModal').style.display = 'flex';
         }
         function closeSwrInfoModal() {
             document.getElementById('swrInfoModal').style.display = 'none';
+        }
+
+        function openScoreInfoModal() {
+            document.getElementById('scoreInfoModal').style.display = 'flex';
+        }
+        function closeScoreInfoModal() {
+            document.getElementById('scoreInfoModal').style.display = 'none';
+        }
+
+        function openFireDateInfoModal() {
+            document.getElementById('fireDateInfoModal').style.display = 'flex';
+        }
+        function closeFireDateInfoModal() {
+            document.getElementById('fireDateInfoModal').style.display = 'none';
+        }
+
+        function openSpendInfoModal() {
+            document.getElementById('spendInfoModal').style.display = 'flex';
+        }
+        function closeSpendInfoModal() {
+            document.getElementById('spendInfoModal').style.display = 'none';
         }
 
         // ===== Helpers =====
