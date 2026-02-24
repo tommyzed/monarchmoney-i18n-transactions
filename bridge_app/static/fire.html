@@ -734,7 +734,7 @@
                 <div class="metric-card">
                     <div class="metric-label"
                         style="display: flex; justify-content: center; align-items: center; gap: 4px;">Historical
-                        monthly spend</div>
+                        Spend</div>
                     <div class="metric-value color-amber" id="monthlySpend">--</div>
                     <div class="metric-sub">last 12 months</div>
                 </div>
@@ -1017,8 +1017,8 @@
             document.getElementById('swrValue').textContent = '$' + formatNum(portfolioAtRetire * data.swr / 100) + '/yr';
             document.getElementById('swrSub').textContent = data.swr + '% of $' + formatCompact(portfolioAtRetire) + ' (5th pctl)';
 
-            // Monthly spend
-            document.getElementById('monthlySpend').textContent = '$' + formatNum(data.monthly_spend_avg);
+            // Annual spend
+            document.getElementById('monthlySpend').textContent = '$' + formatNum(data.monthly_spend_avg * 12);
 
             // Portfolio
             document.getElementById('portfolioTotal').textContent = '$' + formatNum(data.current_portfolio);
