@@ -42,28 +42,37 @@ COOKIE_VALUE = hashlib.sha256(UNLOCK_SECRET.encode()).hexdigest() if UNLOCK_SECR
 
 class GhostSecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # Default state
+        request.state.is_authenticated = False
+
         # If no secret is configured, bypass security (or you could choose to block)
         if not UNLOCK_SECRET:
+            request.state.is_authenticated = True
             return await call_next(request)
+
+        # Check for cookie
+        token = request.cookies.get(DEVICE_TOKEN_COOKIE)
+        if token == COOKIE_VALUE:
+            request.state.is_authenticated = True
+            return await call_next(request)
+
+        # --- Unauthenticated access rules ---
 
         # Allow activation endpoint
         if request.url.path == "/s":
             return await call_next(request)
             
         # Allow static assets (manifest, Service Worker, icons) to support PWA installation.
-        # Browsers often fetch these without credentials or in a separate context.
-        # This exposes the *existence* of the app (if you guess the URL), but protects the functionality.
         if request.url.path in ["/manifest.json", "/sw.js", "/favicon.ico"]:
             return await call_next(request)
             
         if request.url.path.endswith((".png", ".jpg", ".css", ".js", ".gif")):
              return await call_next(request)
-        
-        # Check for cookie
-        token = request.cookies.get(DEVICE_TOKEN_COOKIE)
-        if token == COOKIE_VALUE:
+
+        # Allow FIRE demo mode access
+        if request.url.path == "/fire" or request.url.path.startswith("/api/fire/"):
             return await call_next(request)
-            
+        
         # GHOST MODE: Return 404 Not Found if unauthorized
         return Response(status_code=404, content="Not Found")
 
@@ -1028,10 +1037,18 @@ async def delete_mapping(req: DeleteMappingRequest, db: AsyncSession = Depends(g
 # =============================================================================
 
 @app.get("/fire", response_class=HTMLResponse)
-async def fire_page():
+async def fire_page(request: Request):
     """Serve the Ignite FIRE dashboard page."""
     import pathlib
     fire_html = pathlib.Path("bridge_app/static/fire.html").read_text()
+    
+    # Inject authentication state
+    is_auth_str = "true" if request.state.is_authenticated else "false"
+    fire_html = fire_html.replace(
+        "/* INIT_AUTH_STATE */", 
+        f"</style><script>window.IS_AUTHENTICATED = {is_auth_str};</script><style>"
+    )
+    
     return HTMLResponse(content=fire_html)
 
 
@@ -1045,8 +1062,19 @@ class FireSettingsUpdate(BaseModel):
 
 
 @app.get("/api/fire/settings")
-async def get_fire_settings(db: AsyncSession = Depends(get_db)):
+async def get_fire_settings(request: Request, db: AsyncSession = Depends(get_db)):
     """Get current FIRE simulation settings."""
+    if not request.state.is_authenticated:
+        # Return default values for unauthenticated users instead of reading DB
+        return {
+            "current_age": 45,
+            "retirement_age": 65,
+            "annual_contribution": 100000,
+            "annual_retirement_spending": 80000,
+            "risk_tolerance": "moderate",
+            "inflation_rate": 0.03,
+        }
+
     result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
     settings = result.scalar_one_or_none()
 
@@ -1069,10 +1097,18 @@ async def get_fire_settings(db: AsyncSession = Depends(get_db)):
 
 @app.put("/api/fire/settings")
 async def update_fire_settings(
+    request: Request,
     updates: FireSettingsUpdate,
     db: AsyncSession = Depends(get_db)
 ):
     """Update FIRE simulation settings."""
+    if not request.state.is_authenticated:
+        # Pretend it updated for unauthorized users
+        return {
+            "status": "success",
+            **updates.model_dump(exclude_none=True)
+        }
+
     result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
     settings = result.scalar_one_or_none()
 
@@ -1105,7 +1141,7 @@ class SimulateRequest(BaseModel):
     is_demo: bool = False
 
 @app.post("/api/fire/simulate")
-async def run_fire_simulation(req: Optional[SimulateRequest] = None, db: AsyncSession = Depends(get_db)):
+async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] = None, db: AsyncSession = Depends(get_db)):
     """
     Run a full FIRE Monte Carlo simulation using live Monarch data.
     Set DEMO_MODE=1 in env to return static fictional data for recording/testing.
@@ -1114,17 +1150,23 @@ async def run_fire_simulation(req: Optional[SimulateRequest] = None, db: AsyncSe
         SimulationInput, simulate, filter_accounts, calc_monthly_spend
     )
 
-    # ── Demo Mode ──────────────────────────────────────────────────────────
-    if req and req.is_demo:
+    # ── Demo Mode Enforcement ──────────────────────────────────────────────
+    is_demo = (req and req.is_demo) or not request.state.is_authenticated
+
+    if is_demo:
         if req and req.settings:
             settings_obj = req.settings
         else:
-            settings_result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
-            settings_obj = settings_result.scalar_one_or_none()
-            if not settings_obj:
-                settings_obj = FireSettings(id=1)
+            settings_obj = FireSettings(
+                current_age=45,
+                retirement_age=65,
+                annual_contribution=100000,
+                annual_retirement_spending=80000,
+                risk_tolerance="moderate",
+                inflation_rate=0.03,
+            )
 
-        demo_portfolio = 146_692
+        demo_portfolio = 500_000
         if req and req.current_portfolio is not None:
             demo_portfolio = req.current_portfolio
 
@@ -1149,6 +1191,7 @@ async def run_fire_simulation(req: Optional[SimulateRequest] = None, db: AsyncSe
             "fire_date_age": result.fire_date_age,
             "fire_date_year": result.fire_date_year,
             "swr": result.swr,
+            "required_spend_for_target": result.required_spend_for_target,
             "current_portfolio": demo_portfolio,
             "risk_profile_label": result.risk_profile_label,
             "account_breakdown": [],
@@ -1230,6 +1273,7 @@ async def run_fire_simulation(req: Optional[SimulateRequest] = None, db: AsyncSe
         "fire_date_age": result.fire_date_age,
         "fire_date_year": result.fire_date_year,
         "swr": result.swr,
+        "required_spend_for_target": result.required_spend_for_target,
         "current_portfolio": result.current_portfolio,
         "risk_profile_label": result.risk_profile_label,
         "account_breakdown": account_breakdown,

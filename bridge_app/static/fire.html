@@ -15,6 +15,9 @@
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <style>
+        /* ===== INIT_AUTH_STATE will be injected here ===== */
+        /* INIT_AUTH_STATE */
+
         :root {
             --bg-primary: #0f0f1a;
             --bg-card: rgba(255, 255, 255, 0.04);
@@ -194,6 +197,10 @@
 
         .metric-card:nth-child(4)::before {
             background: linear-gradient(90deg, var(--accent-amber), transparent);
+        }
+
+        #recommendationsCard::before {
+            background: linear-gradient(90deg, var(--accent-purple), transparent);
         }
 
         .metric-label {
@@ -689,7 +696,8 @@
         <div class="error-msg" id="errorMsg">Something went wrong.</div>
         <button class="retry-btn" onclick="runSimulation()">🔄 Retry Simulation</button>
         <div style="margin-top: 1rem;">
-            <a href="/" style="color: var(--text-muted); font-size: 0.8rem; text-decoration: none;">← Back to Bridge</a>
+            <a href="/" id="errorBackBtn" style="color: var(--text-muted); font-size: 0.8rem; text-decoration: none;">←
+                Back to Bridge</a>
         </div>
     </div>
 
@@ -751,7 +759,7 @@
                 <div class="metric-card">
                     <div class="metric-label"
                         style="display: flex; justify-content: center; align-items: center; gap: 4px;">
-                        Safe Withdrawal
+                        🔥 Safe Withdrawal
                         <svg onclick="openSwrInfoModal()"
                             style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
                             xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -762,6 +770,18 @@
                     </div>
                     <div class="metric-value color-blue" id="swrValue">--</div>
                     <div class="metric-sub" id="swrSub">annual rate</div>
+                </div>
+            </div>
+
+            <!-- Recommendations Card -->
+            <div id="recommendationsCard" class="metric-card fade-up"
+                style="margin-bottom: 2rem; align-items: flex-start; text-align: left;">
+                <div class="metric-label" style="display: flex; align-items: center; gap: 6px;">
+                    💡 Recommendations
+                </div>
+                <div id="recommendationText"
+                    style="margin-top: 10px; font-size: 0.95rem; line-height: 1.5; font-weight: 500;">
+                    --
                 </div>
             </div>
 
@@ -784,14 +804,14 @@
 
             <!-- SWR Chart -->
             <div class="chart-section fade-up" style="animation-delay: 0.5s;">
-                <div class="chart-title">💵 Projected Safe Withdrawal Amounts (Next 10 Years)</div>
+                <div class="chart-title">💵 Withdrawal Trends</div>
                 <div id="swrChart" style="width: 100%; height: 250px;"></div>
             </div>
 
             <!-- Account Breakdown -->
             <div class="portfolio-section fade-up">
                 <div class="portfolio-header">
-                    <div class="portfolio-title">💼 Net Worth Breakdown</div>
+                    <div class="portfolio-title">💼 Net Worth</div>
                     <div class="portfolio-total" id="portfolioTotal">--</div>
                 </div>
                 <div id="accountList"></div>
@@ -810,7 +830,7 @@
             <div class="modal-close" id="modalClose">✕</div>
             <div class="modal-title">⚙️ Simulation Settings</div>
 
-            <div class="form-row"
+            <div class="form-row" id="demoToggleContainer"
                 style="margin-bottom: 1.2rem; align-items: center; display: flex; justify-content: space-between; background: rgba(96, 165, 250, 0.1); padding: 12px; border-radius: var(--radius-sm); border: 1px solid rgba(96, 165, 250, 0.2); width: 100%;">
                 <div>
                     <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-blue);">🧪 Demo Mode</div>
@@ -967,6 +987,11 @@
                     configuration. Underneath it, your <strong>Historical Spend</strong> is automatically calculated by
                     summing your last 12 months of living expenses in Monarch.
                 </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    <strong>Target Safe Spend:</strong> If your Anticipated Spend is too high to achieve your target
+                    retirement age, the engine will automatically calculate the maximum "Target Safe Spend" you can
+                    afford and display the required lifestyle cut.
+                </p>
                 <p style="color: var(--text-secondary);">
                     <strong>How to interpret it:</strong> This card exists so you can perform a quick reality check! If
                     your Anticipated Spend is 40k but your Historical Spend is 90k, your goals may need adjusting.
@@ -986,7 +1011,21 @@
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
             loadLogPreference();
-            loadDemoPreference();
+
+            // Enforce Demo Mode if unauthenticated
+            if (window.IS_AUTHENTICATED === false) {
+                window.IS_DEMO = true;
+                document.getElementById('demoToggleContainer').style.display = 'none';
+
+                // Remove back pathways since unauthorized users shouldn't navigate to the locked main app
+                const headerBackBtn = document.querySelector('.back-btn');
+                if (headerBackBtn) headerBackBtn.style.display = 'none';
+                const errorBackBtn = document.getElementById('errorBackBtn');
+                if (errorBackBtn) errorBackBtn.style.display = 'none';
+            } else {
+                loadDemoPreference();
+            }
+
             runSimulation();
 
             // Settings modal
@@ -1138,9 +1177,41 @@
             document.getElementById('swrValue').textContent = '$' + formatNum(portfolioAtRetire * data.swr / 100) + '/yr';
             document.getElementById('swrSub').textContent = data.swr + '% of $' + formatCompact(portfolioAtRetire) + ' (5th pctl)';
 
-            // Anticipated spend
-            document.getElementById('monthlySpend').textContent = '$' + formatNum(data.settings.annual_retirement_spending);
+            // Anticipated spend target logic
+            const plannedSpend = data.settings.annual_retirement_spending;
+            const requiredSpend = data.required_spend_for_target;
+            const spendCard = document.getElementById('monthlySpend');
+            const recText = document.getElementById('recommendationText');
+
+            spendCard.textContent = '$' + formatNum(plannedSpend);
             document.getElementById('historicalSpendSub').textContent = 'vs $' + formatCompact(data.monthly_spend_avg * 12) + ' historical (MM)';
+
+            let recMessage = '';
+            let recColor = 'var(--text-primary)';
+
+            if (requiredSpend !== null && requiredSpend < plannedSpend && requiredSpend > 0) {
+                spendCard.style.color = "var(--accent-red)";
+                recMessage = '• Reduce spend to $' + formatNum(requiredSpend) + ' to reach FIRE at target age.';
+                recColor = "var(--accent-amber)";
+            } else {
+                spendCard.style.color = "var(--accent-amber)";
+                recMessage = '• You are on track to achieve FIRE by your target year! 🎉';
+                recColor = "var(--accent-green)";
+            }
+
+            let freezeIdx = -1;
+            if (data.percentile_5) {
+                freezeIdx = data.percentile_5.findIndex(v => v <= 0);
+            }
+            if (freezeIdx >= 0 && data.fire_date_age === null) {
+                const freezeAge = data.years[freezeIdx];
+                recMessage += `<div style="margin-top: 8px; color: var(--accent-blue);">• There is a 5% chance that you could run out of savings by age ${freezeAge}.</div>`;
+            } else if (data.fire_date_age !== null && data.fire_date_age > data.settings.current_age) {
+                recMessage += `<div style="margin-top: 8px; color: var(--accent-fire);">• If you worked until age ${data.fire_date_age}, you could FIRE with your current anticipated spend.</div>`;
+            }
+
+            recText.innerHTML = recMessage;
+            recText.style.color = recColor;
 
             // Portfolio
             document.getElementById('portfolioTotal').textContent = '$' + formatNum(data.current_portfolio);
@@ -1447,39 +1518,63 @@
             if (swrChartInstance) swrChartInstance.dispose();
             swrChartInstance = echarts.init(container, null, { renderer: 'canvas' });
 
-            // SWR Amounts for next 10 years
-            const limit = Math.min(10, data.years.length);
-            const years = data.years.slice(0, limit);
-            const p5 = data.percentile_5.slice(0, limit);
-
-            // The global SWR rate already accounts for inflation conceptually based on initial portfolio
-            // But if we want to show the specific allowed withdrawal *in each future year*,
-            // Standard Bengen 4% rule assumes the *initial* withdrawal (Portfolio at retirement * SWR)
-            // is then adjusted for *inflation* each subsequent year, regardless of actual portfolio performance!
-            // Wait, the "Safe Withdrawal Amount" in the chart is just (p5 * swrRate).
-            // If p5 (the portfolio balance) goes DOWN in early retirement, then (p5 * swrRate) goes down!
-            // Is p5 going up or down? At 5th percentile, portfolio often shrinks.
-            // Let's use the constant initial SWR amount, adjusted for inflation instead.
+            const years = data.years;
 
             const swrRate = data.swr / 100;
             const retireIdx = data.years.indexOf(data.settings.retirement_age);
             const portfolioAtRetire = retireIdx >= 0 ? data.percentile_5[retireIdx] : data.current_portfolio;
             const initialSwrAmount = portfolioAtRetire * swrRate;
             const inflation = data.settings.inflation_rate;
+            const baseSpending = data.settings.annual_retirement_spending;
 
-            const swrAmounts = years.map((y, i) => {
+            const safeSpending = years.map((y, i) => {
                 const yearsFromRetire = y - data.settings.retirement_age;
-                if (yearsFromRetire < 0) return 0; // Not retired yet
-                return initialSwrAmount * Math.pow(1 + inflation, yearsFromRetire);
+                if (yearsFromRetire < 0) {
+                    return baseSpending * Math.pow(1 + inflation, i);
+                } else {
+                    return initialSwrAmount * Math.pow(1 + inflation, yearsFromRetire);
+                }
             });
 
-            // Calculate Projected Annual Spending (adjusted for inflation)
-            const baseSpending = data.settings.annual_retirement_spending;
-            const projectedSpending = years.map((_, i) => baseSpending * Math.pow(1 + inflation, i));
-
-            // Calculate Historical Annual Spending (adjusted for inflation)
             const historicalAnnualSpend = data.monthly_spend_avg * 12;
             const projectedHistorical = years.map((_, i) => historicalAnnualSpend * Math.pow(1 + inflation, i));
+
+            let seriesArr = [
+                {
+                    name: 'Safe Spend',
+                    type: 'line',
+                    data: safeSpending,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    itemStyle: { color: '#ff6b35' },
+                    lineStyle: { color: '#ff6b35', width: 2, type: 'solid' },
+                    z: 10
+                },
+                {
+                    name: 'Historical Spend',
+                    type: 'line',
+                    data: projectedHistorical,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    itemStyle: { color: '#a78bfa' },
+                    lineStyle: { color: '#a78bfa', width: 2, type: 'dotted' },
+                    z: 10
+                }
+            ];
+
+            const requiredSpend = data.required_spend_for_target;
+            if (requiredSpend !== null && requiredSpend < baseSpending && requiredSpend > 0) {
+                const recommendedSpending = years.map((_, i) => requiredSpend * Math.pow(1 + inflation, i));
+                seriesArr.push({
+                    name: 'Recommended Spend',
+                    type: 'line',
+                    data: recommendedSpending,
+                    symbol: 'none',
+                    itemStyle: { color: '#60a5fa' },
+                    lineStyle: { color: '#60a5fa', width: 2, type: 'dashed' },
+                    z: 11
+                });
+            }
 
             const option = {
                 backgroundColor: 'transparent',
@@ -1513,7 +1608,10 @@
                     nameTextStyle: { color: 'rgba(255,255,255,0.4)', fontSize: 11 },
                     axisLabel: {
                         color: 'rgba(255,255,255,0.35)',
-                        fontSize: 10
+                        fontSize: 10,
+                        interval: function (index) {
+                            return years[index] % 5 === 0;
+                        }
                     },
                     axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
                     axisTick: { show: false },
@@ -1528,52 +1626,7 @@
                     splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
                     axisLine: { show: false },
                 },
-                series: [
-                    {
-                        name: 'Safe Withdrawal',
-                        type: 'bar',
-                        data: swrAmounts,
-                        itemStyle: {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: '#60a5fa' },
-                                { offset: 1, color: 'rgba(96, 165, 250, 0.2)' }
-                            ]),
-                            borderRadius: [4, 4, 0, 0]
-                        }
-                    },
-                    {
-                        name: 'Target Spend',
-                        type: 'line',
-                        data: projectedSpending,
-                        symbol: 'circle',
-                        symbolSize: 6,
-                        itemStyle: {
-                            color: '#ff6b35'
-                        },
-                        lineStyle: {
-                            color: '#ff6b35',
-                            width: 2,
-                            type: 'dashed'
-                        },
-                        z: 10 // Ensure it renders on top of bars
-                    },
-                    {
-                        name: 'Historical Spend',
-                        type: 'line',
-                        data: projectedHistorical,
-                        symbol: 'circle',
-                        symbolSize: 6,
-                        itemStyle: {
-                            color: '#a78bfa' // Purple accent
-                        },
-                        lineStyle: {
-                            color: '#a78bfa',
-                            width: 2,
-                            type: 'dotted'
-                        },
-                        z: 10
-                    }
-                ]
+                series: seriesArr
             };
 
             swrChartInstance.setOption(option);
@@ -1599,7 +1652,7 @@
                 document.getElementById('settInflation').value = (s.inflation_rate * 100).toFixed(1);
             }
             if (window.IS_DEMO && simData) {
-                document.getElementById('settPortfolio').value = simData.current_portfolio || 146692;
+                document.getElementById('settPortfolio').value = simData.current_portfolio || 500000;
             }
             document.getElementById('settingsModal').style.display = 'flex';
         }
