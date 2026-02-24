@@ -153,10 +153,12 @@ bridge_app/
 ├── database.py          # Database connection & session info
 ├── models.py            # SQLAlchemy database models
 ├── services/            # Business logic modules
+│   ├── fire_engine.py   # FIRE Monte Carlo simulation engine
 │   ├── gemini.py        # OCR logic
 │   ├── monarch.py       # Monarch API interaction
 │   └── orchestrator.py  # Pipeline coordination
 └── static/              # Frontend assets
+    ├── fire.html        # 🔥 Ignite FIRE dashboard
     ├── index.html       # PWA entry point
     ├── sw.js            # Service Worker (Offline & Share Target)
     └── manifest.json    # App Manifest
