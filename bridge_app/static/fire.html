@@ -149,7 +149,7 @@
         /* Metric Cards */
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
             margin-bottom: 1.5rem;
         }
@@ -192,6 +192,10 @@
             background: linear-gradient(90deg, var(--accent-blue), transparent);
         }
 
+        .metric-card:nth-child(4)::before {
+            background: linear-gradient(90deg, var(--accent-amber), transparent);
+        }
+
         .metric-label {
             font-size: 0.7rem;
             text-transform: uppercase;
@@ -224,6 +228,10 @@
 
         .color-blue {
             color: var(--accent-blue);
+        }
+
+        .color-amber {
+            color: var(--accent-amber);
         }
 
         /* Chart Section */
@@ -589,7 +597,7 @@
         /* Responsive */
         @media (max-width: 480px) {
             .metrics-grid {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(2, 1fr);
                 gap: 8px;
             }
 
@@ -696,24 +704,49 @@
         </div>
 
         <div class="main">
-            <!-- Spend Badge -->
-            <div class="fade-up" style="text-align: center;">
-                <div class="spend-badge" id="spendBadge">
-                    📊 Avg monthly spend (last 12 months): <span id="monthlySpend">--</span>
-                </div>
-            </div>
-
             <!-- Metric Cards -->
             <div class="metrics-grid fade-up">
                 <div class="metric-card">
-                    <div class="metric-label">Retirement Score</div>
+                    <div class="metric-label"
+                        style="display: flex; justify-content: center; align-items: center; gap: 4px;">Retirement Score
+                        <svg onclick="openScoreInfoModal()"
+                            style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
                     <div class="metric-value color-green" id="probScore">--</div>
                     <div class="metric-sub" id="probSub">out of 100%</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-label">FIRE Date</div>
+                    <div class="metric-label"
+                        style="display: flex; justify-content: center; align-items: center; gap: 4px;">FIRE Date
+                        <svg onclick="openFireDateInfoModal()"
+                            style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
                     <div class="metric-value color-fire" id="fireAge">--</div>
                     <div class="metric-sub" id="fireSub">estimated year</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label"
+                        style="display: flex; justify-content: center; align-items: center; gap: 4px;">Anticipated Spend
+                        <svg onclick="openSpendInfoModal()"
+                            style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="metric-value color-amber" id="monthlySpend">--</div>
+                    <div class="metric-sub" id="historicalSpendSub">--</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label"
@@ -736,10 +769,6 @@
             <div class="chart-section fade-up">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="chart-title">📈 Portfolio Projection
-                        <br>
-                        <span
-                            style="font-style: italic; font-size: 0.75rem; font-weight: normal; color: var(--text-muted);">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Cone
-                            of Uncertainty)</span>
                     </div>
                     <div class="chart-controls">
                         <label class="toggle-label">
@@ -781,6 +810,19 @@
             <div class="modal-close" id="modalClose">✕</div>
             <div class="modal-title">⚙️ Simulation Settings</div>
 
+            <div class="form-row"
+                style="margin-bottom: 1.2rem; align-items: center; display: flex; justify-content: space-between; background: rgba(96, 165, 250, 0.1); padding: 12px; border-radius: var(--radius-sm); border: 1px solid rgba(96, 165, 250, 0.2); width: 100%;">
+                <div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-blue);">🧪 Demo Mode</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Use sample data instead
+                        of real accounts.</div>
+                </div>
+                <label class="toggle-label" style="font-size: 0; margin: 0;">
+                    <input type="checkbox" id="settDemoMode" class="toggle-checkbox" onchange="toggleDemoMode()"
+                        style="width: 18px; height: 18px;">
+                </label>
+            </div>
+
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Current Age</label>
@@ -818,6 +860,13 @@
                 </div>
             </div>
 
+            <div class="form-row" id="demoPortfolioRow" style="display: none;">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label">Net Worth Total ($) [Demo Only]</label>
+                    <input type="number" class="form-input" id="settPortfolio" min="0" step="1000">
+                </div>
+            </div>
+
             <button class="save-btn" id="saveSettingsBtn" onclick="saveSettings()">
                 🔥 Save & Re-run Simulation
             </button>
@@ -834,21 +883,94 @@
             <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
                 <p style="margin-bottom: 1rem;">
                     The <strong>Safe Withdrawal Rate (SWR)</strong> is the maximum percentage of your portfolio you can
-                    withdraw in your first year of retirement without running out of money.
+                    withdraw in your first year of retirement to cover living expenses, adjusting for inflation every
+                    year thereafter.
                 </p>
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                    <strong>How we calculate it:</strong> We run an aggressive binary search through 10,000 Monte Carlo
-                    simulations, hunting for the absolute highest withdrawal rate that still maintains a <strong
-                        style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) after 30 years.
-                </p>
-                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                    This rate automatically adjusts based on your configuration, tracking your chosen <strong>inflation
-                        rate</strong> over time, and simulating the exact <strong>risk tolerance</strong> volatility you
-                    picked in your settings!
+                    <strong>How we calculate it:</strong> We run a binary search through 10,000 Monte Carlo simulations
+                    at your target retirement age, hunting for the absolute highest withdrawal rate that still maintains
+                    a <strong style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) until Age
+                    85.
                 </p>
                 <p style="color: var(--text-secondary);">
-                    The projected dollar amounts shown in the chart below apply this safety rate to your <strong>median
-                        (50th percentile)</strong> projected portfolio value.
+                    <strong>How to interpret it:</strong> A higher SWR (e.g. 4-5%) means you can pull more money out
+                    each year relative to your balance, usually implying high confidence. The chart below graphs these
+                    projected withdrawal amounts mapping to the "5th percentile" safety line.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Score Info Modal -->
+    <div class="modal-overlay" id="scoreInfoModal">
+        <div class="modal-card">
+            <div class="modal-close" id="scoreModalClose">✕</div>
+            <div class="modal-title" style="color: var(--accent-green); margin-bottom: 1rem;">ℹ️ Retirement Score
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
+                <p style="margin-bottom: 1rem;">
+                    The <strong>Retirement Score</strong> represents your overall probability of success based on your
+                    current trajectory and settings.
+                </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    <strong>How we calculate it:</strong> We project your portfolio out to Age 85 across 10,000 Monte
+                    Carlo simulations. The score is exactly the percentage of those simulations where your portfolio
+                    survives (stays above $0) until Age 85.
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>How to interpret it:</strong> Aim for a score of <strong>95% or higher (🟢
+                        Excellent)</strong> to be completely "FIRE ready". If your score is lower, consider manually
+                    adjusting your retirement age, spending, or savings rate.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIRE Date Info Modal -->
+    <div class="modal-overlay" id="fireDateInfoModal">
+        <div class="modal-card">
+            <div class="modal-close" id="fireDateModalClose">✕</div>
+            <div class="modal-title" style="color: var(--accent-fire); margin-bottom: 1rem;">ℹ️ FIRE Date
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
+                <p style="margin-bottom: 1rem;">
+                    Your <strong>FIRE Date</strong> is the earliest estimated age and year you can safely retire while
+                    maintaining your desired lifestyle.
+                </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    <strong>How we calculate it:</strong> We iteratively simulate retiring at every age between now and
+                    85. Your FIRE date is the youngest potential age that still results in a mathematically-safe
+                    <strong>≥95% success rate</strong> (portfolio > $0 until Age 85).
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>How to interpret it:</strong> This is a dynamic target that adjusts to your settings. If it
+                    says "🥶 No FIRE Date", your current savings and planned expenses are incompatible with early
+                    retirement.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anticipated Spend Info Modal -->
+    <div class="modal-overlay" id="spendInfoModal">
+        <div class="modal-card">
+            <div class="modal-close" id="spendModalClose">✕</div>
+            <div class="modal-title" style="color: var(--accent-amber); margin-bottom: 1rem;">ℹ️ Anticipated Spend
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
+                <p style="margin-bottom: 1rem;">
+                    <strong>Anticipated Spend</strong> is exactly the value you input in your Simulation Settings
+                    representing how much you plan to withdraw each year for living expenses post-retirement.
+                </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    <strong>How we calculate it:</strong> This is a passthrough of your manual "Annual Spending ($)"
+                    configuration. Underneath it, your <strong>Historical Spend</strong> is automatically calculated by
+                    summing your last 12 months of living expenses in Monarch.
+                </p>
+                <p style="color: var(--text-secondary);">
+                    <strong>How to interpret it:</strong> This card exists so you can perform a quick reality check! If
+                    your Anticipated Spend is 40k but your Historical Spend is 90k, your goals may need adjusting.
+                    Ensure your simulation represents what you actually plan to spend.
                 </p>
             </div>
         </div>
@@ -864,6 +986,7 @@
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
             loadLogPreference();
+            loadDemoPreference();
             runSimulation();
 
             // Settings modal
@@ -878,13 +1001,51 @@
             document.getElementById('swrInfoModal').onclick = (e) => {
                 if (e.target === document.getElementById('swrInfoModal')) closeSwrInfoModal();
             };
+
+            // Score Info modal
+            document.getElementById('scoreModalClose').onclick = () => closeScoreInfoModal();
+            document.getElementById('scoreInfoModal').onclick = (e) => {
+                if (e.target === document.getElementById('scoreInfoModal')) closeScoreInfoModal();
+            };
+
+            // FIRE Date Info modal
+            document.getElementById('fireDateModalClose').onclick = () => closeFireDateInfoModal();
+            document.getElementById('fireDateInfoModal').onclick = (e) => {
+                if (e.target === document.getElementById('fireDateInfoModal')) closeFireDateInfoModal();
+            };
+
+            // Spend Info modal
+            document.getElementById('spendModalClose').onclick = () => closeSpendInfoModal();
+            document.getElementById('spendInfoModal').onclick = (e) => {
+                if (e.target === document.getElementById('spendInfoModal')) closeSpendInfoModal();
+            };
         });
 
         // ===== API =====
         async function runSimulation() {
             showLoading();
             try {
-                const res = await fetch('/api/fire/simulate', { method: 'POST' });
+                let reqBody = JSON.stringify({ is_demo: window.IS_DEMO });
+                let headers = { 'Content-Type': 'application/json' };
+
+                if (window.IS_DEMO) {
+                    const stored = localStorage.getItem('fire_demo_settings');
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        reqBody = JSON.stringify({
+                            settings: parsed,
+                            current_portfolio: parsed.current_portfolio,
+                            is_demo: true
+                        });
+                    }
+                }
+
+                const res = await fetch('/api/fire/simulate', {
+                    method: 'POST',
+                    headers: headers,
+                    body: reqBody
+                });
+
                 if (!res.ok) {
                     const err = await res.json();
                     throw new Error(err.detail || `HTTP ${res.status}`);
@@ -911,13 +1072,25 @@
             };
 
             try {
-                await fetch('/api/fire/settings', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                });
-                closeSettings();
-                runSimulation();
+                if (window.IS_DEMO) {
+                    const portfolioStr = document.getElementById('settPortfolio').value;
+                    if (portfolioStr) {
+                        payload.current_portfolio = parseInt(portfolioStr);
+                    }
+
+                    // Update in local storage instead of remote database
+                    localStorage.setItem('fire_demo_settings', JSON.stringify(payload));
+                    closeSettings();
+                    runSimulation();
+                } else {
+                    await fetch('/api/fire/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    closeSettings();
+                    runSimulation();
+                }
             } catch (e) {
                 alert('Failed to save: ' + e.message);
             } finally {
@@ -952,14 +1125,22 @@
             document.getElementById('probScore').textContent = data.retirement_probability + '%';
             document.getElementById('probSub').textContent = probabilityLabel(data.retirement_probability);
 
-            document.getElementById('fireAge').textContent = 'Age ' + data.fire_date_age;
-            document.getElementById('fireSub').textContent = '~' + data.fire_date_year;
+            if (data.fire_date_age !== null) {
+                document.getElementById('fireAge').textContent = 'Age ' + data.fire_date_age;
+                document.getElementById('fireSub').textContent = '~' + data.fire_date_year;
+            } else {
+                document.getElementById('fireAge').textContent = '🥶🥶🥶';
+                document.getElementById('fireSub').textContent = 'Survival rate < 95%';
+            }
 
-            document.getElementById('swrValue').textContent = data.swr + '%';
-            document.getElementById('swrSub').textContent = data.risk_profile_label;
+            const retireIdx = data.years.indexOf(data.settings.retirement_age);
+            const portfolioAtRetire = retireIdx >= 0 ? data.percentile_5[retireIdx] : data.current_portfolio;
+            document.getElementById('swrValue').textContent = '$' + formatNum(portfolioAtRetire * data.swr / 100) + '/yr';
+            document.getElementById('swrSub').textContent = data.swr + '% of $' + formatCompact(portfolioAtRetire) + ' (5th pctl)';
 
-            // Monthly spend
-            document.getElementById('monthlySpend').textContent = '$' + formatNum(data.monthly_spend_avg);
+            // Anticipated spend
+            document.getElementById('monthlySpend').textContent = '$' + formatNum(data.settings.annual_retirement_spending);
+            document.getElementById('historicalSpendSub').textContent = 'vs $' + formatCompact(data.monthly_spend_avg * 12) + ' historical (MM)';
 
             // Portfolio
             document.getElementById('portfolioTotal').textContent = '$' + formatNum(data.current_portfolio);
@@ -1020,8 +1201,48 @@
             chartInstance = echarts.init(container, null, { renderer: 'canvas' });
 
             const years = data.years;
-            const retireAge = data.settings.retirement_age;
-            const retireIdx = years.indexOf(retireAge);
+            // Clone the percentiles to prevent in-place mutation affecting other charts
+            let p5 = [...data.percentile_5];
+            let p25 = [...data.percentile_25];
+            let p50 = [...data.percentile_50];
+            let p75 = [...data.percentile_75];
+            let p95 = [...data.percentile_95];
+
+            // Log scale breaks if data contains zeroes or negative values
+            // The yAxis minimum is clamped to 10000 below, so clamp data to 10000 for log scale to prevent broken lines
+            if (useLogScale) {
+                const clamp = val => Math.max(10000, val);
+                p5 = p5.map(clamp);
+                p25 = p25.map(clamp);
+                p50 = p50.map(clamp);
+                p75 = p75.map(clamp);
+                p95 = p95.map(clamp);
+            }
+
+            const targetRetireAge = data.settings.retirement_age;
+            const targetRetireIdx = years.indexOf(targetRetireAge);
+
+            const fireAge = data.fire_date_age;
+            const fireIdx = fireAge !== null ? years.indexOf(fireAge) : -1;
+
+            // Find "Freeze" date (when 5th percentile hits 0)
+            let freezeIdx = -1;
+            if (fireAge === null) {
+                freezeIdx = data.percentile_5.findIndex(v => v <= 0);
+            }
+
+            // Prevent overlapping labels mapping by shifting one of the labels down
+            let targetOffset = [0, 0];
+            let fireOffset = [0, 0];
+            let freezeOffset = [0, 0];
+            if (targetRetireIdx >= 0) {
+                if (fireIdx >= 0 && Math.abs(targetRetireIdx - fireIdx) <= 3) {
+                    fireOffset = [0, 16]; // shift down
+                }
+                if (freezeIdx >= 0 && Math.abs(targetRetireIdx - freezeIdx) <= 3) {
+                    freezeOffset = [0, 16]; // shift down
+                }
+            }
 
             const option = {
                 backgroundColor: 'transparent',
@@ -1102,7 +1323,7 @@
                     {
                         name: '5th Pctl',
                         type: 'line',
-                        data: data.percentile_5,
+                        data: p5,
                         lineStyle: { opacity: 0 },
                         stack: 'band-outer',
                         symbol: 'none',
@@ -1111,7 +1332,7 @@
                     {
                         name: '95th Pctl',
                         type: 'line',
-                        data: data.percentile_95.map((v, i) => v - data.percentile_5[i]),
+                        data: p95.map((v, i) => v - p5[i]),
                         lineStyle: { opacity: 0 },
                         stack: 'band-outer',
                         symbol: 'none',
@@ -1126,7 +1347,7 @@
                     {
                         name: '25th Pctl',
                         type: 'line',
-                        data: data.percentile_25,
+                        data: p25,
                         lineStyle: { opacity: 0 },
                         stack: 'band-inner',
                         symbol: 'none',
@@ -1135,7 +1356,7 @@
                     {
                         name: '75th Pctl',
                         type: 'line',
-                        data: data.percentile_75.map((v, i) => v - data.percentile_25[i]),
+                        data: p75.map((v, i) => v - p25[i]),
                         lineStyle: { opacity: 0 },
                         stack: 'band-inner',
                         symbol: 'none',
@@ -1150,29 +1371,66 @@
                     {
                         name: 'Median',
                         type: 'line',
-                        data: data.percentile_50,
-                        lineStyle: { color: '#ff6b35', width: 2.5 },
+                        data: p50,
+                        lineStyle: { color: '#ff6b35', width: 2 },
                         symbol: 'none',
                         smooth: 0.2,
                         z: 10,
                     },
-                    // Retirement age marker
-                    ...(retireIdx >= 0 ? [{
+                    // Target retirement age marker (user setting)
+                    ...(targetRetireIdx >= 0 ? [{
                         type: 'line',
                         markLine: {
                             silent: true,
                             symbol: 'none',
-                            lineStyle: { color: 'rgba(255, 107, 53, 0.5)', type: 'dashed', width: 1 },
+                            lineStyle: { color: 'rgba(251, 191, 36, 0.5)', type: 'dashed', width: 1 },
                             label: {
-                                formatter: '🔥 Retire',
-                                color: 'rgba(255,107,53,0.7)',
+                                formatter: '🎯 Target',
+                                color: 'rgba(251, 191, 36, 0.7)',
                                 fontSize: 10,
-                                position: 'start',
+                                position: 'end',
+                                offset: targetOffset
                             },
-                            data: [{ xAxis: retireIdx }]
+                            data: [{ xAxis: targetRetireIdx }]
                         },
                         data: [],
                     }] : []),
+                    // Computed FIRE date marker (simulation result)
+                    ...(fireIdx >= 0 ? [{
+                        type: 'line',
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            lineStyle: { color: 'rgba(255, 107, 53, 0.7)', type: 'dashed', width: 1.5 },
+                            label: {
+                                formatter: '🔥 FIRE',
+                                color: '#ff6b35',
+                                fontSize: 10,
+                                position: 'end',
+                                offset: fireOffset
+                            },
+                            data: [{ xAxis: fireIdx }]
+                        },
+                        data: [],
+                    }] : []),
+                    // Freeze marker (when running out of money)
+                    ...(freezeIdx >= 0 ? [{
+                        type: 'line',
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            lineStyle: { color: 'rgba(56, 189, 248, 0.7)', type: 'dashed', width: 1.5 },
+                            label: {
+                                formatter: '🥶 Freeze',
+                                color: 'rgba(56, 189, 248, 0.9)',
+                                fontSize: 10,
+                                position: 'end',
+                                offset: freezeOffset
+                            },
+                            data: [{ xAxis: freezeIdx }]
+                        },
+                        data: [],
+                    }] : [])
                 ]
             };
 
@@ -1192,13 +1450,31 @@
             // SWR Amounts for next 10 years
             const limit = Math.min(10, data.years.length);
             const years = data.years.slice(0, limit);
-            const p50 = data.percentile_50.slice(0, limit);
+            const p5 = data.percentile_5.slice(0, limit);
+
+            // The global SWR rate already accounts for inflation conceptually based on initial portfolio
+            // But if we want to show the specific allowed withdrawal *in each future year*,
+            // Standard Bengen 4% rule assumes the *initial* withdrawal (Portfolio at retirement * SWR)
+            // is then adjusted for *inflation* each subsequent year, regardless of actual portfolio performance!
+            // Wait, the "Safe Withdrawal Amount" in the chart is just (p5 * swrRate).
+            // If p5 (the portfolio balance) goes DOWN in early retirement, then (p5 * swrRate) goes down!
+            // Is p5 going up or down? At 5th percentile, portfolio often shrinks.
+            // Let's use the constant initial SWR amount, adjusted for inflation instead.
+
             const swrRate = data.swr / 100;
-            const swrAmounts = p50.map((p, i) => data.years[i] >= data.settings.retirement_age ? p * swrRate : 0);
+            const retireIdx = data.years.indexOf(data.settings.retirement_age);
+            const portfolioAtRetire = retireIdx >= 0 ? data.percentile_5[retireIdx] : data.current_portfolio;
+            const initialSwrAmount = portfolioAtRetire * swrRate;
+            const inflation = data.settings.inflation_rate;
+
+            const swrAmounts = years.map((y, i) => {
+                const yearsFromRetire = y - data.settings.retirement_age;
+                if (yearsFromRetire < 0) return 0; // Not retired yet
+                return initialSwrAmount * Math.pow(1 + inflation, yearsFromRetire);
+            });
 
             // Calculate Projected Annual Spending (adjusted for inflation)
             const baseSpending = data.settings.annual_retirement_spending;
-            const inflation = data.settings.inflation_rate;
             const projectedSpending = years.map((_, i) => baseSpending * Math.pow(1 + inflation, i));
 
             // Calculate Historical Annual Spending (adjusted for inflation)
@@ -1310,6 +1586,8 @@
 
         // ===== Settings Modal =====
         function openSettings() {
+            document.getElementById('settDemoMode').checked = window.IS_DEMO;
+            document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
             // Populate from current sim data
             if (simData?.settings) {
                 const s = simData.settings;
@@ -1320,18 +1598,48 @@
                 document.getElementById('settRisk').value = s.risk_tolerance;
                 document.getElementById('settInflation').value = (s.inflation_rate * 100).toFixed(1);
             }
+            if (window.IS_DEMO && simData) {
+                document.getElementById('settPortfolio').value = simData.current_portfolio || 146692;
+            }
             document.getElementById('settingsModal').style.display = 'flex';
         }
         function closeSettings() {
             document.getElementById('settingsModal').style.display = 'none';
         }
 
-        // ===== SWR Info Modal =====
+        function toggleDemoMode() {
+            window.IS_DEMO = document.getElementById('settDemoMode').checked;
+            localStorage.setItem('fire_is_demo', window.IS_DEMO);
+            document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
+        }
+
+        // ===== Info Modals =====
         function openSwrInfoModal() {
             document.getElementById('swrInfoModal').style.display = 'flex';
         }
         function closeSwrInfoModal() {
             document.getElementById('swrInfoModal').style.display = 'none';
+        }
+
+        function openScoreInfoModal() {
+            document.getElementById('scoreInfoModal').style.display = 'flex';
+        }
+        function closeScoreInfoModal() {
+            document.getElementById('scoreInfoModal').style.display = 'none';
+        }
+
+        function openFireDateInfoModal() {
+            document.getElementById('fireDateInfoModal').style.display = 'flex';
+        }
+        function closeFireDateInfoModal() {
+            document.getElementById('fireDateInfoModal').style.display = 'none';
+        }
+
+        function openSpendInfoModal() {
+            document.getElementById('spendInfoModal').style.display = 'flex';
+        }
+        function closeSpendInfoModal() {
+            document.getElementById('spendInfoModal').style.display = 'none';
         }
 
         // ===== Helpers =====
@@ -1351,6 +1659,11 @@
                 useLogScale = saved === 'true';
                 document.getElementById('logScaleToggle').checked = useLogScale;
             }
+        }
+
+        function loadDemoPreference() {
+            const saved = localStorage.getItem('fire_is_demo');
+            window.IS_DEMO = saved === 'true';
         }
 
         function handleLogToggle() {
