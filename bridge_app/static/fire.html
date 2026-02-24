@@ -863,7 +863,7 @@
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
                     <strong>How we calculate it:</strong> We run an aggressive binary search through 10,000 Monte Carlo
                     simulations, hunting for the absolute highest withdrawal rate that still maintains a <strong
-                        style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) after 30 years.
+                        style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) until Age 85.
                 </p>
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
                     This rate automatically adjusts based on your configuration, tracking your chosen <strong>inflation
@@ -1010,8 +1010,13 @@
             document.getElementById('probScore').textContent = data.retirement_probability + '%';
             document.getElementById('probSub').textContent = probabilityLabel(data.retirement_probability);
 
-            document.getElementById('fireAge').textContent = 'Age ' + data.fire_date_age;
-            document.getElementById('fireSub').textContent = '~' + data.fire_date_year;
+            if (data.fire_date_age !== null) {
+                document.getElementById('fireAge').textContent = 'Age ' + data.fire_date_age;
+                document.getElementById('fireSub').textContent = '~' + data.fire_date_year;
+            } else {
+                document.getElementById('fireAge').textContent = '🥶🥶🥶';
+                document.getElementById('fireSub').textContent = 'Survival rate < 95%';
+            }
 
             const retireIdx = data.years.indexOf(data.settings.retirement_age);
             const portfolioAtRetire = retireIdx >= 0 ? data.percentile_5[retireIdx] : data.current_portfolio;
@@ -1100,8 +1105,28 @@
 
             const targetRetireAge = data.settings.retirement_age;
             const targetRetireIdx = years.indexOf(targetRetireAge);
+
             const fireAge = data.fire_date_age;
-            const fireIdx = years.indexOf(fireAge);
+            const fireIdx = fireAge !== null ? years.indexOf(fireAge) : -1;
+
+            // Find "Freeze" date (when 5th percentile hits 0)
+            let freezeIdx = -1;
+            if (fireAge === null) {
+                freezeIdx = data.percentile_5.findIndex(v => v <= 0);
+            }
+
+            // Prevent overlapping labels mapping by shifting one of the labels down
+            let targetOffset = [0, 0];
+            let fireOffset = [0, 0];
+            let freezeOffset = [0, 0];
+            if (targetRetireIdx >= 0) {
+                if (fireIdx >= 0 && Math.abs(targetRetireIdx - fireIdx) <= 3) {
+                    fireOffset = [0, 16]; // shift down
+                }
+                if (freezeIdx >= 0 && Math.abs(targetRetireIdx - freezeIdx) <= 3) {
+                    freezeOffset = [0, 16]; // shift down
+                }
+            }
 
             const option = {
                 backgroundColor: 'transparent',
@@ -1242,12 +1267,13 @@
                         markLine: {
                             silent: true,
                             symbol: 'none',
-                            lineStyle: { color: 'rgba(96, 165, 250, 0.5)', type: 'dashed', width: 1 },
+                            lineStyle: { color: 'rgba(251, 191, 36, 0.5)', type: 'dashed', width: 1 },
                             label: {
                                 formatter: '🎯 Target',
-                                color: 'rgba(96, 165, 250, 0.7)',
+                                color: 'rgba(251, 191, 36, 0.7)',
                                 fontSize: 10,
                                 position: 'end',
+                                offset: targetOffset
                             },
                             data: [{ xAxis: targetRetireIdx }]
                         },
@@ -1259,17 +1285,36 @@
                         markLine: {
                             silent: true,
                             symbol: 'none',
-                            lineStyle: { color: 'rgba(255, 107, 53, 0.5)', type: 'dashed', width: 1 },
+                            lineStyle: { color: 'rgba(255, 107, 53, 0.7)', type: 'dashed', width: 1.5 },
                             label: {
                                 formatter: '🔥 FIRE',
-                                color: 'rgba(255, 107, 53, 0.7)',
+                                color: '#ff6b35',
                                 fontSize: 10,
                                 position: 'end',
+                                offset: fireOffset
                             },
                             data: [{ xAxis: fireIdx }]
                         },
                         data: [],
                     }] : []),
+                    // Freeze marker (when running out of money)
+                    ...(freezeIdx >= 0 ? [{
+                        type: 'line',
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            lineStyle: { color: 'rgba(56, 189, 248, 0.7)', type: 'dashed', width: 1.5 },
+                            label: {
+                                formatter: '🥶 Freeze',
+                                color: 'rgba(56, 189, 248, 0.9)',
+                                fontSize: 10,
+                                position: 'end',
+                                offset: freezeOffset
+                            },
+                            data: [{ xAxis: freezeIdx }]
+                        },
+                        data: [],
+                    }] : [])
                 ]
             };
 
