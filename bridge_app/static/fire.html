@@ -199,6 +199,10 @@
             background: linear-gradient(90deg, var(--accent-amber), transparent);
         }
 
+        #recommendationsCard::before {
+            background: linear-gradient(90deg, var(--accent-purple), transparent);
+        }
+
         .metric-label {
             font-size: 0.7rem;
             text-transform: uppercase;
@@ -755,7 +759,7 @@
                 <div class="metric-card">
                     <div class="metric-label"
                         style="display: flex; justify-content: center; align-items: center; gap: 4px;">
-                        Safe Withdrawal
+                        Safe Withdrawal @ 🔥
                         <svg onclick="openSwrInfoModal()"
                             style="width: 14px; height: 14px; cursor: pointer; color: var(--text-muted); transition: color 0.1s;"
                             xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -766,6 +770,18 @@
                     </div>
                     <div class="metric-value color-blue" id="swrValue">--</div>
                     <div class="metric-sub" id="swrSub">annual rate</div>
+                </div>
+            </div>
+
+            <!-- Recommendations Card -->
+            <div id="recommendationsCard" class="metric-card fade-up"
+                style="margin-bottom: 2rem; align-items: flex-start; text-align: left;">
+                <div class="metric-label" style="display: flex; align-items: center; gap: 6px;">
+                    💡 Recommendations
+                </div>
+                <div id="recommendationText"
+                    style="margin-top: 10px; font-size: 0.95rem; line-height: 1.5; font-weight: 500;">
+                    --
                 </div>
             </div>
 
@@ -971,6 +987,11 @@
                     configuration. Underneath it, your <strong>Historical Spend</strong> is automatically calculated by
                     summing your last 12 months of living expenses in Monarch.
                 </p>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    <strong>Target Safe Spend:</strong> If your Anticipated Spend is too high to achieve your target
+                    retirement age, the engine will automatically calculate the maximum "Target Safe Spend" you can
+                    afford and display the required lifestyle cut.
+                </p>
                 <p style="color: var(--text-secondary);">
                     <strong>How to interpret it:</strong> This card exists so you can perform a quick reality check! If
                     your Anticipated Spend is 40k but your Historical Spend is 90k, your goals may need adjusting.
@@ -1156,9 +1177,24 @@
             document.getElementById('swrValue').textContent = '$' + formatNum(portfolioAtRetire * data.swr / 100) + '/yr';
             document.getElementById('swrSub').textContent = data.swr + '% of $' + formatCompact(portfolioAtRetire) + ' (5th pctl)';
 
-            // Anticipated spend
-            document.getElementById('monthlySpend').textContent = '$' + formatNum(data.settings.annual_retirement_spending);
+            // Anticipated spend target logic
+            const plannedSpend = data.settings.annual_retirement_spending;
+            const requiredSpend = data.required_spend_for_target;
+            const spendCard = document.getElementById('monthlySpend');
+            const recText = document.getElementById('recommendationText');
+
+            spendCard.textContent = '$' + formatNum(plannedSpend);
             document.getElementById('historicalSpendSub').textContent = 'vs $' + formatCompact(data.monthly_spend_avg * 12) + ' historical (MM)';
+
+            if (requiredSpend !== null && requiredSpend < plannedSpend && requiredSpend > 0) {
+                spendCard.style.color = "var(--accent-red)";
+                recText.textContent = 'Reduce spend to $' + formatNum(requiredSpend) + ' to reach FIRE at target age.';
+                recText.style.color = "var(--accent-blue)";
+            } else {
+                spendCard.style.color = "var(--accent-amber)";
+                recText.textContent = 'You are on track to achieve FIRE by your target year! 🎉';
+                recText.style.color = "var(--accent-green)";
+            }
 
             // Portfolio
             document.getElementById('portfolioTotal').textContent = '$' + formatNum(data.current_portfolio);
@@ -1617,7 +1653,7 @@
                 document.getElementById('settInflation').value = (s.inflation_rate * 100).toFixed(1);
             }
             if (window.IS_DEMO && simData) {
-                document.getElementById('settPortfolio').value = simData.current_portfolio || 146692;
+                document.getElementById('settPortfolio').value = simData.current_portfolio || 500000;
             }
             document.getElementById('settingsModal').style.display = 'flex';
         }

@@ -1067,9 +1067,9 @@ async def get_fire_settings(request: Request, db: AsyncSession = Depends(get_db)
     if not request.state.is_authenticated:
         # Return default values for unauthenticated users instead of reading DB
         return {
-            "current_age": 35,
-            "retirement_age": 55,
-            "annual_contribution": 24000,
+            "current_age": 45,
+            "retirement_age": 65,
+            "annual_contribution": 100000,
             "annual_retirement_spending": 80000,
             "risk_tolerance": "moderate",
             "inflation_rate": 0.03,
@@ -1157,12 +1157,16 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
         if req and req.settings:
             settings_obj = req.settings
         else:
-            settings_result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
-            settings_obj = settings_result.scalar_one_or_none()
-            if not settings_obj:
-                settings_obj = FireSettings(id=1)
+            settings_obj = FireSettings(
+                current_age=45,
+                retirement_age=65,
+                annual_contribution=100000,
+                annual_retirement_spending=80000,
+                risk_tolerance="moderate",
+                inflation_rate=0.03,
+            )
 
-        demo_portfolio = 146_692
+        demo_portfolio = 500_000
         if req and req.current_portfolio is not None:
             demo_portfolio = req.current_portfolio
 
@@ -1187,6 +1191,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
             "fire_date_age": result.fire_date_age,
             "fire_date_year": result.fire_date_year,
             "swr": result.swr,
+            "required_spend_for_target": result.required_spend_for_target,
             "current_portfolio": demo_portfolio,
             "risk_profile_label": result.risk_profile_label,
             "account_breakdown": [],
@@ -1268,6 +1273,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
         "fire_date_age": result.fire_date_age,
         "fire_date_year": result.fire_date_year,
         "swr": result.swr,
+        "required_spend_for_target": result.required_spend_for_target,
         "current_portfolio": result.current_portfolio,
         "risk_profile_label": result.risk_profile_label,
         "account_breakdown": account_breakdown,

@@ -70,6 +70,7 @@ class SimulationResult:
     fire_date_age: Optional[int]        # earliest age with ≥95% survival
     fire_date_year: Optional[int]       # calendar year of FIRE date
     swr: float                          # safe withdrawal rate (%)
+    required_spend_for_target: Optional[float] # max allowable spending to hit Target age
     current_portfolio: float            # input portfolio value
     risk_profile_label: str             # human-readable risk label
     account_breakdown: List[Dict] = field(default_factory=list)
@@ -133,6 +134,7 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     prob = _calc_retirement_probability(portfolios, inp)
     fire_age = _calc_fire_date(inp, profile)
     swr = _calc_swr(inp, profile)
+    required_spend = _calc_required_spend(inp, profile)
 
     # Calendar year for FIRE date
     from datetime import datetime
@@ -152,6 +154,7 @@ def simulate(inp: SimulationInput) -> SimulationResult:
         fire_date_age=fire_age,
         fire_date_year=fire_year,
         swr=round(swr, 2),
+        required_spend_for_target=int(required_spend) if required_spend else None,
         current_portfolio=round(inp.current_portfolio, 2),
         risk_profile_label=profile["label"],
     )
@@ -289,6 +292,69 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
             high = mid
 
     return best_swr
+
+
+def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
+    """
+    Binary search for the highest annual spending amount (starting from today)
+    that still gives ≥95% survival to age 85 at the configured Target Retirement Age.
+    """
+    years_to_retire = max(inp.retirement_age - inp.current_age, 0)
+    years_post = max(85 - inp.retirement_age, 0)
+    total_years = years_to_retire + years_post
+
+    if total_years > 80:
+        total_years = 80
+
+    # Ensure there is actually a period to model
+    if total_years <= 0:
+        return 0.0
+
+    # Generate market returns identical to actual simulation
+    rng = np.random.default_rng(seed=42)
+    returns = rng.normal(
+        profile["mean_return"], profile["std_return"],
+        size=(inp.iterations, total_years)
+    )
+
+    # Binary search for optimal fixed spending
+    low, high = 0.0, 10_000_000.0  # Search up to $10M/yr spend
+    best_spend = 0.0
+
+    for _ in range(50):  # 50 iterations provides ~$0.01 precision on $10M
+        test_spend = (low + high) / 2
+        
+        # Simulate trajectory using this test spend
+        portfolios = np.zeros((inp.iterations, total_years + 1))
+        portfolios[:, 0] = inp.current_portfolio
+        
+        for yr in range(total_years):
+            inflation_factor = (1 + inp.inflation_rate) ** yr
+            spending = test_spend * inflation_factor
+            
+            # Income only applies before retirement target
+            if yr < years_to_retire:
+                income = inp.annual_contribution * inflation_factor
+            else:
+                income = 0.0
+                
+            net_cashflow = income - spending
+            
+            portfolios[:, yr + 1] = (
+                portfolios[:, yr] * (1 + returns[:, yr]) + net_cashflow
+            )
+            portfolios[:, yr + 1] = np.maximum(portfolios[:, yr + 1], 0)
+            
+        survival_rate = np.sum(portfolios[:, -1] > 0) / inp.iterations
+        if round(survival_rate, 3) >= 0.950:
+            # We survived! Try to spend MORE money to find the maximum possible.
+            best_spend = test_spend
+            low = test_spend
+        else:
+            # We failed. We spent too much money. Lower the ceiling.
+            high = test_spend
+
+    return best_spend
 
 
 def filter_accounts(accounts_data: dict) -> tuple:
