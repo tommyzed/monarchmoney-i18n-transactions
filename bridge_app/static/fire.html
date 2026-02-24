@@ -785,6 +785,19 @@
             <div class="modal-close" id="modalClose">✕</div>
             <div class="modal-title">⚙️ Simulation Settings</div>
 
+            <div class="form-row"
+                style="margin-bottom: 1.2rem; align-items: center; display: flex; justify-content: space-between; background: rgba(96, 165, 250, 0.1); padding: 12px; border-radius: var(--radius-sm); border: 1px solid rgba(96, 165, 250, 0.2); width: 100%;">
+                <div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-blue);">🧪 Demo Mode</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Use sample data instead
+                        of real accounts.</div>
+                </div>
+                <label class="toggle-label" style="font-size: 0; margin: 0;">
+                    <input type="checkbox" id="settDemoMode" class="toggle-checkbox" onchange="toggleDemoMode()"
+                        style="width: 18px; height: 18px;">
+                </label>
+            </div>
+
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Current Age</label>
@@ -875,6 +888,7 @@
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
             loadLogPreference();
+            loadDemoPreference();
             runSimulation();
 
             // Settings modal
@@ -895,8 +909,8 @@
         async function runSimulation() {
             showLoading();
             try {
-                let reqBody = undefined;
-                let headers = undefined;
+                let reqBody = JSON.stringify({ is_demo: window.IS_DEMO });
+                let headers = { 'Content-Type': 'application/json' };
 
                 if (window.IS_DEMO) {
                     const stored = localStorage.getItem('fire_demo_settings');
@@ -904,9 +918,9 @@
                         const parsed = JSON.parse(stored);
                         reqBody = JSON.stringify({
                             settings: parsed,
-                            current_portfolio: parsed.current_portfolio
+                            current_portfolio: parsed.current_portfolio,
+                            is_demo: true
                         });
-                        headers = { 'Content-Type': 'application/json' };
                     }
                 }
 
@@ -1410,6 +1424,8 @@
 
         // ===== Settings Modal =====
         function openSettings() {
+            document.getElementById('settDemoMode').checked = window.IS_DEMO;
+            document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
             // Populate from current sim data
             if (simData?.settings) {
                 const s = simData.settings;
@@ -1422,12 +1438,17 @@
             }
             if (window.IS_DEMO && simData) {
                 document.getElementById('settPortfolio').value = simData.current_portfolio || 146692;
-                document.getElementById('demoPortfolioRow').style.display = 'grid';
             }
             document.getElementById('settingsModal').style.display = 'flex';
         }
         function closeSettings() {
             document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function toggleDemoMode() {
+            window.IS_DEMO = document.getElementById('settDemoMode').checked;
+            localStorage.setItem('fire_is_demo', window.IS_DEMO);
+            document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
         }
 
         // ===== SWR Info Modal =====
@@ -1455,6 +1476,11 @@
                 useLogScale = saved === 'true';
                 document.getElementById('logScaleToggle').checked = useLogScale;
             }
+        }
+
+        function loadDemoPreference() {
+            const saved = localStorage.getItem('fire_is_demo');
+            window.IS_DEMO = saved === 'true';
         }
 
         function handleLogToggle() {

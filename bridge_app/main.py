@@ -1032,13 +1032,6 @@ async def fire_page():
     """Serve the Ignite FIRE dashboard page."""
     import pathlib
     fire_html = pathlib.Path("bridge_app/static/fire.html").read_text()
-    
-    is_demo = os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes")
-    if is_demo:
-        fire_html = fire_html.replace("</head>", "<script>window.IS_DEMO = true;</script></head>")
-    else:
-        fire_html = fire_html.replace("</head>", "<script>window.IS_DEMO = false;</script></head>")
-        
     return HTMLResponse(content=fire_html)
 
 
@@ -1109,6 +1102,7 @@ async def update_fire_settings(
 class SimulateRequest(BaseModel):
     settings: Optional[FireSettingsUpdate] = None
     current_portfolio: Optional[float] = None
+    is_demo: bool = False
 
 @app.post("/api/fire/simulate")
 async def run_fire_simulation(req: Optional[SimulateRequest] = None, db: AsyncSession = Depends(get_db)):
@@ -1121,7 +1115,7 @@ async def run_fire_simulation(req: Optional[SimulateRequest] = None, db: AsyncSe
     )
 
     # ── Demo Mode ──────────────────────────────────────────────────────────
-    if os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes"):
+    if req and req.is_demo:
         if req and req.settings:
             settings_obj = req.settings
         else:
