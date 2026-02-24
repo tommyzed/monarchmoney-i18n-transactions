@@ -1257,12 +1257,30 @@
             const limit = Math.min(10, data.years.length);
             const years = data.years.slice(0, limit);
             const p5 = data.percentile_5.slice(0, limit);
+
+            // The global SWR rate already accounts for inflation conceptually based on initial portfolio
+            // But if we want to show the specific allowed withdrawal *in each future year*,
+            // Standard Bengen 4% rule assumes the *initial* withdrawal (Portfolio at retirement * SWR)
+            // is then adjusted for *inflation* each subsequent year, regardless of actual portfolio performance!
+            // Wait, the "Safe Withdrawal Amount" in the chart is just (p5 * swrRate).
+            // If p5 (the portfolio balance) goes DOWN in early retirement, then (p5 * swrRate) goes down!
+            // Is p5 going up or down? At 5th percentile, portfolio often shrinks.
+            // Let's use the constant initial SWR amount, adjusted for inflation instead.
+
             const swrRate = data.swr / 100;
-            const swrAmounts = p5.map((p, i) => data.years[i] >= data.settings.retirement_age ? p * swrRate : 0);
+            const retireIdx = data.years.indexOf(data.settings.retirement_age);
+            const portfolioAtRetire = retireIdx >= 0 ? data.percentile_5[retireIdx] : data.current_portfolio;
+            const initialSwrAmount = portfolioAtRetire * swrRate;
+            const inflation = data.settings.inflation_rate;
+
+            const swrAmounts = years.map((y, i) => {
+                const yearsFromRetire = y - data.settings.retirement_age;
+                if (yearsFromRetire < 0) return 0; // Not retired yet
+                return initialSwrAmount * Math.pow(1 + inflation, yearsFromRetire);
+            });
 
             // Calculate Projected Annual Spending (adjusted for inflation)
             const baseSpending = data.settings.annual_retirement_spending;
-            const inflation = data.settings.inflation_rate;
             const projectedSpending = years.map((_, i) => baseSpending * Math.pow(1 + inflation, i));
 
             // Calculate Historical Annual Spending (adjusted for inflation)
