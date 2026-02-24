@@ -1065,6 +1065,24 @@
             chartInstance = echarts.init(container, null, { renderer: 'canvas' });
 
             const years = data.years;
+            // Clone the percentiles to prevent in-place mutation affecting other charts
+            let p5 = [...data.percentile_5];
+            let p25 = [...data.percentile_25];
+            let p50 = [...data.percentile_50];
+            let p75 = [...data.percentile_75];
+            let p95 = [...data.percentile_95];
+
+            // Log scale breaks if data contains zeroes or negative values
+            // The yAxis minimum is clamped to 10000 below, so clamp data to 10000 for log scale to prevent broken lines
+            if (useLogScale) {
+                const clamp = val => Math.max(10000, val);
+                p5 = p5.map(clamp);
+                p25 = p25.map(clamp);
+                p50 = p50.map(clamp);
+                p75 = p75.map(clamp);
+                p95 = p95.map(clamp);
+            }
+
             const targetRetireAge = data.settings.retirement_age;
             const targetRetireIdx = years.indexOf(targetRetireAge);
             const fireAge = data.fire_date_age;
@@ -1149,7 +1167,7 @@
                     {
                         name: '5th Pctl',
                         type: 'line',
-                        data: data.percentile_5,
+                        data: p5,
                         lineStyle: { opacity: 0 },
                         stack: 'band-outer',
                         symbol: 'none',
@@ -1158,7 +1176,7 @@
                     {
                         name: '95th Pctl',
                         type: 'line',
-                        data: data.percentile_95.map((v, i) => v - data.percentile_5[i]),
+                        data: p95.map((v, i) => v - p5[i]),
                         lineStyle: { opacity: 0 },
                         stack: 'band-outer',
                         symbol: 'none',
@@ -1173,7 +1191,7 @@
                     {
                         name: '25th Pctl',
                         type: 'line',
-                        data: data.percentile_25,
+                        data: p25,
                         lineStyle: { opacity: 0 },
                         stack: 'band-inner',
                         symbol: 'none',
@@ -1182,7 +1200,7 @@
                     {
                         name: '75th Pctl',
                         type: 'line',
-                        data: data.percentile_75.map((v, i) => v - data.percentile_25[i]),
+                        data: p75.map((v, i) => v - p25[i]),
                         lineStyle: { opacity: 0 },
                         stack: 'band-inner',
                         symbol: 'none',
@@ -1197,8 +1215,8 @@
                     {
                         name: 'Median',
                         type: 'line',
-                        data: data.percentile_50,
-                        lineStyle: { color: '#ff6b35', width: 2.5 },
+                        data: p50,
+                        lineStyle: { color: '#ff6b35', width: 2 },
                         symbol: 'none',
                         smooth: 0.2,
                         z: 10,
