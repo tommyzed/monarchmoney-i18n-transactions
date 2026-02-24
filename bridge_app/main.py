@@ -1032,6 +1032,13 @@ async def fire_page():
     """Serve the Ignite FIRE dashboard page."""
     import pathlib
     fire_html = pathlib.Path("bridge_app/static/fire.html").read_text()
+    
+    is_demo = os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes")
+    if is_demo:
+        fire_html = fire_html.replace("</head>", "<script>window.IS_DEMO = true;</script></head>")
+    else:
+        fire_html = fire_html.replace("</head>", "<script>window.IS_DEMO = false;</script></head>")
+        
     return HTMLResponse(content=fire_html)
 
 
@@ -1099,8 +1106,12 @@ async def update_fire_settings(
     }
 
 
+class SimulateRequest(BaseModel):
+    settings: Optional[FireSettingsUpdate] = None
+    current_portfolio: Optional[float] = None
+
 @app.post("/api/fire/simulate")
-async def run_fire_simulation(db: AsyncSession = Depends(get_db)):
+async def run_fire_simulation(req: Optional[SimulateRequest] = None, db: AsyncSession = Depends(get_db)):
     """
     Run a full FIRE Monte Carlo simulation using live Monarch data.
     Set DEMO_MODE=1 in env to return static fictional data for recording/testing.
@@ -1111,21 +1122,26 @@ async def run_fire_simulation(db: AsyncSession = Depends(get_db)):
 
     # ── Demo Mode ──────────────────────────────────────────────────────────
     if os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes"):
-        # Read settings from DB so user can edit via the UI
-        settings_result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
-        settings = settings_result.scalar_one_or_none()
-        if not settings:
-            settings = FireSettings(id=1)
+        if req and req.settings:
+            settings_obj = req.settings
+        else:
+            settings_result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
+            settings_obj = settings_result.scalar_one_or_none()
+            if not settings_obj:
+                settings_obj = FireSettings(id=1)
 
         demo_portfolio = 146_692
+        if req and req.current_portfolio is not None:
+            demo_portfolio = req.current_portfolio
+
         sim_input = SimulationInput(
             current_portfolio=demo_portfolio,
-            current_age=settings.current_age,
-            retirement_age=settings.retirement_age,
-            annual_contribution=settings.annual_contribution,
-            annual_retirement_spending=settings.annual_retirement_spending,
-            risk_tolerance=settings.risk_tolerance,
-            inflation_rate=settings.inflation_rate,
+            current_age=settings_obj.current_age,
+            retirement_age=settings_obj.retirement_age,
+            annual_contribution=settings_obj.annual_contribution,
+            annual_retirement_spending=settings_obj.annual_retirement_spending,
+            risk_tolerance=settings_obj.risk_tolerance,
+            inflation_rate=settings_obj.inflation_rate,
         )
         result = simulate(sim_input)
         return {
@@ -1141,22 +1157,15 @@ async def run_fire_simulation(db: AsyncSession = Depends(get_db)):
             "swr": result.swr,
             "current_portfolio": demo_portfolio,
             "risk_profile_label": result.risk_profile_label,
-            "account_breakdown": [
-                {"name": "Vanguard Brokerage", "balance": 250_000, "type": "Investment", "subtype": "Brokerage", "isAsset": True},
-                {"name": "RSUs", "balance": 137_492, "type": "Investment", "subtype": "Stock", "isAsset": True},
-                {"name": "Fidelity 401k", "balance": 80_000, "type": "Retirement", "subtype": "401k", "isAsset": True},
-                {"name": "HYSA — Marcus", "balance": 95_000, "type": "Cash", "subtype": "Savings", "isAsset": True},
-                {"name": "Primary Mortgage", "balance": -412_000, "type": "Loan", "subtype": "Mortgage", "isAsset": False},
-                {"name": "Chase Sapphire", "balance": -3_800, "type": "Credit", "subtype": "Credit Card", "isAsset": False},
-            ],
+            "account_breakdown": [],
             "monthly_spend_avg": 6015,
             "settings": {
-                "current_age": settings.current_age,
-                "retirement_age": settings.retirement_age,
-                "annual_contribution": settings.annual_contribution,
-                "annual_retirement_spending": settings.annual_retirement_spending,
-                "risk_tolerance": settings.risk_tolerance,
-                "inflation_rate": settings.inflation_rate,
+                "current_age": settings_obj.current_age,
+                "retirement_age": settings_obj.retirement_age,
+                "annual_contribution": settings_obj.annual_contribution,
+                "annual_retirement_spending": settings_obj.annual_retirement_spending,
+                "risk_tolerance": settings_obj.risk_tolerance,
+                "inflation_rate": settings_obj.inflation_rate,
             }
         }
     # ── End Demo Mode ──────────────────────────────────────────────────────

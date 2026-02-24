@@ -732,7 +732,9 @@
                     <div class="metric-sub" id="swrSub">annual rate</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-label" style="display: flex; justify-content: center; align-items: center; gap: 4px;">📈 Avg monthly spend</div>
+                    <div class="metric-label"
+                        style="display: flex; justify-content: center; align-items: center; gap: 4px;">Historical
+                        monthly spend</div>
                     <div class="metric-value color-amber" id="monthlySpend">--</div>
                     <div class="metric-sub">last 12 months</div>
                 </div>
@@ -742,10 +744,6 @@
             <div class="chart-section fade-up">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div class="chart-title">📈 Portfolio Projection
-                        <br>
-                        <span
-                            style="font-style: italic; font-size: 0.75rem; font-weight: normal; color: var(--text-muted);">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Cone
-                            of Uncertainty)</span>
                     </div>
                     <div class="chart-controls">
                         <label class="toggle-label">
@@ -824,6 +822,13 @@
                 </div>
             </div>
 
+            <div class="form-row" id="demoPortfolioRow" style="display: none;">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label">Net Worth Total ($) [Demo Only]</label>
+                    <input type="number" class="form-input" id="settPortfolio" min="0" step="1000">
+                </div>
+            </div>
+
             <button class="save-btn" id="saveSettingsBtn" onclick="saveSettings()">
                 🔥 Save & Re-run Simulation
             </button>
@@ -890,7 +895,27 @@
         async function runSimulation() {
             showLoading();
             try {
-                const res = await fetch('/api/fire/simulate', { method: 'POST' });
+                let reqBody = undefined;
+                let headers = undefined;
+
+                if (window.IS_DEMO) {
+                    const stored = localStorage.getItem('fire_demo_settings');
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        reqBody = JSON.stringify({
+                            settings: parsed,
+                            current_portfolio: parsed.current_portfolio
+                        });
+                        headers = { 'Content-Type': 'application/json' };
+                    }
+                }
+
+                const res = await fetch('/api/fire/simulate', {
+                    method: 'POST',
+                    headers: headers,
+                    body: reqBody
+                });
+
                 if (!res.ok) {
                     const err = await res.json();
                     throw new Error(err.detail || `HTTP ${res.status}`);
@@ -917,13 +942,25 @@
             };
 
             try {
-                await fetch('/api/fire/settings', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                });
-                closeSettings();
-                runSimulation();
+                if (window.IS_DEMO) {
+                    const portfolioStr = document.getElementById('settPortfolio').value;
+                    if (portfolioStr) {
+                        payload.current_portfolio = parseInt(portfolioStr);
+                    }
+
+                    // Update in local storage instead of remote database
+                    localStorage.setItem('fire_demo_settings', JSON.stringify(payload));
+                    closeSettings();
+                    runSimulation();
+                } else {
+                    await fetch('/api/fire/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    closeSettings();
+                    runSimulation();
+                }
             } catch (e) {
                 alert('Failed to save: ' + e.message);
             } finally {
@@ -1346,6 +1383,10 @@
                 document.getElementById('settSpending').value = s.annual_retirement_spending;
                 document.getElementById('settRisk').value = s.risk_tolerance;
                 document.getElementById('settInflation').value = (s.inflation_rate * 100).toFixed(1);
+            }
+            if (window.IS_DEMO && simData) {
+                document.getElementById('settPortfolio').value = simData.current_portfolio || 146692;
+                document.getElementById('demoPortfolioRow').style.display = 'grid';
             }
             document.getElementById('settingsModal').style.display = 'flex';
         }
