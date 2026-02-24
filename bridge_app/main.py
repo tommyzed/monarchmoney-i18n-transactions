@@ -1103,10 +1103,63 @@ async def update_fire_settings(
 async def run_fire_simulation(db: AsyncSession = Depends(get_db)):
     """
     Run a full FIRE Monte Carlo simulation using live Monarch data.
+    Set DEMO_MODE=1 in env to return static fictional data for recording/testing.
     """
     from .services.fire_engine import (
         SimulationInput, simulate, filter_accounts, calc_monthly_spend
     )
+
+    # ── Demo Mode ──────────────────────────────────────────────────────────
+    if os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes"):
+        # Read settings from DB so user can edit via the UI
+        settings_result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
+        settings = settings_result.scalar_one_or_none()
+        if not settings:
+            settings = FireSettings(id=1)
+
+        demo_portfolio = 146_692
+        sim_input = SimulationInput(
+            current_portfolio=demo_portfolio,
+            current_age=settings.current_age,
+            retirement_age=settings.retirement_age,
+            annual_contribution=settings.annual_contribution,
+            annual_retirement_spending=settings.annual_retirement_spending,
+            risk_tolerance=settings.risk_tolerance,
+            inflation_rate=settings.inflation_rate,
+        )
+        result = simulate(sim_input)
+        return {
+            "years": result.years,
+            "percentile_5": result.percentile_5,
+            "percentile_25": result.percentile_25,
+            "percentile_50": result.percentile_50,
+            "percentile_75": result.percentile_75,
+            "percentile_95": result.percentile_95,
+            "retirement_probability": result.retirement_probability,
+            "fire_date_age": result.fire_date_age,
+            "fire_date_year": result.fire_date_year,
+            "swr": result.swr,
+            "current_portfolio": demo_portfolio,
+            "risk_profile_label": result.risk_profile_label,
+            "account_breakdown": [
+                {"name": "Vanguard Brokerage", "balance": 250_000, "type": "Investment", "subtype": "Brokerage", "isAsset": True},
+                {"name": "RSUs", "balance": 137_492, "type": "Investment", "subtype": "Stock", "isAsset": True},
+                {"name": "Fidelity 401k", "balance": 80_000, "type": "Retirement", "subtype": "401k", "isAsset": True},
+                {"name": "HYSA — Marcus", "balance": 95_000, "type": "Cash", "subtype": "Savings", "isAsset": True},
+                {"name": "Primary Mortgage", "balance": -412_000, "type": "Loan", "subtype": "Mortgage", "isAsset": False},
+                {"name": "Chase Sapphire", "balance": -3_800, "type": "Credit", "subtype": "Credit Card", "isAsset": False},
+            ],
+            "monthly_spend_avg": 6015,
+            "settings": {
+                "current_age": settings.current_age,
+                "retirement_age": settings.retirement_age,
+                "annual_contribution": settings.annual_contribution,
+                "annual_retirement_spending": settings.annual_retirement_spending,
+                "risk_tolerance": settings.risk_tolerance,
+                "inflation_rate": settings.inflation_rate,
+            }
+        }
+    # ── End Demo Mode ──────────────────────────────────────────────────────
 
     # 1. Get Monarch client
     creds_result = await db.execute(select(Credentials))
@@ -1190,4 +1243,3 @@ async def run_fire_simulation(db: AsyncSession = Depends(get_db)):
 
 
 app.mount("/", StaticFiles(directory="bridge_app/static", html=True), name="static")
-

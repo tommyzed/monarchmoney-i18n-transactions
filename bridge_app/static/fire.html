@@ -149,7 +149,7 @@
         /* Metric Cards */
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
             margin-bottom: 1.5rem;
         }
@@ -192,6 +192,10 @@
             background: linear-gradient(90deg, var(--accent-blue), transparent);
         }
 
+        .metric-card:nth-child(4)::before {
+            background: linear-gradient(90deg, var(--accent-amber), transparent);
+        }
+
         .metric-label {
             font-size: 0.7rem;
             text-transform: uppercase;
@@ -224,6 +228,10 @@
 
         .color-blue {
             color: var(--accent-blue);
+        }
+
+        .color-amber {
+            color: var(--accent-amber);
         }
 
         /* Chart Section */
@@ -589,7 +597,7 @@
         /* Responsive */
         @media (max-width: 480px) {
             .metrics-grid {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(2, 1fr);
                 gap: 8px;
             }
 
@@ -696,13 +704,6 @@
         </div>
 
         <div class="main">
-            <!-- Spend Badge -->
-            <div class="fade-up" style="text-align: center;">
-                <div class="spend-badge" id="spendBadge">
-                    📊 Avg monthly spend (last 12 months): <span id="monthlySpend">--</span>
-                </div>
-            </div>
-
             <!-- Metric Cards -->
             <div class="metrics-grid fade-up">
                 <div class="metric-card">
@@ -729,6 +730,11 @@
                     </div>
                     <div class="metric-value color-blue" id="swrValue">--</div>
                     <div class="metric-sub" id="swrSub">annual rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label" style="display: flex; justify-content: center; align-items: center; gap: 4px;">📈 Avg monthly spend</div>
+                    <div class="metric-value color-amber" id="monthlySpend">--</div>
+                    <div class="metric-sub">last 12 months</div>
                 </div>
             </div>
 
@@ -847,8 +853,8 @@
                     picked in your settings!
                 </p>
                 <p style="color: var(--text-secondary);">
-                    The projected dollar amounts shown in the chart below apply this safety rate to your <strong>median
-                        (50th percentile)</strong> projected portfolio value.
+                    The projected dollar amounts shown in the chart below apply this safety rate to your <strong>5th
+                        percentile (worst-case)</strong> projected portfolio value, ensuring 95% confidence.
                 </p>
             </div>
         </div>
@@ -955,8 +961,10 @@
             document.getElementById('fireAge').textContent = 'Age ' + data.fire_date_age;
             document.getElementById('fireSub').textContent = '~' + data.fire_date_year;
 
-            document.getElementById('swrValue').textContent = data.swr + '%';
-            document.getElementById('swrSub').textContent = data.risk_profile_label;
+            const retireIdx = data.years.indexOf(data.settings.retirement_age);
+            const portfolioAtRetire = retireIdx >= 0 ? data.percentile_5[retireIdx] : data.current_portfolio;
+            document.getElementById('swrValue').textContent = '$' + formatNum(portfolioAtRetire * data.swr / 100) + '/yr';
+            document.getElementById('swrSub').textContent = data.swr + '% of $' + formatCompact(portfolioAtRetire) + ' (5th pctl)';
 
             // Monthly spend
             document.getElementById('monthlySpend').textContent = '$' + formatNum(data.monthly_spend_avg);
@@ -1020,8 +1028,10 @@
             chartInstance = echarts.init(container, null, { renderer: 'canvas' });
 
             const years = data.years;
-            const retireAge = data.settings.retirement_age;
-            const retireIdx = years.indexOf(retireAge);
+            const targetRetireAge = data.settings.retirement_age;
+            const targetRetireIdx = years.indexOf(targetRetireAge);
+            const fireAge = data.fire_date_age;
+            const fireIdx = years.indexOf(fireAge);
 
             const option = {
                 backgroundColor: 'transparent',
@@ -1156,20 +1166,37 @@
                         smooth: 0.2,
                         z: 10,
                     },
-                    // Retirement age marker
-                    ...(retireIdx >= 0 ? [{
+                    // Target retirement age marker (user setting)
+                    ...(targetRetireIdx >= 0 ? [{
+                        type: 'line',
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            lineStyle: { color: 'rgba(96, 165, 250, 0.5)', type: 'dashed', width: 1 },
+                            label: {
+                                formatter: '🎯 Target',
+                                color: 'rgba(96, 165, 250, 0.7)',
+                                fontSize: 10,
+                                position: 'end',
+                            },
+                            data: [{ xAxis: targetRetireIdx }]
+                        },
+                        data: [],
+                    }] : []),
+                    // Computed FIRE date marker (simulation result)
+                    ...(fireIdx >= 0 ? [{
                         type: 'line',
                         markLine: {
                             silent: true,
                             symbol: 'none',
                             lineStyle: { color: 'rgba(255, 107, 53, 0.5)', type: 'dashed', width: 1 },
                             label: {
-                                formatter: '🔥 Retire',
-                                color: 'rgba(255,107,53,0.7)',
+                                formatter: '🔥 FIRE',
+                                color: 'rgba(255, 107, 53, 0.7)',
                                 fontSize: 10,
-                                position: 'start',
+                                position: 'end',
                             },
-                            data: [{ xAxis: retireIdx }]
+                            data: [{ xAxis: fireIdx }]
                         },
                         data: [],
                     }] : []),
@@ -1192,9 +1219,9 @@
             // SWR Amounts for next 10 years
             const limit = Math.min(10, data.years.length);
             const years = data.years.slice(0, limit);
-            const p50 = data.percentile_50.slice(0, limit);
+            const p5 = data.percentile_5.slice(0, limit);
             const swrRate = data.swr / 100;
-            const swrAmounts = p50.map((p, i) => data.years[i] >= data.settings.retirement_age ? p * swrRate : 0);
+            const swrAmounts = p5.map((p, i) => data.years[i] >= data.settings.retirement_age ? p * swrRate : 0);
 
             // Calculate Projected Annual Spending (adjusted for inflation)
             const baseSpending = data.settings.annual_retirement_spending;
