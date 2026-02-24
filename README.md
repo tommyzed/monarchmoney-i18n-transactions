@@ -1,34 +1,35 @@
 # Monarch Money Bridge 🇪🇺🇺🇸
 
-**Seamlessly import international (EUR) transaction receipts into Monarch Money.**
+**Seamlessly import international (EUR, GBP, etc) transaction receipts into Monarch Money.**
 
 Monarch Money is amazing, but it lacks native support for foreign banks and currencies. This application bridges that gap by allowing you to "Share" a receipt image from your phone directly to your Monarch account, automatically handling OCR, currency conversion, and upload.
 
 ## ✨ Features
 
-*   **🇪🇺 Automatic Currency Conversion**: Detects EUR amounts and converts them to USD using historical exchange rates (via Frankfurter API) for the exact transaction date.
+*   **🇪🇺 Automatic Currency Conversion**: Detects EUR/GBP/etc amounts and converts them to USD using historical exchange rates (via Frankfurter API) for the exact transaction date.
 *   **✍️ Manual Entry Mode**: Quickly add transactions manually (Amount, Currency, Date, Merchant) without needing a receipt image. Supports any currency.
-*   **🧙‍♂️ AI-Powered OCR**: Uses **Google Gemini 3 Flash** to instantly extract Merchant, Date, and Amount from receipt photos with high accuracy.
+*   **🧙‍♂️ AI-Powered OCR**: Uses **Google Gemini 3** to instantly extract Merchant, Date, and Amount from receipt photos with high accuracy.
 *   **📱 Native-Like PWA Experience**:
     *   **Installable**: Add to your home screen as a standalone app.
     *   **Share Target**: Appears in your phone's native "Share" sheet for images.
     *   **Instant UI**: Service Worker interception ensures you see the "Processing" animation instantly, even used continuously offline or on slow networks.
 *   **🔒 Secure & Private**:
-    *   Runs locally on your server/computer.
+    *   Option to run locally on your server/computer.
     *   Credentials encrypted at rest (Fernet).
     *   No logs of sensitive financial data.
-*   **🤖 Smart Monarch Integration**:
+*   **🤖 v1.2: Smart Monarch Integration**:
     *   **Auto-tags transactions** (`Imported by MM Bridge`).
     *   **Auto-Mapping Engine**: Define rules to automatically rename merchants and assign categories.
-    *   **Edit Mapping**: Correct merchant names and categories on the fly via a new modal.
+    *   **Edit Mapping**: Edit/Update merchant names and categories on the fly via a new modal.
     *   **Sync Categories**: Import your Monarch categories (including emojis 🍔) for easy mapping.
-    *   **Stores Metadata**: Saves `Original Amount: €XX.XX`, ForEx Rate, and original merchant name in notes.
-*   **🔥 Ignite FIRE Engine**:
+    *   **Stores Metadata**: Saves `Original Amount: €XX.XX` and ForEx Rate in notes.
+*   **🔥 v1.3: Ignite FIRE Engine**:
     *   **Monte Carlo Simulations**: Runs 10,000 real-time Monte Carlo simulations against your live Monarch portfolio.
     *   **Dynamic Safe Withdrawal Rate**: Calculates the safest withdrawal amount by hunting for a ≥95% success rate over a 30-year horizon.
     *   **Custom Assumptions**: Adjust inflation, expected market returns, retirement age, and risk volatility directly in the UI.
 
-## 🖼 Demo
+## 🖼 Demo (v1.1 only)
+
 ![LatestMMDemo-ezgif com-speed](https://github.com/user-attachments/assets/b4fefae9-ff0d-4cf5-a2b3-71befc6e29d8)
 
 ## 🏗 Architecture
@@ -142,10 +143,7 @@ To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
 
 ## 🔮 Roadmap
 
-*   [ ] **Docker Support**: Containerize for easy NAS deployment.
-*   [ ] **Alembic Migrations**: Proper database schema management.
 *   [ ] **Multi-User Support**: Support multiple Monarch accounts/users.
-*   [ ] **Secure Remote Access**: Add Basic Auth or OAuth for the web interface.
 
 ## 📂 Project Structure
 
