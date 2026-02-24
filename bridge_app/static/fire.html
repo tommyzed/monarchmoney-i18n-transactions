@@ -1194,7 +1194,7 @@
             const years = data.years.slice(0, limit);
             const p50 = data.percentile_50.slice(0, limit);
             const swrRate = data.swr / 100;
-            const swrAmounts = p50.map(p => p * swrRate);
+            const swrAmounts = p50.map((p, i) => data.years[i] >= data.settings.retirement_age ? p * swrRate : 0);
 
             // Calculate Projected Annual Spending (adjusted for inflation)
             const baseSpending = data.settings.annual_retirement_spending;

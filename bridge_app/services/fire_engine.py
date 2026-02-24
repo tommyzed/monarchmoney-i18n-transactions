@@ -98,24 +98,23 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     portfolios[:, 0] = inp.current_portfolio
 
     for yr in range(n_years):
-        age = inp.current_age + yr
-        # Inflation-adjusted spending (grows each year)
+        # Inflation-adjusted amounts (grow each year)
         inflation_factor = (1 + inp.inflation_rate) ** yr
+        spending = inp.annual_retirement_spending * inflation_factor  # always
 
         if yr < years_to_retire:
-            # Pre-retirement: contributing, no withdrawals
-            contribution = inp.annual_contribution * inflation_factor
-            withdrawal = 0.0
+            # Pre-retirement: earning income, still spending
+            income = inp.annual_contribution * inflation_factor
         else:
-            # Post-retirement: no contributions, spending down
-            contribution = 0.0
-            withdrawal = inp.annual_retirement_spending * inflation_factor
+            # Post-retirement: no income
+            income = 0.0
+
+        net_cashflow = income - spending
 
         # Apply market return, then net cash flow
         portfolios[:, yr + 1] = (
             portfolios[:, yr] * (1 + returns[:, yr])
-            + contribution
-            - withdrawal
+            + net_cashflow
         )
         # Floor at zero (can't go negative in real life)
         portfolios[:, yr + 1] = np.maximum(portfolios[:, yr + 1], 0)
@@ -197,16 +196,16 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> int:
 
         for yr in range(total_years):
             inflation_factor = (1 + inp.inflation_rate) ** yr
+            spending = inp.annual_retirement_spending * inflation_factor  # always
             if yr < years_to_retire:
-                contribution = inp.annual_contribution * inflation_factor
-                withdrawal = 0.0
+                income = inp.annual_contribution * inflation_factor
             else:
-                contribution = 0.0
-                withdrawal = inp.annual_retirement_spending * inflation_factor
+                income = 0.0
+            net_cashflow = income - spending
 
             portfolios[:, yr + 1] = (
                 portfolios[:, yr] * (1 + returns[:, yr])
-                + contribution - withdrawal
+                + net_cashflow
             )
             portfolios[:, yr + 1] = np.maximum(portfolios[:, yr + 1], 0)
 
@@ -242,9 +241,11 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
 
     for yr in range(years_to_retire):
         inflation_factor = (1 + inp.inflation_rate) ** yr
-        contribution = inp.annual_contribution * inflation_factor
+        income = inp.annual_contribution * inflation_factor
+        spending = inp.annual_retirement_spending * inflation_factor
+        net_cashflow = income - spending
         portfolios_accum[:, yr + 1] = (
-            portfolios_accum[:, yr] * (1 + returns[:, yr]) + contribution
+            portfolios_accum[:, yr] * (1 + returns[:, yr]) + net_cashflow
         )
         portfolios_accum[:, yr + 1] = np.maximum(portfolios_accum[:, yr + 1], 0)
 
