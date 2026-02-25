@@ -335,8 +335,6 @@ LOADING_HTML = """
             @media (max-width: 480px) {
                 body {
                     padding: 1rem;
-                    justify-content: flex-start;
-                    padding-top: 15vh;
                 }
             }
             
