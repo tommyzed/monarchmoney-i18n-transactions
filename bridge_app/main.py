@@ -601,12 +601,14 @@ LOADING_HTML = """
                         document.getElementById('cardTitle').textContent = 'Already Processed';
                         document.getElementById('cardTitle').style.color = '#856404';
                         document.getElementById('forceSubmitBtn').style.display = 'inline-block';
+                        document.getElementById('editMappingBtn').style.display = 'none';
                 } else {
                     // Reset to Success State
                     document.getElementById('cardIcon').textContent = '🎉';
                     document.getElementById('cardTitle').textContent = 'Transaction Processed';
                     document.getElementById('cardTitle').style.color = 'green';
                     document.getElementById('forceSubmitBtn').style.display = 'none';
+                    document.getElementById('editMappingBtn').style.display = 'inline-block';
 
                     // Confetti!
                     confetti({
