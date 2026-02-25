@@ -64,9 +64,10 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     if not target_account:
         raise ValueError(f"No account found with name '{target_name}'. Please create a new Manual account in Monarch named '{target_name}'.")
 
-    # Ensure amount is negative (Expense/Debit)
-    # Receipts are always expenses
-    amount = -abs(float(data['amount']))
+    # Determine amount sign: positive for credits, negative for expenses/debits
+    parsed_amount = float(data['amount'])
+    is_credit = data.get('is_credit', False)
+    amount = abs(parsed_amount) if is_credit else -abs(parsed_amount)
     
     # Check for original currency conversion data
     # Check for original currency conversion data

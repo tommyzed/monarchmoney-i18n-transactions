@@ -601,12 +601,14 @@ LOADING_HTML = """
                         document.getElementById('cardTitle').textContent = 'Already Processed';
                         document.getElementById('cardTitle').style.color = '#856404';
                         document.getElementById('forceSubmitBtn').style.display = 'inline-block';
+                        document.getElementById('editMappingBtn').style.display = 'none';
                 } else {
                     // Reset to Success State
                     document.getElementById('cardIcon').textContent = '🎉';
                     document.getElementById('cardTitle').textContent = 'Transaction Processed';
                     document.getElementById('cardTitle').style.color = 'green';
                     document.getElementById('forceSubmitBtn').style.display = 'none';
+                    document.getElementById('editMappingBtn').style.display = 'inline-block';
 
                     // Confetti!
                     confetti({
@@ -621,7 +623,8 @@ LOADING_HTML = """
                 // Add Deep Link if ID exists
                 if (data.monarch_tx_id) {
                     const deepLink = `intent://transactions/${data.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${data.monarch_tx_id};end`;
-                    amountHtml = `<a href="${deepLink}" style="text-decoration:none; color:#2563eb;">${amountHtml}</a>`;
+                    const linkColor = data.is_credit ? "#16a34a" : "#2563eb"; // Green for credits, blue for debits
+                    amountHtml = `<a href="${deepLink}" style="text-decoration:none; color:${linkColor};">${amountHtml}</a>`;
                 }
                 
                 if (data.original_amount && data.original_currency) {

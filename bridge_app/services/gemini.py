@@ -19,8 +19,9 @@ def extract_transaction_data(image_bytes: bytes) -> dict:
     - amount (float)
     - currency (ISO code, assume EUR if not specified but likely European)
     - merchant (string, clean name)
+    - is_credit (boolean, true if the number/total on the receipt is the color Green indicating a refund/credit, false otherwise)
     
-    Return strictly valid JSON with keys: date, amount, currency, merchant.
+    Return strictly valid JSON with keys: date, amount, currency, merchant, is_credit.
     """
     
     try:
