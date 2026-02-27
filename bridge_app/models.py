@@ -38,4 +38,5 @@ class FireSettings(Base):
     annual_retirement_spending = Column(Integer, default=40000)
     risk_tolerance = Column(String, default="moderate")  # "lean", "moderate", "fat"
     inflation_rate = Column(Float, default=0.03)
+    final_age = Column(Integer, default=85)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

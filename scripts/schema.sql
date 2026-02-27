@@ -44,5 +44,6 @@ CREATE TABLE IF NOT EXISTS fire_settings (
     annual_retirement_spending INTEGER DEFAULT 40000,
     risk_tolerance VARCHAR DEFAULT 'moderate',
     inflation_rate FLOAT DEFAULT 0.03,
+    final_age INTEGER DEFAULT 85,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
