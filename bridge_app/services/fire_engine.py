@@ -3,9 +3,9 @@ Ignite FIRE Engine — Monte Carlo retirement simulation using numpy.
 
 Provides:
 - simulate(): 10,000-iteration Monte Carlo with percentile bands
-- calc_fire_date(): earliest age with ≥95% portfolio survival to age 85
-- calc_swr(): max safe withdrawal rate with ≥95% survival to age 85
-- calc_retirement_probability(): % of simulations surviving to age 85
+- calc_fire_date(): earliest age with ≥95% portfolio survival to final age
+- calc_swr(): max safe withdrawal rate with ≥95% survival to final age
+- calc_retirement_probability(): % of simulations surviving to final age
 """
 
 import numpy as np
@@ -46,15 +46,14 @@ class SimulationInput:
     annual_retirement_spending: float
     risk_tolerance: str = "moderate"
     inflation_rate: float = 0.03
+    final_age: int = 85
     simulation_years: int = 0  # auto-calculated if 0
     iterations: int = DEFAULT_ITERATIONS
 
     def __post_init__(self):
         if self.simulation_years == 0:
-            # Simulate until age 85 or at least 15 years post-retirement
-            years_to_85 = max(85 - self.current_age, 0)
-            years_post_retire = max((self.retirement_age - self.current_age) + 15, 1)
-            self.simulation_years = max(years_to_85, years_post_retire)
+            # Simulate until final age
+            self.simulation_years = max(self.final_age - self.current_age, 0)
 
 
 @dataclass
@@ -66,7 +65,7 @@ class SimulationResult:
     percentile_50: List[float]          # median
     percentile_75: List[float]          # 75th percentile
     percentile_95: List[float]          # 95th percentile
-    retirement_probability: float       # % of sims surviving to age 85
+    retirement_probability: float       # % of sims surviving to final age
     fire_date_age: Optional[int]        # earliest age with ≥95% survival
     fire_date_year: Optional[int]       # calendar year of FIRE date
     swr: float                          # safe withdrawal rate (%)
@@ -165,11 +164,11 @@ def _calc_retirement_probability(
     inp: SimulationInput
 ) -> float:
     """
-    % of simulations where portfolio is > 0 at age 85
+    % of simulations where portfolio is > 0 at final age
     (or end of simulation if shorter).
     """
-    years_to_85 = max(85 - inp.current_age, 0)
-    target_year = min(years_to_85, inp.simulation_years)
+    years_to_final = max(inp.final_age - inp.current_age, 0)
+    target_year = min(years_to_final, inp.simulation_years)
     survived = np.sum(portfolios[:, target_year] > 0)
     return (survived / portfolios.shape[0]) * 100
 
@@ -177,15 +176,15 @@ def _calc_retirement_probability(
 def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
     """
     Find the earliest retirement age where ≥95% of simulations survive
-    to age 85.
+    to final age.
 
     Binary search over possible retirement ages.
     """
     best_age = None
 
-    for test_age in range(inp.current_age, 85 + 1):
+    for test_age in range(inp.current_age, inp.final_age + 1):
         years_to_retire = test_age - inp.current_age
-        years_post = max(85 - test_age, 0)
+        years_post = max(inp.final_age - test_age, 0)
         total_years = years_to_retire + years_post
 
         if total_years > inp.simulation_years:
@@ -229,10 +228,10 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
 def _calc_swr(inp: SimulationInput, profile: dict) -> float:
     """
     Binary search for the maximum withdrawal rate (as % of portfolio at retirement)
-    that gives ≥95% survival to age 85.
+    that gives ≥95% survival to final age.
     """
     years_to_retire = max(inp.retirement_age - inp.current_age, 0)
-    years_post = max(85 - inp.retirement_age, 0)
+    years_post = max(inp.final_age - inp.retirement_age, 0)
     total_years = years_to_retire + years_post
 
     if total_years > 80:
@@ -269,7 +268,7 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
         mid = (low + high) / 2
         withdrawal_rate = mid / 100
 
-        # Simulate withdrawals to age 85
+        # Simulate withdrawals to final age
         port = portfolio_at_retire.copy()
         survived = True
 
@@ -297,10 +296,10 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
 def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
     """
     Binary search for the highest annual spending amount (starting from today)
-    that still gives ≥95% survival to age 85 at the configured Target Retirement Age.
+    that still gives ≥95% survival to final age at the configured Target Retirement Age.
     """
     years_to_retire = max(inp.retirement_age - inp.current_age, 0)
-    years_post = max(85 - inp.retirement_age, 0)
+    years_post = max(inp.final_age - inp.retirement_age, 0)
     total_years = years_to_retire + years_post
 
     if total_years > 80:

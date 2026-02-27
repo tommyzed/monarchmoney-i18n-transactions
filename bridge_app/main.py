@@ -1060,6 +1060,7 @@ class FireSettingsUpdate(BaseModel):
     annual_retirement_spending: Optional[int] = None
     risk_tolerance: Optional[str] = None
     inflation_rate: Optional[float] = None
+    final_age: Optional[int] = None
 
 
 @app.get("/api/fire/settings")
@@ -1074,6 +1075,7 @@ async def get_fire_settings(request: Request, db: AsyncSession = Depends(get_db)
             "annual_retirement_spending": 80000,
             "risk_tolerance": "moderate",
             "inflation_rate": 0.03,
+            "final_age": 85,
         }
 
     result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
@@ -1093,6 +1095,7 @@ async def get_fire_settings(request: Request, db: AsyncSession = Depends(get_db)
         "annual_retirement_spending": settings.annual_retirement_spending,
         "risk_tolerance": settings.risk_tolerance,
         "inflation_rate": settings.inflation_rate,
+        "final_age": settings.final_age,
     }
 
 
@@ -1133,6 +1136,7 @@ async def update_fire_settings(
         "annual_retirement_spending": settings.annual_retirement_spending,
         "risk_tolerance": settings.risk_tolerance,
         "inflation_rate": settings.inflation_rate,
+        "final_age": settings.final_age,
     }
 
 
@@ -1165,6 +1169,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
                 annual_retirement_spending=80000,
                 risk_tolerance="moderate",
                 inflation_rate=0.03,
+                final_age=85,
             )
 
         demo_portfolio = 500_000
@@ -1179,6 +1184,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
             annual_retirement_spending=settings_obj.annual_retirement_spending,
             risk_tolerance=settings_obj.risk_tolerance,
             inflation_rate=settings_obj.inflation_rate,
+            final_age=settings_obj.final_age,
         )
         result = simulate(sim_input)
         return {
@@ -1204,6 +1210,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
                 "annual_retirement_spending": settings_obj.annual_retirement_spending,
                 "risk_tolerance": settings_obj.risk_tolerance,
                 "inflation_rate": settings_obj.inflation_rate,
+                "final_age": settings_obj.final_age,
             }
         }
     # ── End Demo Mode ──────────────────────────────────────────────────────
@@ -1254,6 +1261,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
         annual_retirement_spending=settings.annual_retirement_spending,
         risk_tolerance=settings.risk_tolerance,
         inflation_rate=settings.inflation_rate,
+        final_age=settings.final_age,
     )
 
     # 6. Run simulation
@@ -1286,6 +1294,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
             "annual_retirement_spending": settings.annual_retirement_spending,
             "risk_tolerance": settings.risk_tolerance,
             "inflation_rate": settings.inflation_rate,
+            "final_age": settings.final_age,
         }
     }
 

@@ -867,16 +867,23 @@
 
             <div class="form-row">
                 <div class="form-group">
+                    <label class="form-label">Final Year (☠️)</label>
+                    <input type="number" class="form-input" id="settFinalAge" min="40" max="150" value="85">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Inflation Rate (%)</label>
+                    <input type="number" class="form-input" id="settInflation" min="0" max="15" step="0.5">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="grid-column: 1 / -1;">
                     <label class="form-label">Risk Tolerance</label>
                     <select class="form-select" id="settRisk">
                         <option value="lean">🛡️ Lean (60/40)</option>
                         <option value="moderate">⚖️ Moderate (80/20)</option>
                         <option value="fat">🚀 Fat (100% Equity)</option>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Inflation Rate (%)</label>
-                    <input type="number" class="form-input" id="settInflation" min="0" max="15" step="0.5">
                 </div>
             </div>
 
@@ -909,8 +916,8 @@
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
                     <strong>How we calculate it:</strong> We run a binary search through 10,000 Monte Carlo simulations
                     at your target retirement age, hunting for the absolute highest withdrawal rate that still maintains
-                    a <strong style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) until Age
-                    85.
+                    a <strong style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) until your
+                    Target Final Year.
                 </p>
                 <p style="color: var(--text-secondary);">
                     <strong>How to interpret it:</strong> A higher SWR (e.g. 4-5%) means you can pull more money out
@@ -933,9 +940,10 @@
                     current trajectory and settings.
                 </p>
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                    <strong>How we calculate it:</strong> We project your portfolio out to Age 85 across 10,000 Monte
+                    <strong>How we calculate it:</strong> We project your portfolio out to your Target Final Year across
+                    10,000 Monte
                     Carlo simulations. The score is exactly the percentage of those simulations where your portfolio
-                    survives (stays above $0) until Age 85.
+                    survives (stays above $0) until your Target Final Year.
                 </p>
                 <p style="color: var(--text-secondary);">
                     <strong>How to interpret it:</strong> Aim for a score of <strong>95% or higher (🟢
@@ -959,8 +967,9 @@
                 </p>
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
                     <strong>How we calculate it:</strong> We iteratively simulate retiring at every age between now and
-                    85. Your FIRE date is the youngest potential age that still results in a mathematically-safe
-                    <strong>≥95% success rate</strong> (portfolio > $0 until Age 85).
+                    your Target Final Year. Your FIRE date is the youngest potential age that still results in a
+                    mathematically-safe
+                    <strong>≥95% success rate</strong> (portfolio > $0 until your Target Final Year).
                 </p>
                 <p style="color: var(--text-secondary);">
                     <strong>How to interpret it:</strong> This is a dynamic target that adjusts to your settings. If it
@@ -1108,6 +1117,7 @@
                 annual_retirement_spending: parseInt(document.getElementById('settSpending').value),
                 risk_tolerance: document.getElementById('settRisk').value,
                 inflation_rate: parseFloat(document.getElementById('settInflation').value) / 100,
+                final_age: parseInt(document.getElementById('settFinalAge').value) || 85,
             };
 
             try {
@@ -1296,6 +1306,9 @@
             const fireAge = data.fire_date_age;
             const fireIdx = fireAge !== null ? years.indexOf(fireAge) : -1;
 
+            const finalAge = data.settings.final_age;
+            const finalAgeIdx = finalAge !== null ? years.indexOf(finalAge) : -1;
+
             // Find "Freeze" date (when 5th percentile hits 0)
             let freezeIdx = -1;
             if (fireAge === null) {
@@ -1306,12 +1319,17 @@
             let targetOffset = [0, 0];
             let fireOffset = [0, 0];
             let freezeOffset = [0, 0];
+            let finalAgeOffset = [0, 0];
+
             if (targetRetireIdx >= 0) {
                 if (fireIdx >= 0 && Math.abs(targetRetireIdx - fireIdx) <= 3) {
                     fireOffset = [0, 16]; // shift down
                 }
                 if (freezeIdx >= 0 && Math.abs(targetRetireIdx - freezeIdx) <= 3) {
                     freezeOffset = [0, 16]; // shift down
+                }
+                if (finalAgeIdx >= 0 && Math.abs(targetRetireIdx - finalAgeIdx) <= 3) {
+                    finalAgeOffset = [0, 16]; // shift down
                 }
             }
 
@@ -1501,6 +1519,24 @@
                             data: [{ xAxis: freezeIdx }]
                         },
                         data: [],
+                    }] : []),
+                    // Final Age marker
+                    ...(finalAgeIdx >= 0 ? [{
+                        type: 'line',
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            lineStyle: { color: 'rgba(200, 200, 200, 0.5)', type: 'dashed', width: 1 },
+                            label: {
+                                formatter: '☠️',
+                                color: 'rgba(200, 200, 200, 0.7)',
+                                fontSize: 16,
+                                position: 'end',
+                                offset: finalAgeOffset
+                            },
+                            data: [{ xAxis: finalAgeIdx }]
+                        },
+                        data: [],
                     }] : [])
                 ]
             };
@@ -1650,6 +1686,7 @@
                 document.getElementById('settSpending').value = s.annual_retirement_spending;
                 document.getElementById('settRisk').value = s.risk_tolerance;
                 document.getElementById('settInflation').value = (s.inflation_rate * 100).toFixed(1);
+                document.getElementById('settFinalAge').value = s.final_age || 85;
             }
             if (window.IS_DEMO && simData) {
                 document.getElementById('settPortfolio').value = simData.current_portfolio || 500000;
