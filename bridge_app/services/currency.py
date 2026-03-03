@@ -6,7 +6,7 @@ async def get_exchange_rate(from_curr: str, to_curr: str, date_str: str) -> floa
     date_str: YYYY-MM-DD
     """
     # Frankfurter API format
-    url = f"https://api.frankfurter.app/{date_str}?from={from_curr}&to={to_curr}"
+    url = f"https://api.frankfurter.dev/v1/{date_str}?base={from_curr}&symbols={to_curr}"
     
     async with httpx.AsyncClient() as client:
         try:
@@ -27,7 +27,7 @@ async def get_exchange_rate(from_curr: str, to_curr: str, date_str: str) -> floa
             raise e
 
 async def get_latest_rate(from_curr: str, to_curr: str) -> float:
-    url = f"https://api.frankfurter.app/latest?from={from_curr}&to={to_curr}"
+    url = f"https://api.frankfurter.dev/v1/latest?base={from_curr}&symbols={to_curr}"
     async with httpx.AsyncClient() as client:
          response = await client.get(url)
          data = response.json()
