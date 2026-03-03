@@ -21,7 +21,9 @@ async def get_exchange_rate(from_curr: str, to_curr: str, date_str: str) -> floa
                  return await get_latest_rate(from_curr, to_curr)
             raise e
         except Exception as e:
-            print(f"Currency conversion error ({from_curr}->{to_curr}): {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"Currency conversion error ({from_curr}->{to_curr}): {repr(e)}")
             raise e
 
 async def get_latest_rate(from_curr: str, to_curr: str) -> float:
