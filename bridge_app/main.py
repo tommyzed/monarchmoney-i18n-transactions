@@ -858,7 +858,8 @@ async def handle_manual_entry(
     amount: float = Form(...),
     currency: str = Form(...),
     date: str = Form(...),
-    merchant: str = Form(...)
+    merchant: str = Form(...),
+    is_cash: Optional[bool] = Form(False)
 ):
     """
     Handle Manual Entry POST request.
@@ -871,7 +872,8 @@ async def handle_manual_entry(
             "amount": amount,
             "currency": currency,
             "date": date,
-            "merchant": merchant
+            "merchant": merchant,
+            "is_cash": is_cash
         }
         
         # Start background task
