@@ -170,30 +170,50 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         await mm.update_transaction(transaction_id=tx_id, needs_review=True)
         print(f"Marked transaction {tx_id} as 'Needs Review'")
         
-        # Apply Tag
-        tag_name = "Imported by MM Bridge"
-        tag_color = "#2196F3" # Material Blue
-        tag_id = None
-        print(f"Applying tag: {tag_name}")
+        # Apply Tags
+        tags_to_apply = []
         
-        # 1. Find existing tag
+        # Base Tag
+        base_tag_name = "Imported by MM Bridge"
+        base_tag_color = "#2196F3" # Material Blue
+        base_tag_id = None
+        
+        # Cash Tag
+        cash_tag_name = "Cash"
+        cash_tag_color = "#4CAF50" # Material Green
+        cash_tag_id = None
+        apply_cash_tag = data.get('is_cash')
+        
+        # 1. Find existing tags
         existing_tags = await mm.get_transaction_tags()
         for tag in existing_tags.get("householdTransactionTags", []):
-            if tag["name"] == tag_name:
-                tag_id = tag["id"]
-                print(f"Found existing tag: {tag_name} with ID: {tag_id}")
-                break
-        
-        # 2. Create if missing
-        if not tag_id:
-            new_tag_res = await mm.create_transaction_tag(name=tag_name, color=tag_color)
-            tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
-            print(f"Created new tag: {tag_name} with ID: {tag_id}")
+            if tag["name"] == base_tag_name:
+                base_tag_id = tag["id"]
+                print(f"Found existing tag: {base_tag_name} with ID: {base_tag_id}")
+            if apply_cash_tag and tag["name"] == cash_tag_name:
+                cash_tag_id = tag["id"]
+                print(f"Found existing tag: {cash_tag_name} with ID: {cash_tag_id}")
+                
+        # 2. Create missing tags
+        if not base_tag_id:
+            new_tag_res = await mm.create_transaction_tag(name=base_tag_name, color=base_tag_color)
+            base_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
+            print(f"Created new tag: {base_tag_name} with ID: {base_tag_id}")
             
-        # 3. Apply tag
-        if tag_id:
-            await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=[tag_id])
-            print(f"Tagged transaction {tx_id} with '{tag_name}'")
+        if apply_cash_tag and not cash_tag_id:
+            new_tag_res = await mm.create_transaction_tag(name=cash_tag_name, color=cash_tag_color)
+            cash_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
+            print(f"Created new tag: {cash_tag_name} with ID: {cash_tag_id}")
+            
+        if base_tag_id:
+            tags_to_apply.append(base_tag_id)
+        if cash_tag_id:
+            tags_to_apply.append(cash_tag_id)
+            
+        # 3. Apply tags
+        if tags_to_apply:
+            await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=tags_to_apply)
+            print(f"Tagged transaction {tx_id} with {len(tags_to_apply)} tags")
         
         return tx_id
             
