@@ -55,16 +55,26 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     
     # 3. OCR Extraction
     await report("Scanning receipt with Gemini AI...", 30)
-    
+
+    # Fetch historical merchant names to hint the AI
+    hist_result = await db.execute(
+        select(MerchantMapping.monarch_merchant_name).distinct()
+    )
+    historical_names = sorted(
+        [r[0] for r in hist_result.fetchall() if r[0]]
+    )
+    if historical_names:
+        print(f"Passing {len(historical_names)} historical merchant names to Gemini as hints")
+
     # Retry logic for overloaded Gemini API
     max_retries = 2
     data = None
-    
+
     for attempt in range(max_retries + 1):
         if attempt > 0:
              await report(f"Retrying Gemini scan (Attempt {attempt+1})...", 35)
 
-        data = await run_in_threadpool(extract_transaction_data, content)
+        data = await run_in_threadpool(extract_transaction_data, content, historical_names)
         
         if data and "error" in data:
             err_str = str(data["error"])
@@ -83,6 +93,12 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     if not data or "error" in data:
         error_msg = data.get("error", "Unknown OCR error") if data else "Empty OCR response"
         raise HTTPException(status_code=500, detail=error_msg)
+
+    # Log whether the AI matched a historical merchant name
+    if data.get("used_historical_name"):
+        print(f"✅ Gemini matched historical merchant: '{data.get('merchant')}'")
+    else:
+        print(f"🆕 Gemini returned new merchant name: '{data.get('merchant')}'")
 
     # Inject/Override currency if provided by user during upload
     if user_currency:
@@ -140,6 +156,27 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
                 data["category_name"] = mapping.category_name
         else:
             print(f"No mapping found for '{current_merchant}'")
+
+    # 3a-ii. Historical-name category lookup
+    # When Gemini matched a historical merchant name (used_historical_name=true), the receipt
+    # merchant name is gone — the AI already resolved it to the canonical form. In that case we
+    # won't have hit the receipt-name lookup above, so we look up the category by monarch_merchant_name
+    # instead, using the first matching row (the mapping is deterministically 1:1).
+    if data.get("used_historical_name") and not data.get("category_name"):
+        hist_merchant = data.get("merchant", "").strip()
+        if hist_merchant:
+            hist_stmt = select(MerchantMapping).where(
+                MerchantMapping.monarch_merchant_name == hist_merchant
+            )
+            hist_result = await db.execute(hist_stmt)
+            hist_mapping = hist_result.scalars().first()
+            if hist_mapping and hist_mapping.category_name:
+                print(f"Historical name category lookup: '{hist_merchant}' -> '{hist_mapping.category_name}'")
+                await report_func(f"Category resolved from history...", 29)
+                data["category_name"] = hist_mapping.category_name
+            else:
+                print(f"No category found for historical merchant '{hist_merchant}'")
+
 
 
     # 3b. Currency Conversion

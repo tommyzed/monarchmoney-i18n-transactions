@@ -472,6 +472,9 @@ LOADING_HTML = """
                     <span id="accountValue" class="value">__MM_ACCOUNT__</span>
                 </div>
             </div>
+
+            <!-- Historical name legend — shown only when used_historical_name is true -->
+            <div id="historicalLegend" style="display:none; font-size:0.75rem; color:#677ae3; font-style:italic; margin-top:0.75rem; text-align:center;">💜 matched from history</div>
             
             <div id="errorContainer" style="display:none; text-align: center;">
                 <p id="errorMessage" style="color: #666; margin: 1rem 0;"></p>
@@ -633,22 +636,37 @@ LOADING_HTML = """
                     amountHtml += `<br><span style="font-size: 0.8em; color: #777;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
                 }
                 
-                if (data.original_merchant_name) {
+                if (data.used_historical_name) {
+                    // Already mapped — button is irrelevant
+                    document.getElementById('editMappingBtn').style.display = 'none';
+                } else if (data.original_merchant_name) {
+                    document.getElementById('editMappingBtn').style.display = 'inline-block';
                     document.getElementById('editMappingBtn').textContent = "Edit Mapping";
                 } else {
+                    document.getElementById('editMappingBtn').style.display = 'inline-block';
                     document.getElementById('editMappingBtn').textContent = "Add Mapping";
                 }
 
                 document.getElementById('amountValue').innerHTML = amountHtml;
-                document.getElementById('merchantValue').textContent = data.merchant;
+
+                const isHistorical = !!data.used_historical_name;
+
+                // Merchant name — prefix with 💜 when matched from history
+                document.getElementById('merchantValue').textContent =
+                    (isHistorical ? '💜 ' : '') + data.merchant;
+
                 document.getElementById('dateValue').textContent = data.date;
-                
-                // Emoji + Category Name
+
+                // Emoji + Category Name — prefix with 💜 when matched from history
                 let catDisplay = data.category_name || "--";
                 if (data.category_emoji) {
                     catDisplay = data.category_emoji + " " + catDisplay;
                 }
-                document.getElementById('categoryValue').textContent = catDisplay;
+                document.getElementById('categoryValue').textContent =
+                    (isHistorical ? '💜 ' : '') + catDisplay;
+
+                // Show/hide legend
+                document.getElementById('historicalLegend').style.display = isHistorical ? 'block' : 'none';
                 
                 window.currentTransactionData = data;
                 // Prefetch categories
@@ -917,6 +935,23 @@ class MappingRequest(BaseModel):
     monarch_merchant_name: str
     category_name: str
     monarch_tx_id: Optional[str] = None
+
+@app.get("/api/merchant-names")
+async def get_merchant_names(db: AsyncSession = Depends(get_db)):
+    """
+    Return a sorted, distinct list of Monarch merchant names from the merchant_mappings table.
+    Used by the frontend to build the HISTORICAL_MERCHANT_NAMES localStorage cache, and by
+    the backend to hint the Gemini AI during OCR inference.
+    """
+    try:
+        result = await db.execute(
+            select(MerchantMapping.monarch_merchant_name).distinct()
+        )
+        names = sorted([row[0] for row in result.fetchall() if row[0]])
+        return {"merchant_names": names}
+    except Exception as e:
+        print(f"Error fetching merchant names: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/categories")
 async def get_categories(db: AsyncSession = Depends(get_db)):
