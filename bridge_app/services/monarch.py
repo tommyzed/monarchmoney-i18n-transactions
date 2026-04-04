@@ -83,9 +83,6 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         # User requested redundancy for USD
         notes = f"Original Price: {data['currency']} {abs(amount):.2f}"
 
-    if data.get('is_cash'):
-        notes += "\n#cash"
-
     # Fetch categories to find a valid category_id (required by API)
     category_id = None
     target_category_name = data.get('category_name')
