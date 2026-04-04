@@ -27,6 +27,12 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     *   **Monte Carlo Simulations**: Runs 10,000 real-time Monte Carlo simulations against your live Monarch portfolio.
     *   **Dynamic Safe Withdrawal Rate**: Calculates the safest withdrawal amount by hunting for a ≥95% success rate over a 30-year horizon.
     *   **Custom Assumptions**: Adjust inflation, expected market returns, retirement age, and risk volatility directly in the UI.
+*   **🧠 v1.4: AI Merchant Hinting**:
+    *   **Historical Merchant Hints**: Before each OCR scan, the Gemini agent receives the full list of previously seen `monarch_merchant_names` from the mapping table as context.
+    *   **Confidence-Based Matching**: If Gemini is ≥75% confident the receipt merchant matches a historical name, it returns the canonical historical name exactly. Below 75%, the raw OCR name is used instead.
+    *   **Auto-Category Resolution**: When a historical name is matched, the associated category is automatically looked up from the mapping table and applied — no manual step required.
+    *   **💜 Result Card Indicators**: The Merchant and Category fields display a 💜 prefix when a historical name was used, with a legend below the result card. The "Add Mapping" button is hidden in this case since the merchant is already mapped.
+    *   **New API Endpoint**: `GET /api/merchant-names` returns the sorted, distinct list of Monarch merchant names for use by other tools.
 
 ## 🖼 Demo (v1.1 only)
 
@@ -41,7 +47,7 @@ The system is a lightweight **FastAPI** application backed by **PostgreSQL**.
     *   **Image Flow**: Hashing -> De-duplication -> OCR -> Conversion -> Push.
     *   **Manual Flow**: Form Data -> Hashing -> Conversion -> Push.
 2.  **Monarch Service**: Handles authentication (including MFA), session persistence, and GraphQL interactions.
-3.  **Gemini Service**: Interacts with Google's GenAI SDK for image parsing.
+3.  **Gemini Service**: Interacts with Google's GenAI SDK for image parsing. Accepts an optional list of historical merchant names to hint the model toward canonical names.
 4.  **Currency Service**: Fetches historical forex rates.
 
 ## 🚀 Getting Started
