@@ -388,8 +388,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">v1.4.0 - ©2025-26 ego/DEV/null</span>
-        <span style="font-style: italic;">BUILD: 20260404.2337</span>
+        <span style="font-style: italic; color: rgba(255, 255, 255, 0.9);"><span style="color: #fcc5a7; margin-right: 0.5rem;">20260410.0903</span> ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- Manual Entry Modal -->
@@ -411,6 +410,13 @@
                     <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Amount</label>
                     <input type="number" step="0.01" name="amount" required
                         style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
+                </div>
+
+                <div style="text-align: left; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <label for="isCreditCheckbox"
+                        style="color: #666; font-size: 0.9rem; font-weight: bold; cursor: pointer; margin: 0;">Credit?</label>
+                    <input type="checkbox" name="is_credit" id="isCreditCheckbox" value="true"
+                        style="width: 1.2rem; height: 1.2rem;">
                 </div>
 
                 <!-- Reusing Magic Dropdown Logic Structure for Manual -->
