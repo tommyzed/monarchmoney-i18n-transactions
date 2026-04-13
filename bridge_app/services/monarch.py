@@ -47,7 +47,74 @@ async def get_monarch_client(db: AsyncSession, user_id: int):
     # We do NOT allow headless login anymore per user request for manual flow.
     raise ValueError("Monarch session expired or missing. Please run 'python scripts/interactive_login.py' to login.")
 
+async def _gql_update_one(mm: MonarchMoney, transaction_id: str, field: str, value) -> None:
+    """
+    Issue a single updateTransaction mutation with exactly ONE payload field besides the id.
+    Monarch's API rejects mutations that combine certain fields (e.g. amount + date).
+    By sending one field at a time we avoid the TransportQueryError.
+    """
+    from gql import gql
+
+    query = gql(
+        """
+        mutation Web_TransactionDrawerUpdateTransaction($input: UpdateTransactionMutationInput!) {
+            updateTransaction(input: $input) {
+                transaction { id __typename }
+                errors {
+                    fieldErrors { field messages __typename }
+                    message
+                    code
+                    __typename
+                }
+                __typename
+            }
+        }
+        """
+    )
+    variables: dict = {"input": {"id": transaction_id, field: value}}
+    await mm.gql_call(
+        operation="Web_TransactionDrawerUpdateTransaction",
+        variables=variables,
+        graphql_query=query,
+    )
+
+
+async def update_transaction_fields(
+    mm: MonarchMoney,
+    transaction_id: str,
+    date: str = None,
+    amount: float = None,
+    notes: str = None,
+) -> dict:
+    """
+    Update one or more fields on an existing Monarch transaction by issuing a
+    separate API call per field.  Returns a dict with keys for every field
+    that was successfully updated and an 'amount_updated' boolean.
+    """
+    result: dict = {"amount_updated": False}
+
+    if date:
+        await _gql_update_one(mm, transaction_id, "date", date)
+        result["date"] = date
+
+    if notes is not None:
+        await _gql_update_one(mm, transaction_id, "notes", notes)
+        result["notes"] = notes
+
+    if amount is not None:
+        try:
+            await _gql_update_one(mm, transaction_id, "amount", amount)
+            result["amount_updated"] = True
+            result["amount"] = amount
+        except Exception as e:
+            # Monarch may reject amount updates on some transaction types.
+            # We still succeed on date + notes; just log the failure.
+            print(f"⚠️  Could not update amount for {transaction_id}: {e}")
+
+    return result
+
 async def push_transaction(mm: MonarchMoney, data: dict):
+
     # data: date, amount, currency, merchant
     # Find manual account
     accounts = await mm.get_accounts()

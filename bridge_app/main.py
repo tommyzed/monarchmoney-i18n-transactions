@@ -330,6 +330,29 @@ LOADING_HTML = """
             .detail-row { display: flex; justify-content: space-between; align-items: center; margin: 0.25rem auto; border-bottom: 1px solid #eee; padding-bottom: 0.25rem; width: 100%; gap: 1rem; }
             .label { color: #666; }
             .value { font-weight: 600; text-align: right; }
+
+            /* Editable date pill */
+            .date-pill {
+                font-weight: 600;
+                color: #667eea;
+                cursor: pointer;
+                border-bottom: 2px dashed #667eea;
+                padding-bottom: 1px;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                transition: color 0.2s, border-color 0.2s;
+                user-select: none;
+            }
+            .date-pill:hover { color: #764ba2; border-color: #764ba2; }
+            .date-pill.updating { opacity: 0.5; pointer-events: none; }
+            #datePicker {
+                position: absolute;
+                opacity: 0;
+                pointer-events: none;
+                width: 0;
+                height: 0;
+            }
             
             /* Mobile Optimizations */
             @media (max-width: 480px) {
@@ -459,9 +482,10 @@ LOADING_HTML = """
                     <span id="amountValue" class="value">--</span>
                 </div>
 
-                <div class="detail-row">
+                <div class="detail-row" style="position: relative;">
                     <span class="label">Date</span>
-                    <span id="dateValue" class="value">--</span>
+                    <span id="dateValue" class="value date-pill" title="Tap to correct date" onclick="openDatePicker()">--&#160;✏️</span>
+                    <input type="date" id="datePicker" aria-label="Date picker">
                 </div>
                 <div class="detail-row">
                     <span class="label">Category</span>
@@ -655,7 +679,8 @@ LOADING_HTML = """
                 document.getElementById('merchantValue').textContent =
                     (isHistorical ? '💜 ' : '') + data.merchant;
 
-                document.getElementById('dateValue').textContent = data.date;
+                document.getElementById('dateValue').innerHTML = data.date + '&#160;✏️';
+                document.getElementById('datePicker').value = data.date;
 
                 // Emoji + Category Name — prefix with 💜 when matched from history
                 let catDisplay = data.category_name || "--";
@@ -862,6 +887,97 @@ LOADING_HTML = """
                 document.getElementById('errorContainer').style.display = 'block';
                 document.getElementById('errorMessage').textContent = msg;
             }
+
+            // ── Editable Date ──────────────────────────────────────────────
+            function openDatePicker() {
+                const picker = document.getElementById('datePicker');
+                // Ensure value reflects the current displayed date
+                // Strip any emoji from the pill text to get the raw date
+                const currentText = document.getElementById('dateValue').textContent.replace(/[^\d\-]/g, '').trim();
+                if (currentText) picker.value = currentText;
+                picker.showPicker ? picker.showPicker() : picker.click();
+            }
+
+            document.getElementById('datePicker').addEventListener('change', async function() {
+                const newDate = this.value;
+                await onDateChanged(newDate);
+            });
+
+            async function onDateChanged(newDate) {
+                const data = window.currentTransactionData;
+                if (!data || !data.monarch_tx_id) {
+                    showToast('Cannot update date: no transaction ID.', 'error');
+                    return;
+                }
+
+                // No-op if the user picked the same date that's already stored
+                if (newDate === data.date) return;
+
+                const pill = document.getElementById('dateValue');
+                pill.classList.add('updating');
+                pill.innerHTML = newDate + '&#160;⏳';
+
+                try {
+                    const payload = {
+                        monarch_tx_id: data.monarch_tx_id,
+                        new_date: newDate,
+                        original_currency: data.original_currency || data.currency || 'USD',
+                        original_amount: data.original_amount ?? data.amount,
+                        is_credit: data.is_credit || false
+                    };
+
+                    const res = await fetch('/api/transaction/update-date', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.detail || 'Update failed');
+                    }
+
+                    const result = await res.json();
+
+                    // Update stored data
+                    data.date = result.new_date;
+                    data.amount = result.new_amount;
+                    if (result.exchange_rate !== null && result.exchange_rate !== undefined) {
+                        data.exchange_rate = result.exchange_rate;
+                    }
+
+                    // Update date pill
+                    pill.innerHTML = result.new_date + '&#160;✏️';
+                    document.getElementById('datePicker').value = result.new_date;
+
+                    // Rebuild amount display
+                    let amountHtml = `${parseFloat(result.new_amount).toFixed(2)} ${data.currency}`;
+                    if (data.monarch_tx_id) {
+                        const deepLink = `intent://transactions/${data.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${data.monarch_tx_id};end`;
+                        const linkColor = data.is_credit ? '#16a34a' : '#2563eb';
+                        amountHtml = `<a href="${deepLink}" style="text-decoration:none; color:${linkColor};">${amountHtml}</a>`;
+                    }
+                    if (data.original_amount && data.original_currency) {
+                        let rateInfo = '';
+                        if (result.exchange_rate) {
+                            rateInfo = ` @ ${parseFloat(result.exchange_rate).toFixed(3)}`;
+                        }
+                        amountHtml += `<br><span style="font-size: 0.8em; color: #777;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
+                    }
+                    document.getElementById('amountValue').innerHTML = amountHtml;
+
+                    showToast('✅ Date & rate updated!', 'success');
+
+                } catch(e) {
+                    // Revert pill
+                    const revDate = document.getElementById('datePicker').value || (data.date || '--');
+                    pill.innerHTML = revDate + '&#160;✏️';
+                    showToast('Error: ' + e.message, 'error');
+                } finally {
+                    pill.classList.remove('updating');
+                }
+            }
+            // ── End Editable Date ──────────────────────────────────────────
 
             // Start polling
             setTimeout(checkStatus, 100);
@@ -1070,6 +1186,93 @@ async def delete_mapping(req: DeleteMappingRequest, db: AsyncSession = Depends(g
         await db.rollback()
         print(f"Error deleting mapping: {e}")
         if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=str(e))
+
+class UpdateDateRequest(BaseModel):
+    monarch_tx_id: str
+    new_date: str            # YYYY-MM-DD
+    original_currency: str   # e.g. "EUR" — the foreign currency before conversion
+    original_amount: float   # The original foreign-currency amount
+    is_credit: Optional[bool] = False
+
+@app.post("/api/transaction/update-date")
+async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Update a transaction's date in Monarch, recalculating the USD amount and notes
+    using the exchange rate for the new date.
+
+    If original_currency is USD, only the date is updated (no conversion needed).
+    """
+    try:
+        from .services.currency import get_exchange_rate
+
+        creds_result = await db.execute(select(Credentials))
+        creds = creds_result.scalars().first()
+        if not creds:
+            raise HTTPException(status_code=400, detail="No Monarch credentials configured")
+
+        mm = await get_monarch_client(db, creds.id)
+        from .services.monarch import update_transaction_fields
+
+        new_date = req.new_date
+        original_currency = req.original_currency.upper().strip()
+        original_amount = req.original_amount
+        is_credit = req.is_credit or False
+
+        if original_currency in ("USD", ""):
+            # No conversion needed — just update the date
+            await update_transaction_fields(
+                mm,
+                transaction_id=req.monarch_tx_id,
+                date=new_date,
+            )
+            print(f"Updated transaction {req.monarch_tx_id}: new date={new_date} (USD, no conversion)")
+            return {
+                "status": "success",
+                "new_date": new_date,
+                "new_amount": original_amount,
+                "exchange_rate": None,
+                "original_currency": original_currency,
+            }
+        else:
+            # Re-fetch exchange rate for the new date
+            rate = await get_exchange_rate(original_currency, "USD", new_date)
+            new_usd = round(original_amount * rate, 2)
+            # Sign: credits are positive, debits are negative
+            signed_amount = abs(new_usd) if is_credit else -abs(new_usd)
+
+            # Build notes in the same format as push_transaction
+            notes = (
+                f"Original Price: {original_currency} {original_amount:.2f}\n"
+                f"Exchange Rate: {rate} USD/{original_currency}"
+            )
+
+            update_result = await update_transaction_fields(
+                mm,
+                transaction_id=req.monarch_tx_id,
+                date=new_date,
+                amount=signed_amount,
+                notes=notes,
+            )
+            print(
+                f"Updated transaction {req.monarch_tx_id}: new date={new_date}, "
+                f"{original_currency} {original_amount:.2f} -> USD {new_usd:.2f} @ {rate} "
+                f"(amount_updated={update_result['amount_updated']})"
+            )
+            return {
+                "status": "success",
+                "new_date": new_date,
+                "new_amount": new_usd,
+                "exchange_rate": rate,
+                "original_currency": original_currency,
+                "amount_updated": update_result["amount_updated"],
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 # =============================================================================
