@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime
 from google import genai
 from PIL import Image
 import io
@@ -31,10 +32,12 @@ MERCHANT MATCHING RULES:
 - When in doubt, prefer the historical name — it is the already-standardised canonical form.
 """
 
+    current_year = datetime.now().year
+
     # Prompt engineering
     prompt = f"""
 You are a financial data extractor. Extract the following from the receipt image:
-- date (YYYY-MM-DD)
+- date (YYYY-MM-DD). STRICT RULE: Assume the receipt is recent. The current year is {current_year}. Do NOT output dates from the distant past (e.g. 2024). If the year is ambiguous or missing, default to {current_year}.
 - amount (float)
 - currency (ISO code, assume EUR if not specified but likely European)
 - merchant (string, clean name — see rules below)
