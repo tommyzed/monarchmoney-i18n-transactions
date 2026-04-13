@@ -32,12 +32,12 @@ MERCHANT MATCHING RULES:
 - When in doubt, prefer the historical name — it is the already-standardised canonical form.
 """
 
-    current_year = datetime.now().year
+    today_str = datetime.now().strftime("%Y-%m-%d")
 
     # Prompt engineering
     prompt = f"""
 You are a financial data extractor. Extract the following from the receipt image:
-- date (YYYY-MM-DD). STRICT RULE: Assume the receipt is recent. The current year is {current_year}. Do NOT output dates from the distant past (e.g. 2024). If the year is ambiguous or missing, default to {current_year}.
+- date (YYYY-MM-DD). STRICT RULE: Assume the receipt is recent. The current date is {today_str}. Future dates are impossible. Do NOT output dates from the distant past (e.g. 2024). If the date is ambiguous, missing, or cannot be determined, default to {today_str}.
 - amount (float)
 - currency (ISO code, assume EUR if not specified but likely European)
 - merchant (string, clean name — see rules below)
