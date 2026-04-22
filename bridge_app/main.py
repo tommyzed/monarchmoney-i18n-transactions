@@ -484,7 +484,7 @@ LOADING_HTML = """
 
                 <div class="detail-row" style="position: relative;">
                     <span class="label">Date</span>
-                    <span id="dateValue" class="value date-pill" title="Tap to correct date" onclick="openDatePicker()">--&#160;✏️</span>
+                    <span id="dateValue" class="value date-pill" title="Tap to correct date" onclick="openDatePicker()">--</span>
                     <input type="date" id="datePicker" aria-label="Date picker">
                 </div>
                 <div class="detail-row">
@@ -679,7 +679,7 @@ LOADING_HTML = """
                 document.getElementById('merchantValue').textContent =
                     (isHistorical ? '💜 ' : '') + data.merchant;
 
-                document.getElementById('dateValue').innerHTML = data.date + '&#160;✏️';
+                document.getElementById('dateValue').innerHTML = data.date;
                 document.getElementById('datePicker').value = data.date;
 
                 // Emoji + Category Name — prefix with 💜 when matched from history
@@ -947,7 +947,7 @@ LOADING_HTML = """
                     }
 
                     // Update date pill
-                    pill.innerHTML = result.new_date + '&#160;✏️';
+                    pill.innerHTML = result.new_date;
                     document.getElementById('datePicker').value = result.new_date;
 
                     // Rebuild amount display
@@ -971,7 +971,7 @@ LOADING_HTML = """
                 } catch(e) {
                     // Revert pill
                     const revDate = document.getElementById('datePicker').value || (data.date || '--');
-                    pill.innerHTML = revDate + '&#160;✏️';
+                    pill.innerHTML = revDate;
                     showToast('Error: ' + e.message, 'error');
                 } finally {
                     pill.classList.remove('updating');
