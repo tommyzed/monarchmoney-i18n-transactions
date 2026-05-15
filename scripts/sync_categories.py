@@ -30,7 +30,12 @@ def guess_emoji(name: str) -> str:
 async def sync_categories():
     async with AsyncSessionLocal() as db:
         print("Fetching credentials...")
-        creds_result = await db.execute(select(Credentials))
+        import os
+        mm_email = os.getenv("MM_EMAIL")
+        if mm_email:
+            creds_result = await db.execute(select(Credentials).where(Credentials.email == mm_email))
+        else:
+            creds_result = await db.execute(select(Credentials).where(Credentials.monarch_session.isnot(None)))
         creds = creds_result.scalars().first()
         
         if not creds:

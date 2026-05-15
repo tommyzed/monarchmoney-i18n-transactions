@@ -223,7 +223,12 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     # 4. Monarch Push
     await report_func("Connecting to Monarch Money...", 70)
     from ..models import Credentials
-    creds_result = await db.execute(select(Credentials))
+    import os
+    mm_email = os.getenv("MM_EMAIL")
+    if mm_email:
+        creds_result = await db.execute(select(Credentials).where(Credentials.email == mm_email))
+    else:
+        creds_result = await db.execute(select(Credentials).where(Credentials.monarch_session.isnot(None)))
     creds = creds_result.scalars().first()
     
     if not creds:

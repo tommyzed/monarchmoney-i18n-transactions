@@ -8,6 +8,7 @@ class Credentials(Base):
     email = Column(String, unique=True, index=True)
     encrypted_payload = Column(LargeBinary, nullable=False)
     monarch_session = Column(LargeBinary, nullable=True)
+    last_update_date = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class Transaction(Base):
     __tablename__ = "transactions"
