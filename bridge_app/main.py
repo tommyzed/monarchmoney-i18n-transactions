@@ -876,6 +876,7 @@ LOADING_HTML = """
             }
             
             function showError(msg) {
+                console.error("Debug Error:", msg);
                 document.getElementById('loadingOverlay').style.display = 'none';
                 document.getElementById('resultCard').style.display = 'flex';
                 

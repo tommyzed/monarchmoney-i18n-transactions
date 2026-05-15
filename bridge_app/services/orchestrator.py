@@ -225,11 +225,18 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     from ..models import Credentials
     import os
     mm_email = os.getenv("MM_EMAIL")
+    print(f"DEBUG ORCHESTRATOR: MM_EMAIL from env is: {repr(mm_email)}")
+    
     if mm_email:
+        mm_email = mm_email.strip()
+        print(f"DEBUG ORCHESTRATOR: Searching for credentials with email: {mm_email}")
         creds_result = await db.execute(select(Credentials).where(Credentials.email == mm_email))
     else:
+        print(f"DEBUG ORCHESTRATOR: No MM_EMAIL set, searching for any credential with a session")
         creds_result = await db.execute(select(Credentials).where(Credentials.monarch_session.isnot(None)))
+        
     creds = creds_result.scalars().first()
+    print(f"DEBUG ORCHESTRATOR: Found credentials: {creds}")
     
     if not creds:
         raise HTTPException(status_code=400, detail="No Monarch credentials configured")
