@@ -64,7 +64,7 @@ async def get_monarch_client(db: AsyncSession, user_id: int):
 
     raise ValueError(
         "Monarch auth expired or missing. "
-        "Run 'python scripts/interactive_login.py' to re-authenticate."
+        "Run 'python scripts/cookie_login.py' to re-authenticate."
     )
 
 
