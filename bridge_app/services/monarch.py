@@ -18,34 +18,55 @@ async def get_monarch_client(db: AsyncSession, user_id: int):
         raise ValueError("No credentials found for user")
 
     mm = MonarchMoney()
-    
-    # Try to load session from DB
+
+    # --- Strategy 1: Cookie-based auth (NEW — Monarch security update 2025) ---
+    # Restores the cookie jar captured at login time (csrftoken + session cookie).
+    # The session cookie is long-lived when trusted_device=True was used.
+    if creds.monarch_cookies:
+        mm._cookie_jar = creds.monarch_cookies
+        csrf = creds.monarch_cookies.get("csrftoken")
+        if csrf:
+            mm._headers["X-Csrftoken"] = csrf
+        try:
+            await mm.get_subscription_details()
+            print("✅ Authenticated via cookie-based auth (new)")
+            return mm
+        except Exception as e:
+            print(f"Cookie auth failed: {e}")
+            mm._cookie_jar = None
+
+    # --- Strategy 2: Long-lived API token (legacy) ---
+    if creds.monarch_token:
+        mm.set_token(creds.monarch_token)
+        mm._headers["Authorization"] = f"Token {creds.monarch_token}"
+        try:
+            await mm.get_subscription_details()
+            print("✅ Authenticated via long-lived token (legacy)")
+            return mm
+        except Exception as e:
+            print(f"Long-lived token validation failed: {e}")
+            del mm._headers["Authorization"]
+
+    # --- Strategy 3: Cookie/session pickle (oldest legacy fallback) ---
     if creds.monarch_session:
         import tempfile
         try:
-            # Create a temp file to hold the session pickle
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 tmp.write(creds.monarch_session)
                 tmp_path = tmp.name
-            
-            # Load session using library method
             mm.load_session(tmp_path)
-            
-            # Clean up temp file
             os.unlink(tmp_path)
-            
-            # Verify session is valid
             await mm.get_subscription_details()
+            print("✅ Authenticated via session pickle (oldest legacy)")
             return mm
-            
         except Exception as e:
-            print(f"Session load/Verify failed: {e}")
-            # Fallthrough to error
-            pass
-    
-    # If we get here, session is missing or invalid.
-    # We do NOT allow headless login anymore per user request for manual flow.
-    raise ValueError("Monarch session expired or missing. Please run 'python scripts/interactive_login.py' to login.")
+            print(f"Session pickle failed: {e}")
+
+    raise ValueError(
+        "Monarch auth expired or missing. "
+        "Run 'python scripts/interactive_login.py' to re-authenticate."
+    )
+
 
 async def _gql_update_one(mm: MonarchMoney, transaction_id: str, field: str, value) -> None:
     """

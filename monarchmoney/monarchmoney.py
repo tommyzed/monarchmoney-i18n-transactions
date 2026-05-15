@@ -76,10 +76,12 @@ class MonarchMoney(object):
         token: Optional[str] = None,
     ) -> None:
         self._headers = {
-            "Accept": "application/json",
+            "Accept": "*/*",
             "Client-Platform": "web",
             "Content-Type": "application/json",
-            "User-Agent": "MonarchMoneyAPI (https://github.com/bradleyseanf/monarchmoneycommunity)",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "monarch-client": "web",
+            "monarch-client-version": "2025.05",
         }
         if token:
             self._headers["Authorization"] = f"Token {token}"
@@ -87,6 +89,8 @@ class MonarchMoney(object):
         self._session_file = session_file
         self._token = token
         self._timeout = timeout
+        # Cookie jar for new cookie-based auth (Monarch security update 2025)
+        self._cookie_jar: Optional[dict] = None
 
     @staticmethod
     def _looks_like_jwt(token: str) -> bool:
@@ -3194,7 +3198,8 @@ class MonarchMoney(object):
     ) -> None:
         """
         Performs the initial login to a Monarch Money account.
-        Requires/persists only the long-lived login token (NOT the 1-hour features JWT).
+        Captures both the long-lived token (if returned) AND the session cookies
+        to support Monarch's cookie-based auth security update (2025).
         """
         data = {
             "password": password,
@@ -3205,15 +3210,15 @@ class MonarchMoney(object):
         if mfa_secret_key:
             data["totp"] = oathtool.generate_otp(mfa_secret_key)
 
-        async with ClientSession(headers=self._headers) as session:
+        from aiohttp import CookieJar
+        cookie_jar = CookieJar(unsafe=True)
+        async with ClientSession(headers=self._headers, cookie_jar=cookie_jar) as session:
             async with session.post(
                 MonarchMoneyEndpoints.getLoginEndpoint(), json=data
             ) as resp:
                 if resp.status == 403:
-                    # Server demands MFA
                     raise RequireMFAException("Multi-Factor Auth Required")
                 if resp.status != 200:
-                    # Surface server message if present
                     try:
                         response = await resp.json()
                         if "detail" in response:
@@ -3227,26 +3232,30 @@ class MonarchMoney(object):
                         )
 
                 response = await resp.json()
+
+                # Capture all response cookies (session cookie is httpOnly, csrftoken is readable)
+                self._cookie_jar = {}
+                for cookie in session.cookie_jar:
+                    self._cookie_jar[cookie.key] = cookie.value
+
+                # Extract csrftoken for use in X-Csrftoken header
+                csrf = self._cookie_jar.get("csrftoken")
+                if csrf:
+                    self._headers["X-Csrftoken"] = csrf
+                    print(f"✅ Cookie-based auth: captured csrftoken + {len(self._cookie_jar)} cookies")
+
+                # Also capture token if still returned (backward compat)
                 tok = response.get("token")
                 tokexp = response.get("tokenExpiration")
-
-                if not tok:
-                    raise LoginFailedException("Login succeeded but no token returned.")
-                # Reject 1-hour features/Ably JWTs (they look like header.payload.signature)
-                if isinstance(tok, str) and tok.count(".") == 2:
+                if tok and not (isinstance(tok, str) and tok.count(".") == 2) and tokexp in (None, "null"):
+                    self.set_token(tok)
+                    self._headers["Authorization"] = f"Token {self._token}"
+                    print(f"✅ Also captured long-lived token: {tok[:12]}...")
+                elif not self._cookie_jar:
                     raise LoginFailedException(
-                        "Received a JWT-style token (likely 1-hour features token). "
-                        "Refusing to save; ensure we are using /auth/login/ token."
+                        "Login succeeded but no token or cookies returned. "
+                        "Monarch may have changed their auth API."
                     )
-                # Long-lived browser-style sessions come with tokenExpiration == null
-                if tokexp not in (None, "null"):
-                    raise LoginFailedException(
-                        f"Short-lived token returned (tokenExpiration={tokexp}). "
-                        "Retry with trusted_device=True or complete MFA as trusted device."
-                    )
-
-                self.set_token(tok)
-                self._headers["Authorization"] = f"Token {self._token}"
 
     async def _multi_factor_authenticate(
         self,
@@ -3257,18 +3266,19 @@ class MonarchMoney(object):
     ) -> None:
         """
         Performs the MFA step of login.
-        Requires/persists only the long-lived login token (NOT the 1-hour features JWT).
+        Captures both the long-lived token (if returned) AND session cookies.
         """
-
         data = {
             "password": password,
             "supports_mfa": True,
             "totp": code,
-            "trusted_device": bool(trusted_device),  # request trusted device token
+            "trusted_device": bool(trusted_device),
             "username": email,
         }
 
-        async with ClientSession(headers=self._headers) as session:
+        from aiohttp import CookieJar
+        cookie_jar = CookieJar(unsafe=True)
+        async with ClientSession(headers=self._headers, cookie_jar=cookie_jar) as session:
             async with session.post(
                 MonarchMoneyEndpoints.getLoginEndpoint(), json=data
             ) as resp:
@@ -3286,40 +3296,54 @@ class MonarchMoney(object):
                         )
 
                 response = await resp.json()
+
+                # Capture cookies from MFA response
+                self._cookie_jar = {}
+                for cookie in session.cookie_jar:
+                    self._cookie_jar[cookie.key] = cookie.value
+
+                csrf = self._cookie_jar.get("csrftoken")
+                if csrf:
+                    self._headers["X-Csrftoken"] = csrf
+                    print(f"✅ MFA cookie-based auth: captured csrftoken + {len(self._cookie_jar)} cookies")
+
+                # Also capture token if still returned
                 tok = response.get("token")
                 tokexp = response.get("tokenExpiration")
-
-                if not tok:
-                    raise LoginFailedException("MFA succeeded but no token returned.")
-
-                # Reject 1-hour features/Ably JWTs (look like header.payload.signature)
-                if isinstance(tok, str) and tok.count(".") == 2:
+                if tok and not (isinstance(tok, str) and tok.count(".") == 2) and tokexp in (None, "null"):
+                    self.set_token(tok)
+                    self._headers["Authorization"] = f"Token {self._token}"
+                    print(f"✅ MFA also captured long-lived token: {tok[:12]}...")
+                elif not self._cookie_jar:
                     raise LoginFailedException(
-                        "Received a JWT-style token (likely 1-hour features token). "
-                        "Refusing to save; ensure this is the /auth/login/ token."
+                        "MFA succeeded but no token or cookies returned."
                     )
-
-                # Must be long-lived (tokenExpiration == null)
-                if tokexp not in (None, "null"):
-                    raise LoginFailedException(
-                        f"MFA returned short-lived token (tokenExpiration={tokexp}). "
-                        "Make sure trusted_device=True when performing MFA."
-                    )
-
-                self.set_token(tok)
-                self._headers["Authorization"] = f"Token {self._token}"
 
     def _get_graphql_client(self) -> Client:
         """
         Creates a correctly configured GraphQL client for connecting to Monarch Money.
+        Supports both the new cookie-based auth (X-Csrftoken) and legacy token auth.
         """
         if self._headers is None:
             raise LoginFailedException(
                 "Make sure you call login() first or provide a session token!"
             )
+
+        headers = dict(self._headers)
+
+        # If we have a cookie jar, build the Cookie header and set X-Csrftoken
+        if self._cookie_jar:
+            cookie_header = "; ".join(f"{k}={v}" for k, v in self._cookie_jar.items())
+            headers["Cookie"] = cookie_header
+            csrf = self._cookie_jar.get("csrftoken")
+            if csrf:
+                headers["X-Csrftoken"] = csrf
+            # Remove Authorization header when using cookie auth — Monarch now rejects both
+            headers.pop("Authorization", None)
+
         transport = AIOHTTPTransport(
             url=MonarchMoneyEndpoints.getGraphQL(),
-            headers=self._headers,
+            headers=headers,
             timeout=self._timeout,
         )
         return Client(

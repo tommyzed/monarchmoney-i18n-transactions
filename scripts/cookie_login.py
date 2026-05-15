@@ -1,67 +1,141 @@
+"""
+cookie_login.py — Interactive cookie injection for Monarch Money auth.
+
+Use this when `interactive_login.py` is blocked by Cloudflare (429).
+Since you're already logged in via your browser, we bypass the login API
+entirely and inject the cookies directly from your browser session.
+
+HOW TO GET YOUR COOKIES:
+  1. Go to https://app.monarch.com in your browser (make sure you're logged in)
+  2. Open DevTools → Network tab → reload the page
+  3. Click any request to api.monarch.com
+  4. Under "Request Headers", find the `cookie:` header — copy the ENTIRE value
+  5. Run this script and paste when prompted (nothing will be saved to disk)
+"""
+
 import asyncio
 import os
 import sys
 import pickle
+from datetime import datetime, timezone
 
 sys.path.append(os.getcwd())
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 from bridge_app.database import get_db
 from bridge_app.models import Credentials
-from monarchmoney import MonarchMoney
+
+
+def parse_cookie_string(cookie_str: str) -> dict:
+    """Parse a raw 'cookie' header string into a key→value dict."""
+    cookies = {}
+    for part in cookie_str.split(";"):
+        part = part.strip()
+        if "=" in part:
+            key, _, value = part.partition("=")
+            cookies[key.strip()] = value.strip()
+    return cookies
+
 
 async def manual_session_save():
-    mm = MonarchMoney()
-    # Populate the headers with the browser's cookies and csrf token
-    mm._headers.update({
-        "cookie": "ajs_anonymous_id=5eb1ea1f-d771-42e9-a089-9e7dc838e2c2; osano_consentmanager_uuid=b7fd1c5f-1089-4a32-81ba-da1187debba8; osano_consentmanager=GnMkCMDauJUoskwpu6zg2pXr2V1kl8Mp3mWtwtTRlMz2WfW01eokvfVTPbEOLtzcoR04hmJefw3aOh27-aR_GkEWY6oLXy9GJpjUN9v3FuOcuESwmLtIU1ZApEJnnQMnOSIO7m-NGyGK_f0Y7cOWJ4QstFbQcVVzKs1Rh0ZlgfexToXckSvER2RZmwa5OWVupJIZ3SU_QIQJUSJ5mmxifq8ZpJpIXAbo2wZy_ERIlYRCp5iCkT5bfElHxAaPFqWc7r4WlkTIIYHIXKx4b7DS02X349Aaz2uM-tqXN21yY82re-Df-XYBOIu8HqY3-8k8s6WPWQdDzuk=; ajs_user_id=ac447137-6bcf-4dfe-96ce-521ccfe599be; afUserId=e0b209db-f69d-4bd8-9a28-64b7ddf7423b-p; AF_SYNC=1778833891117; session_id=6a6841829c08029b085d4c52309e65ac; csrftoken=RtNl1and8jpJ5obEkqYwlqYsLu7C8Upi; cf_clearance=zE_wdGQrWscooYAB_CpHsHGBroJOj1VexGmyofC16ec-1778838994-1.2.1.1-qcfchfbTH4ZPeXM_gMqVkGvSUzNEqE_1yRWG06OyZkOw.SDwe1TaxKa7gAZiwwuSUr132CbTiergfVHMBDA1fQkQNFzO2_sED3w0kRVvOgyOq.9YLA0TIo4yKIu8KodK.BxjF0XMCRERAg7H7okcIeCAvmm7wTvB4RK1jpBmYYT16H_Mi9rB9ifmzukdHyl9GaHc8rO6L1My5fyhoWrEPbIkwqJzGKk.E.OoN46OX0IfgHm2QwMh8RRDeAmCBhN06LbapOtXbOG9g.ie3nl6zi1VR77HhV1QHpJlHYxKxRS7rTalEnq8lix6oDz0cdEuYH0hFkPAentBT.H5LznCkg; __cf_bm=aoRkwF.uvTtaCNPYQMPBZugQFa5wvAy2AOSai67rpw8-1778838994.5422864-1.0.1.1-wYxT3ylupER_LCtWul7bCrIy6YZh2ecunRv4067aYk6ROadAT5Iml2Zi6o1wNEWmn_B9iOUMHeQ2XwU4_r7vq9OuYS_h3vmB2z1M62KZNJW8GkBBoBWODAEHPI7ezKeS",
-        "x-csrftoken": "RtNl1and8jpJ5obEkqYwlqYsLu7C8Upi",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-        "client-platform": "web"
-    })
-    
-    if "Authorization" in mm._headers:
-        del mm._headers["Authorization"]
-    
-    mm._token = None
-    
-    session_data = {
-        "token": mm._token,
-        "headers": mm._headers,
+    print("=" * 60)
+    print("  Monarch Money — Cookie Login")
+    print("=" * 60)
+    print()
+    print("Paste your browser cookie string below, then press ENTER on a blank line.")
+    print("(DevTools → Network → any api.monarch.com request → Request Headers → cookie:)\n")
+
+    lines = []
+    while True:
+        line = sys.stdin.readline()
+        # readline() returns '\n' for blank lines and '' for EOF
+        stripped = line.rstrip("\n")
+        if stripped == "" and lines:
+            break
+        if stripped:
+            lines.append(stripped)
+    cookie_string = "".join(lines).strip()
+
+    if not cookie_string:
+        print("❌ No cookie string provided. Aborting.")
+        return
+
+    cookie_dict = parse_cookie_string(cookie_string)
+    csrf = cookie_dict.get("csrftoken")
+
+    # Allow overriding csrftoken explicitly if not found in cookie string
+    if not csrf:
+        print("\n⚠️  No csrftoken found in cookies.")
+        csrf_input = input("Paste your x-csrftoken value (or press ENTER to skip): ").strip()
+        if csrf_input:
+            csrf = csrf_input
+            cookie_dict["csrftoken"] = csrf
+
+    print(f"\n📦 Parsed {len(cookie_dict)} cookies: {list(cookie_dict.keys())}")
+
+    session_id = cookie_dict.get("session_id")
+    if not csrf:
+        print("⚠️  Warning: no csrftoken found — GraphQL calls may fail!")
+    if not session_id:
+        print("⚠️  Warning: no session_id found — session may not persist!")
+
+    # Build legacy pickle blob for backward compat
+    headers = {
+        "Accept": "*/*",
+        "Client-Platform": "web",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+        "monarch-client": "web",
+        "monarch-client-version": "2025.05",
+        "cookie": cookie_string,
+        "X-Csrftoken": csrf or "",
     }
-    session_bytes = pickle.dumps(session_data)
-    
-    email = input("Confirm your email to save session to: ").strip()
-    print("DEBUG: Connecting to the database...")
-    
+    session_bytes = pickle.dumps({"token": None, "headers": headers})
+
+    email = os.getenv("MM_EMAIL") or input("\nEmail to save session for: ").strip()
+    print(f"\n💾 Saving cookies for {email}...")
+
     try:
         async for db in get_db():
-            print("DEBUG: Database connection acquired.")
             from sqlalchemy import select
-            print(f"DEBUG: Looking up credentials for email: {email}")
             result = await db.execute(select(Credentials).where(Credentials.email == email))
             creds = result.scalar_one_or_none()
-            
+
+            now = datetime.now(timezone.utc)
+
             if creds:
-                 print(f"Updating session for {email}...")
-                 creds.monarch_session = session_bytes
-                 from datetime import datetime, timezone
-                 creds.last_update_date = datetime.now(timezone.utc)
+                print(f"Updating existing credentials for {email}...")
+                creds.monarch_cookies = cookie_dict
+                creds.monarch_session = session_bytes
+                creds.monarch_token = None
+                creds.last_update_date = now
             else:
-                 from bridge_app.utils.crypto import encrypt
-                 print(f"User {email} not found in DB. Creating placeholder.")
-                 payload = encrypt('{"password": "", "mfa_secret": ""}')
-                 from datetime import datetime, timezone
-                 creds = Credentials(email=email, encrypted_payload=payload, monarch_session=session_bytes, last_update_date=datetime.now(timezone.utc))
-                 db.add(creds)
-            
-            print("DEBUG: Committing to database...")
+                print(f"User {email} not found — creating new record.")
+                from bridge_app.utils.crypto import encrypt
+                payload = encrypt('{"password": "", "mfa_secret": ""}')
+                creds = Credentials(
+                    email=email,
+                    encrypted_payload=payload,
+                    monarch_cookies=cookie_dict,
+                    monarch_session=session_bytes,
+                    monarch_token=None,
+                    last_update_date=now,
+                )
+                db.add(creds)
+
             await db.commit()
-            print("Session saved to database successfully! You should now be logged in.")
+            print("\n✅ Cookies saved to database successfully!")
+            print(f"   csrftoken:  {csrf[:20] if csrf else 'MISSING'}...")
+            print(f"   session_id: {session_id[:20] if session_id else 'MISSING'}...")
+            print(f"   saved at:   {now.isoformat()}")
             break
-            
+
     except Exception as e:
-        print(f"DEBUG: Exception occurred during DB operation: {e}")
+        print(f"\n❌ Exception during DB operation: {e}")
         import traceback
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     asyncio.run(manual_session_save())

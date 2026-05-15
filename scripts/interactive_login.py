@@ -53,41 +53,58 @@ async def interactive_login_flow():
             print(f"Login failed: {e}")
         return
 
-    # Pickle the session manually to bytes
-    # We replicate what save_session does but to bytes
-    session_data = {
-        "token": mm._token,
-        "headers": mm._headers,
-    }
+    # The cookie jar from login (primary auth — new Monarch security model)
+    cookie_jar = mm._cookie_jar or {}
+    if cookie_jar:
+        print(f"✅ Got cookie jar with {len(cookie_jar)} cookies (csrftoken={'csrftoken' in cookie_jar})")
+    else:
+        print("⚠️  No cookies captured — auth will fall back to token/pickle")
+
+    # Legacy: pickle session bytes (kept for backward compat)
+    session_data = {"token": mm._token, "headers": mm._headers}
     session_bytes = pickle.dumps(session_data)
-    
+    long_lived_token = mm._token
+
     # Save to user's credentials in DB
     if not email:
         email = input("Confirm your email to save session to: ").strip()
     else:
         print(f"Saving session for {email}...")
-    
+
+    from datetime import datetime, timezone
     async for db in get_db():
         from sqlalchemy import select
         result = await db.execute(select(Credentials).where(Credentials.email == email))
         creds = result.scalar_one_or_none()
-        
+
         if creds:
-             print(f"Updating session for {email}...")
-             creds.monarch_session = session_bytes
-             # If we have a password payload, asking to keep it or clear it?
-             # User might want to clear password if they only want session auth.
-             # But let's keep it as is.
+            print(f"Updating credentials for {email}...")
+            creds.monarch_cookies = cookie_jar or None
+            creds.monarch_session = session_bytes
+            creds.monarch_token = long_lived_token
+            creds.last_update_date = datetime.now(timezone.utc)
         else:
-             print(f"User {email} not found in DB. Creating placeholder.")
-             # We need a dummy payload if strictly required, or just empty
-             payload = encrypt('{"password": "", "mfa_secret": ""}')
-             creds = Credentials(email=email, encrypted_payload=payload, monarch_session=session_bytes)
-             db.add(creds)
-        
+            print(f"User {email} not found in DB. Creating placeholder.")
+            from bridge_app.utils.crypto import encrypt
+            payload = encrypt('{"password": "", "mfa_secret": ""}')
+            creds = Credentials(
+                email=email,
+                encrypted_payload=payload,
+                monarch_cookies=cookie_jar or None,
+                monarch_session=session_bytes,
+                monarch_token=long_lived_token,
+                last_update_date=datetime.now(timezone.utc),
+            )
+            db.add(creds)
+
         await db.commit()
-        print("Session saved to database successfully!")
+        print("✅ Credentials saved to database!")
+        if cookie_jar:
+            print("🎉 Cookie-based auth stored — this is the new long-lived Monarch session format!")
+        elif long_lived_token:
+            print("🎉 Long-lived token stored (legacy format).")
         break
+
 
 if __name__ == "__main__":
     try:
