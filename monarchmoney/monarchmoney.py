@@ -3330,21 +3330,30 @@ class MonarchMoney(object):
             )
 
         headers = dict(self._headers)
+        client_session_args = {}
 
-        # If we have a cookie jar, build the Cookie header and set X-Csrftoken
         if self._cookie_jar:
-            cookie_header = "; ".join(f"{k}={v}" for k, v in self._cookie_jar.items())
-            headers["Cookie"] = cookie_header
+            # Pass cookies via ClientSession, NOT as a header string.
+            # aiohttp silently strips manually-set Cookie headers as a security measure.
+            client_session_args["cookies"] = self._cookie_jar
+
             csrf = self._cookie_jar.get("csrftoken")
             if csrf:
                 headers["X-Csrftoken"] = csrf
-            # Remove Authorization header when using cookie auth — Monarch now rejects both
+
+            # Django's CSRF middleware validates Origin/Referer against ALLOWED_HOSTS.
+            # Without these, even a valid csrftoken will result in a 403 Forbidden.
+            headers["Origin"] = "https://app.monarch.com"
+            headers["Referer"] = "https://app.monarch.com/"
+
+            # Remove Authorization when using cookie auth
             headers.pop("Authorization", None)
 
         transport = AIOHTTPTransport(
             url=MonarchMoneyEndpoints.getGraphQL(),
             headers=headers,
             timeout=self._timeout,
+            client_session_args=client_session_args or None,
         )
         return Client(
             transport=transport,
