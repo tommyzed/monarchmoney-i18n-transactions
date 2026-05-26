@@ -158,7 +158,6 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     amount = abs(parsed_amount) if is_credit else -abs(parsed_amount)
     
     # Check for original currency conversion data
-    # Check for original currency conversion data
     if "original_amount" in data:
         notes = (
             f"Original Price: {data['original_currency']} {data['original_amount']:.2f}\n"
@@ -170,6 +169,10 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     else:
         # User requested redundancy for USD
         notes = f"Original Price: {data['currency']} {abs(amount):.2f}"
+
+    user_notes = data.get("notes")
+    if user_notes and user_notes.strip():
+        notes = f"{notes}\n{user_notes.strip()}"
 
     # Fetch categories to find a valid category_id (required by API)
     category_id = None
