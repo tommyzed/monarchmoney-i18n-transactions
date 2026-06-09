@@ -186,18 +186,22 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     # If user_currency_override is set (from upload form), use it IF the OCR'd one is ambiguous or we trust user more?
     # Original logic used user_currency if present, else OCR.
     target_original = user_currency_override if user_currency_override else raw_currency
+    if target_original:
+        target_original = target_original.upper().strip()
     
     # Normalize
     if target_original in ["EURO", "€"]: target_original = "EUR"
     if target_original in ["£", "POUND"]: target_original = "GBP"
     if target_original in ["¥", "YEN"]: target_original = "JPY"
+    if target_original in ["KČ", "KČS", "KC"]: target_original = "CZK"
+    if target_original in ["FT"]: target_original = "HUF"
     
     print(f"Currency Check: User='{user_currency_override}' OCR='{raw_currency}' -> Effective='{target_original}'")
     
     if target_original == "USD":
         data["currency"] = "USD"
         
-    elif target_original in ["EUR", "GBP", "JPY"]:
+    elif target_original in ["EUR", "GBP", "JPY", "CZK", "HUF"]:
         try:
             await report_func(f"Converting {target_original} to USD...", 60)
             from .currency import get_exchange_rate
