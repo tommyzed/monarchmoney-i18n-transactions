@@ -81,14 +81,22 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            padding: 1rem 0;
             background: rgba(15, 15, 26, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border);
+        }
+
+        .header-container {
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
         }
 
         .header-left {
@@ -889,16 +897,19 @@
     <!-- Main Dashboard (hidden until data loads) -->
     <div id="dashboard" style="display: none;">
         <div class="header">
-            <div class="header-left">
-                <a href="/" class="back-btn" title="Back to Bridge">←</a>
-                <div class="header-title">🔥 Ignite</div>
+            <div class="header-container">
+                <div class="header-left">
+                    <a href="/" class="back-btn" title="Back to Bridge">←</a>
+                    <div class="header-title">🔥 Ignite</div>
+                </div>
+                <div class="coffee-link-container">
+                    <a href="https://ko-fi.com/egodevnull" target="_blank" rel="noopener noreferrer"
+                        class="coffee-link">
+                        Please Buy Me a ☕️
+                    </a>
+                </div>
+                <div class="settings-btn" id="settingsBtn" title="Settings">⚙️</div>
             </div>
-            <div class="coffee-link-container">
-                <a href="https://ko-fi.com/egodevnull" target="_blank" rel="noopener noreferrer" class="coffee-link">
-                    Please Buy Me a ☕️
-                </a>
-            </div>
-            <div class="settings-btn" id="settingsBtn" title="Settings">⚙️</div>
         </div>
 
         <!-- Secondary Header Bar for Social Security -->
@@ -907,7 +918,8 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="ssEnabledToggle" class="toggle-checkbox" onchange="toggleSsEnabled(this)"
                         style="width: 16px; height: 16px; cursor: pointer; margin: 0;">
-                    <label for="ssEnabledToggle" class="ss-status-label" style="cursor: pointer; margin: 0; user-select: none;">👴 Social Security</label>
+                    <label for="ssEnabledToggle" class="ss-status-label"
+                        style="cursor: pointer; margin: 0; user-select: none;">Social Security</label>
                 </div>
                 <span class="ss-status-value" id="ssHeaderValue">Not included in projection.</span>
             </div>
@@ -1086,7 +1098,7 @@
                     <input type="number" class="form-input" id="settAge" min="18" max="80">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Retirement Age</label>
+                    <label class="form-label">Target 🔥 Age</label>
                     <input type="number" class="form-input" id="settRetireAge" min="25" max="90">
                 </div>
             </div>
@@ -1853,7 +1865,7 @@
             const birthYear = parseInt(document.getElementById('ssBirthYear').value) || 1980;
             const withdrawMonth = parseInt(document.getElementById('ssWithdrawMonth').value) || 1;
             const withdrawYear = parseInt(document.getElementById('ssWithdrawYear').value) || 2047;
-            
+
             // Auto-enable projection when user updates settings from the modal
             const checkbox = document.getElementById('ssEnabledToggle');
             if (checkbox) checkbox.checked = true;
@@ -2048,7 +2060,7 @@
 
             if (requiredSpend !== null && requiredSpend < plannedSpend && requiredSpend > 0) {
                 spendCard.style.color = "var(--accent-red)";
-                recMessage = '• Reduce spend to $' + formatNum(requiredSpend) + ' to reach FIRE at target age.';
+                recMessage = '• Reduce spend to $' + formatNum(requiredSpend) + ' to reach FIRE at target age (' + s.retirement_age + ').';
                 recColor = "var(--accent-amber)";
             } else {
                 spendCard.style.color = "var(--accent-amber)";
@@ -2064,7 +2076,7 @@
                 const freezeAge = data.years[freezeIdx];
                 recMessage += `<div style="margin-top: 8px; color: var(--accent-blue);">• There is a 5% chance that you could run out of savings by age ${freezeAge}.</div>`;
             } else if (data.fire_date_age !== null && data.fire_date_age > data.settings.current_age) {
-                recMessage += `<div style="margin-top: 8px; color: var(--accent-fire);">• If you worked until age ${data.fire_date_age}, you could FIRE with your current anticipated spend.</div>`;
+                recMessage += `<div style="margin-top: 8px; color: var(--accent-fire);">• If you worked until age ${data.fire_date_age}, you could FIRE with your current anticipated spend ($${formatNum(plannedSpend)}).</div>`;
             }
 
             recText.innerHTML = recMessage;
