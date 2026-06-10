@@ -904,7 +904,11 @@
         <!-- Secondary Header Bar for Social Security -->
         <div class="secondary-header" id="ssHeaderBar">
             <div class="ss-header-info" id="ssHeaderInfo">
-                <span class="ss-status-label">👴 Social Security</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="ssEnabledToggle" class="toggle-checkbox" onchange="toggleSsEnabled(this)"
+                        style="width: 16px; height: 16px; cursor: pointer; margin: 0;">
+                    <label for="ssEnabledToggle" class="ss-status-label" style="cursor: pointer; margin: 0; user-select: none;">👴 Social Security</label>
+                </div>
                 <span class="ss-status-value" id="ssHeaderValue">Not included in projection.</span>
             </div>
             <button class="ss-calc-btn" id="ssCalcBtn">
@@ -1376,14 +1380,7 @@
             </div>
 
             <div
-                style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.2rem; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <input type="checkbox" id="ssEnabledToggle" class="toggle-checkbox"
-                        style="width: 18px; height: 18px; cursor: pointer;">
-                    <label for="ssEnabledToggle"
-                        style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); cursor: pointer; user-select: none;">Include
-                        in FIRE Projection</label>
-                </div>
+                style="display: flex; align-items: center; justify-content: flex-end; gap: 1.5rem; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.2rem; flex-wrap: wrap;">
                 <button class="save-btn" id="ssSaveBtn" onclick="saveSsSettings()"
                     style="margin-top: 0; width: auto; padding: 0.8rem 1.8rem;">
                     💾 Save & Update FIRE Projection
@@ -1819,6 +1816,36 @@
             document.getElementById('ssModal').style.display = 'none';
         }
 
+        async function toggleSsEnabled(checkbox) {
+            const enabled = checkbox.checked;
+            const payload = {
+                social_security_enabled: enabled
+            };
+
+            try {
+                if (window.IS_DEMO) {
+                    let demoSettings = {};
+                    const stored = localStorage.getItem('fire_demo_settings');
+                    if (stored) demoSettings = JSON.parse(stored);
+
+                    demoSettings = { ...demoSettings, ...payload };
+                    localStorage.setItem('fire_demo_settings', JSON.stringify(demoSettings));
+                    runSimulation();
+                } else {
+                    const res = await fetch('/api/fire/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error('Failed to save settings.');
+                    runSimulation();
+                }
+            } catch (e) {
+                alert('Failed to update: ' + e.message);
+                checkbox.checked = !enabled;
+            }
+        }
+
         async function saveSsSettings() {
             const pia = parseInt(document.getElementById('ssPia').value) || 0;
             const fra = parseInt(document.getElementById('ssFra').value) || 67;
@@ -1826,7 +1853,11 @@
             const birthYear = parseInt(document.getElementById('ssBirthYear').value) || 1980;
             const withdrawMonth = parseInt(document.getElementById('ssWithdrawMonth').value) || 1;
             const withdrawYear = parseInt(document.getElementById('ssWithdrawYear').value) || 2047;
-            const enabled = document.getElementById('ssEnabledToggle').checked;
+            
+            // Auto-enable projection when user updates settings from the modal
+            const checkbox = document.getElementById('ssEnabledToggle');
+            if (checkbox) checkbox.checked = true;
+            const enabled = true;
 
             const birthMonths = birthYear * 12 + birthMonth;
             const withdrawMonths = withdrawYear * 12 + withdrawMonth;
@@ -2046,6 +2077,10 @@
             // Update Social Security Header Bar status
             const ssValEl = document.getElementById('ssHeaderValue');
             const ssBtnEl = document.getElementById('ssCalcBtn');
+            const ssToggleEl = document.getElementById('ssEnabledToggle');
+            if (ssToggleEl) {
+                ssToggleEl.checked = s.social_security_enabled || false;
+            }
             if (s.social_security_enabled && s.social_security_pia > 0) {
                 const mba = calculateSocialSecurityMbaJS(
                     s.social_security_pia,
