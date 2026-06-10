@@ -36,6 +36,58 @@ RISK_PROFILES = {
 DEFAULT_ITERATIONS = 10_000
 
 
+def calculate_social_security_mba(
+    pia: Optional[float],
+    fra: Optional[int],
+    birth_year: Optional[int],
+    birth_month: Optional[int],
+    withdrawal_year: Optional[int],
+    withdrawal_month: Optional[int]
+) -> float:
+    """
+    Calculate Monthly Benefit Amount (MBA) based on Social Security rules.
+    """
+    pia_val = pia if pia is not None else 0.0
+    fra_val = fra if fra is not None else 67
+    birth_y = birth_year if birth_year is not None else 1980
+    birth_m = birth_month if birth_month is not None else 1
+    withdraw_y = withdrawal_year if withdrawal_year is not None else 2047
+    withdraw_m = withdrawal_month if withdrawal_month is not None else 1
+
+    if pia_val <= 0:
+        return 0.0
+        
+    birth_months = birth_y * 12 + birth_m
+    withdrawal_months = withdraw_y * 12 + withdraw_m
+    fra_months = birth_months + (fra_val * 12)
+    
+    diff_months = withdrawal_months - fra_months
+    
+    if diff_months < 0:
+        # Early Retirement
+        m_e = -diff_months
+        if m_e <= 36:
+            reduction_factor = m_e * (5.0 / 900.0)
+        else:
+            reduction_factor = (36.0 * (5.0 / 900.0)) + ((m_e - 36) * (5.0 / 1200.0))
+        
+        reduction_factor = min(reduction_factor, 1.0)
+        mba = pia_val * (1.0 - reduction_factor)
+    elif diff_months > 0:
+        # Delayed Retirement
+        # Capped at age 70
+        age_70_months = birth_months + (70 * 12)
+        effective_withdrawal_months = min(withdrawal_months, age_70_months)
+        m_l = max(0, effective_withdrawal_months - fra_months)
+        
+        credit_factor = m_l * (2.0 / 300.0)
+        mba = pia_val * (1.0 + credit_factor)
+    else:
+        mba = pia_val
+        
+    return float(round(mba))
+
+
 @dataclass
 class SimulationInput:
     """Input parameters for the FIRE simulation."""
@@ -49,11 +101,37 @@ class SimulationInput:
     final_age: int = 85
     simulation_years: int = 0  # auto-calculated if 0
     iterations: int = DEFAULT_ITERATIONS
+    social_security_enabled: bool = False
+    social_security_pia: float = 0.0
+    social_security_fra: int = 67
+    social_security_birth_month: int = 1
+    social_security_birth_year: int = 1980
+    social_security_withdrawal_month: int = 1
+    social_security_withdrawal_year: int = 2047
+    social_security_mba: float = 0.0
 
     def __post_init__(self):
         if self.simulation_years == 0:
             # Simulate until final age
             self.simulation_years = max(self.final_age - self.current_age, 0)
+        
+        # Coerce None values to defaults (e.g. from legacy database rows)
+        self.social_security_enabled = bool(self.social_security_enabled)
+        self.social_security_pia = self.social_security_pia if self.social_security_pia is not None else 0.0
+        self.social_security_fra = self.social_security_fra if self.social_security_fra is not None else 67
+        self.social_security_birth_month = self.social_security_birth_month if self.social_security_birth_month is not None else 1
+        self.social_security_birth_year = self.social_security_birth_year if self.social_security_birth_year is not None else 1980
+        self.social_security_withdrawal_month = self.social_security_withdrawal_month if self.social_security_withdrawal_month is not None else 1
+        self.social_security_withdrawal_year = self.social_security_withdrawal_year if self.social_security_withdrawal_year is not None else 2047
+
+        self.social_security_mba = calculate_social_security_mba(
+            pia=self.social_security_pia,
+            fra=self.social_security_fra,
+            birth_year=self.social_security_birth_year,
+            birth_month=self.social_security_birth_month,
+            withdrawal_year=self.social_security_withdrawal_year,
+            withdrawal_month=self.social_security_withdrawal_month
+        )
 
 
 @dataclass
@@ -109,6 +187,17 @@ def simulate(inp: SimulationInput) -> SimulationResult:
         else:
             # Post-retirement: no income
             income = 0.0
+
+        if inp.social_security_enabled and inp.social_security_mba > 0:
+            from datetime import datetime
+            current_year = datetime.now().year
+            sim_year = current_year + yr
+            if sim_year > inp.social_security_withdrawal_year:
+                income += (inp.social_security_mba * 12) * inflation_factor
+            elif sim_year == inp.social_security_withdrawal_year:
+                months_collected = 13 - inp.social_security_withdrawal_month
+                if 1 <= months_collected <= 12:
+                    income += (inp.social_security_mba * months_collected) * inflation_factor
 
         net_cashflow = income - spending
 
@@ -206,6 +295,18 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
                 income = inp.annual_contribution * inflation_factor
             else:
                 income = 0.0
+
+            if inp.social_security_enabled and inp.social_security_mba > 0:
+                from datetime import datetime
+                current_year = datetime.now().year
+                sim_year = current_year + yr
+                if sim_year > inp.social_security_withdrawal_year:
+                    income += (inp.social_security_mba * 12) * inflation_factor
+                elif sim_year == inp.social_security_withdrawal_year:
+                    months_collected = 13 - inp.social_security_withdrawal_month
+                    if 1 <= months_collected <= 12:
+                        income += (inp.social_security_mba * months_collected) * inflation_factor
+
             net_cashflow = income - spending
 
             portfolios[:, yr + 1] = (
@@ -252,6 +353,19 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
         inflation_factor = (1 + inp.inflation_rate) ** yr
         income = inp.annual_contribution * inflation_factor
         spending = inp.annual_retirement_spending * inflation_factor
+        
+        # Add Social Security if claimed pre-retirement
+        if inp.social_security_enabled and inp.social_security_mba > 0:
+            from datetime import datetime
+            current_year = datetime.now().year
+            sim_year = current_year + yr
+            if sim_year > inp.social_security_withdrawal_year:
+                income += (inp.social_security_mba * 12) * inflation_factor
+            elif sim_year == inp.social_security_withdrawal_year:
+                months_collected = 13 - inp.social_security_withdrawal_month
+                if 1 <= months_collected <= 12:
+                    income += (inp.social_security_mba * months_collected) * inflation_factor
+
         net_cashflow = income - spending
         portfolios_accum[:, yr + 1] = (
             portfolios_accum[:, yr] * (1 + returns[:, yr]) + net_cashflow
@@ -280,7 +394,21 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
             annual_withdrawal = portfolio_at_retire * withdrawal_rate * (
                 (1 + inp.inflation_rate) ** yr
             )
-            port = port * (1 + returns[:, post_yr]) - annual_withdrawal
+
+            # Social Security offsets portfolio withdrawals
+            ss_income = 0.0
+            if inp.social_security_enabled and inp.social_security_mba > 0:
+                from datetime import datetime
+                current_year = datetime.now().year
+                sim_year = current_year + post_yr
+                if sim_year > inp.social_security_withdrawal_year:
+                    ss_income = (inp.social_security_mba * 12) * inflation_factor
+                elif sim_year == inp.social_security_withdrawal_year:
+                    months_collected = 13 - inp.social_security_withdrawal_month
+                    if 1 <= months_collected <= 12:
+                        ss_income = (inp.social_security_mba * months_collected) * inflation_factor
+
+            port = port * (1 + returns[:, post_yr]) - (annual_withdrawal - ss_income)
             port = np.maximum(port, 0)
 
         survival_rate = np.sum(port > 0) / inp.iterations
@@ -337,6 +465,17 @@ def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
             else:
                 income = 0.0
                 
+            if inp.social_security_enabled and inp.social_security_mba > 0:
+                from datetime import datetime
+                current_year = datetime.now().year
+                sim_year = current_year + yr
+                if sim_year > inp.social_security_withdrawal_year:
+                    income += (inp.social_security_mba * 12) * inflation_factor
+                elif sim_year == inp.social_security_withdrawal_year:
+                    months_collected = 13 - inp.social_security_withdrawal_month
+                    if 1 <= months_collected <= 12:
+                        income += (inp.social_security_mba * months_collected) * inflation_factor
+
             net_cashflow = income - spending
             
             portfolios[:, yr + 1] = (

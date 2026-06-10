@@ -720,6 +720,146 @@
             color: var(--accent-fire);
             text-decoration: none;
         }
+
+        /* Secondary Header */
+        .secondary-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            position: relative;
+            z-index: 90;
+        }
+
+        .ss-header-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ss-status-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .ss-status-value {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .ss-calc-btn {
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid var(--accent-blue);
+            color: var(--accent-blue);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ss-calc-btn:hover {
+            background: rgba(96, 165, 250, 0.2);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
+        }
+
+        /* Styling for the new Social Security Modal */
+        #ssModal .modal-card {
+            max-width: 960px;
+            /* Much wider on desktop */
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-height: 90vh;
+            /* Scrollable modal card */
+            overflow-y: auto;
+        }
+
+        .ss-modal-body {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            /* Slightly wider input pane */
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .ss-modal-body {
+                grid-template-columns: 1fr;
+            }
+
+            #ssModal .modal-card {
+                max-width: 95%;
+                max-height: 95vh;
+            }
+        }
+
+        .ss-chart-container {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        #ssChart {
+            width: 100%;
+            height: 320px;
+            /* Taller graph to balance the extra width */
+        }
+
+        .ss-breakeven-text {
+            font-size: 0.78rem;
+            line-height: 1.45;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-top: 10px;
+        }
+
+        .ss-breakeven-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent-amber);
+            margin-bottom: 4px;
+        }
+
+        .ss-switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-bottom: 1rem;
+        }
+
+        .ss-switch-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .validation-error {
+            color: var(--accent-red);
+            font-size: 0.72rem;
+            margin-top: 4px;
+            display: none;
+        }
     </style>
 </head>
 
@@ -759,6 +899,17 @@
                 </a>
             </div>
             <div class="settings-btn" id="settingsBtn" title="Settings">⚙️</div>
+        </div>
+
+        <!-- Secondary Header Bar for Social Security -->
+        <div class="secondary-header" id="ssHeaderBar">
+            <div class="ss-header-info" id="ssHeaderInfo">
+                <span class="ss-status-label">👴 Social Security</span>
+                <span class="ss-status-value" id="ssHeaderValue">Not included in projection.</span>
+            </div>
+            <button class="ss-calc-btn" id="ssCalcBtn">
+                Calculate my Social Security Benefits!
+            </button>
         </div>
 
         <div class="main">
@@ -966,6 +1117,16 @@
                         <option value="moderate">⚖️ Moderate (80/20)</option>
                         <option value="fat">🚀 Fat (100% Equity)</option>
                     </select>
+                    <div
+                        style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; margin-top: 6px; background: rgba(255, 255, 255, 0.02); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <strong>💡 Return Assumptions (Inflation-Adjusted Real Returns):</strong>
+                        <ul style="margin: 4px 0 0 12px; padding: 0; list-style-type: disc;">
+                            <li><strong>Stocks (S&P 500)</strong>: 8.0% real annual return</li>
+                            <li><strong>Bonds</strong>: 3.0% real annual return</li>
+                            <li><strong>Combined Profiles</strong>: Lean (60/40) = 6.0%, Moderate (80/20) = 7.0%, Fat
+                                (100% Equity) = 8.0%</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -1092,6 +1253,145 @@
         </div>
     </div>
 
+    <!-- Social Security Calculator Modal -->
+    <div class="modal-overlay" id="ssModal">
+        <div class="modal-card">
+            <div class="modal-close" id="ssModalClose">✕</div>
+            <div class="modal-title" style="margin-bottom: 0.5rem;">👴 Social Security Benefit Optimizer</div>
+
+            <div class="ss-modal-body">
+                <!-- Inputs Section -->
+                <div class="ss-inputs-pane">
+                    <div class="form-group">
+                        <label class="form-label">FRA (Full Retirement Age)</label>
+                        <select class="form-select" id="ssFra">
+                            <option value="66">Age 66</option>
+                            <option value="67" selected>Age 67</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Monthly Benefit at FRA ($)</label>
+                        <input type="number" class="form-input" id="ssPia" placeholder="e.g. 3000" min="0" step="50">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Birth Month & Year</label>
+                        <div class="form-row">
+                            <select class="form-select" id="ssBirthMonth">
+                                <option value="1">Jan</option>
+                                <option value="2">Feb</option>
+                                <option value="3">Mar</option>
+                                <option value="4">Apr</option>
+                                <option value="5">May</option>
+                                <option value="6">Jun</option>
+                                <option value="7">Jul</option>
+                                <option value="8">Aug</option>
+                                <option value="9">Sep</option>
+                                <option value="10">Oct</option>
+                                <option value="11">Nov</option>
+                                <option value="12">Dec</option>
+                            </select>
+                            <input type="number" class="form-input" id="ssBirthYear" placeholder="Year" min="1930"
+                                max="2050">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">First Withdrawal Month & Year</label>
+                        <div class="form-row">
+                            <select class="form-select" id="ssWithdrawMonth">
+                                <option value="1">Jan</option>
+                                <option value="2">Feb</option>
+                                <option value="3">Mar</option>
+                                <option value="4">Apr</option>
+                                <option value="5">May</option>
+                                <option value="6">Jun</option>
+                                <option value="7">Jul</option>
+                                <option value="8">Aug</option>
+                                <option value="9">Sep</option>
+                                <option value="10">Oct</option>
+                                <option value="11">Nov</option>
+                                <option value="12">Dec</option>
+                            </select>
+                            <input type="number" class="form-input" id="ssWithdrawYear" placeholder="Year" min="1990"
+                                max="2120">
+                        </div>
+                        <div class="validation-error" id="ssValidationError">
+                            Social Security retirement benefits cannot be claimed prior to age 62.
+                        </div>
+                    </div>
+
+                    <div
+                        style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 12px; margin-bottom: 0.5rem;">
+                        <div
+                            style="font-weight: 600; font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">
+                            Capital Gains Optimization</div>
+                        <div
+                            style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <label class="form-label" style="margin-bottom: 0; font-size: 0.8rem; cursor: pointer;"
+                                for="ssGainsEnabled">Reinvest benefits</label>
+                            <input type="checkbox" id="ssGainsEnabled" checked
+                                style="width: 16px; height: 16px; cursor: pointer;">
+                        </div>
+                        <div id="ssGainsStrategyGroup" class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 0.8rem;">Investment Strategy</label>
+                            <select class="form-select" id="ssGainsStrategy"
+                                style="font-size: 0.8rem; padding: 4px 8px; height: auto;">
+                                <option value="lean">🛡️ Lean (60/40)</option>
+                                <option value="moderate" selected>⚖️ Moderate (80/20)</option>
+                                <option value="fat">🚀 Fat (100% Equity)</option>
+                            </select>
+                            <div
+                                style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.35; margin-top: 6px; padding: 6px 8px; background: rgba(255,255,255,0.01); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                                Assumes 8.0% real return on Stocks & 3.0% on Bonds <nav></nav>(Lean: 6.0%, Moderate:
+                                7.0%, Fat: 8.0%).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 12px;">
+                        <div
+                            style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">
+                            Calculated Benefit</div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent-green); margin-top: 4px;"
+                            id="ssCalculatedBenefit">$0 / mo</div>
+                        <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;"
+                            id="ssCalculatedAge">Age: --</div>
+                    </div>
+                </div>
+
+                <!-- Analysis Chart Section -->
+                <div class="ss-chart-container">
+                    <div
+                        style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; text-align: center;">
+                        Cumulative Benefit Comparison (62 vs 70)
+                    </div>
+                    <div id="ssChart"></div>
+                    <div class="ss-breakeven-text" id="ssBreakevenText">
+                        <div class="ss-breakeven-title">💡 Break-Even Insights</div>
+                        Enter your benefit details to run the actuarial optimization analysis.
+                    </div>
+                </div>
+            </div>
+
+            <div
+                style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.2rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="ssEnabledToggle" class="toggle-checkbox"
+                        style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="ssEnabledToggle"
+                        style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); cursor: pointer; user-select: none;">Include
+                        in FIRE Projection</label>
+                </div>
+                <button class="save-btn" id="ssSaveBtn" onclick="saveSsSettings()"
+                    style="margin-top: 0; width: auto; padding: 0.8rem 1.8rem;">
+                    💾 Save & Update FIRE Projection
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ===== State =====
         let chartInstance = null;
@@ -1149,7 +1449,440 @@
             document.getElementById('spendInfoModal').onclick = (e) => {
                 if (e.target === document.getElementById('spendInfoModal')) closeSpendInfoModal();
             };
+
+            // Social Security modal bindings
+            document.getElementById('ssCalcBtn').onclick = () => openSsModal();
+            document.getElementById('ssModalClose').onclick = () => closeSsModal();
+            document.getElementById('ssModal').onclick = (e) => {
+                if (e.target === document.getElementById('ssModal')) closeSsModal();
+            };
+
+            // Listeners for Social Security calculation updates
+            const ssInputs = ['ssPia', 'ssFra', 'ssBirthMonth', 'ssBirthYear', 'ssWithdrawMonth', 'ssWithdrawYear', 'ssEnabledToggle', 'ssGainsEnabled', 'ssGainsStrategy'];
+            ssInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('change', updateSsCalculation);
+                    el.addEventListener('input', updateSsCalculation);
+                }
+            });
         });
+
+        // ===== Social Security Calculator Helpers =====
+        let ssChartInstance = null;
+
+        function getMonthName(m) {
+            const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return names[m - 1] || "";
+        }
+
+        function calculateSocialSecurityMbaJS(pia, fra, birthYear, birthMonth, withdrawYear, withdrawMonth) {
+            if (pia <= 0) return 0;
+            const birthMonths = birthYear * 12 + birthMonth;
+            const withdrawMonths = withdrawYear * 12 + withdrawMonth;
+            const fraMonths = birthMonths + (fra * 12);
+            const diffMonths = withdrawMonths - fraMonths;
+
+            if (diffMonths < 0) {
+                const m_e = -diffMonths;
+                let reduction;
+                if (m_e <= 36) {
+                    reduction = m_e * (5 / 900);
+                } else {
+                    reduction = (36 * (5 / 900)) + ((m_e - 36) * (5 / 1200));
+                }
+                reduction = Math.min(reduction, 1.0);
+                return Math.round(pia * (1 - reduction));
+            } else if (diffMonths > 0) {
+                const age70Months = birthMonths + 70 * 12;
+                const effectiveWithdraw = Math.min(withdrawMonths, age70Months);
+                const m_l = Math.max(0, effectiveWithdraw - fraMonths);
+                const credit = m_l * (2 / 300);
+                return Math.round(pia * (1 + credit));
+            } else {
+                return Math.round(pia);
+            }
+        }
+
+        function updateSsCalculation() {
+            // Sync strategy enabled/disabled UI state
+            const gainsEnabledEl = document.getElementById('ssGainsEnabled');
+            const gainsEnabled = gainsEnabledEl ? gainsEnabledEl.checked : true;
+            const strategyGroup = document.getElementById('ssGainsStrategyGroup');
+            if (strategyGroup) {
+                strategyGroup.style.opacity = gainsEnabled ? '1' : '0.5';
+                document.getElementById('ssGainsStrategy').disabled = !gainsEnabled;
+            }
+
+            const pia = parseInt(document.getElementById('ssPia').value) || 0;
+            const fra = parseInt(document.getElementById('ssFra').value) || 67;
+            const birthMonth = parseInt(document.getElementById('ssBirthMonth').value) || 1;
+            const birthYear = parseInt(document.getElementById('ssBirthYear').value) || 1980;
+            const withdrawMonth = parseInt(document.getElementById('ssWithdrawMonth').value) || 1;
+            const withdrawYear = parseInt(document.getElementById('ssWithdrawYear').value) || 2047;
+
+            const birthMonths = birthYear * 12 + birthMonth;
+            const withdrawMonths = withdrawYear * 12 + withdrawMonth;
+            const ageMonths = withdrawMonths - birthMonths;
+            const ageYears = ageMonths / 12;
+
+            const errEl = document.getElementById('ssValidationError');
+            const saveBtn = document.getElementById('ssSaveBtn');
+
+            if (ageYears < 62) {
+                errEl.style.display = 'block';
+                saveBtn.disabled = true;
+                document.getElementById('ssCalculatedBenefit').textContent = '$0 / mo';
+                document.getElementById('ssCalculatedAge').textContent = 'Age: ' + Math.floor(ageYears) + 'y ' + (ageMonths % 12) + 'm (Claim age must be >= 62)';
+                return;
+            } else {
+                errEl.style.display = 'none';
+                saveBtn.disabled = false;
+            }
+            const mba = calculateSocialSecurityMbaJS(pia, fra, birthYear, birthMonth, withdrawYear, withdrawMonth);
+            document.getElementById('ssCalculatedBenefit').textContent = '$' + formatNum(mba) + ' / mo';
+            document.getElementById('ssCalculatedAge').textContent = 'Claiming at Age ' + Math.floor(ageYears) + 'y ' + (ageMonths % 12) + 'm';
+
+            // Draw/update chart
+            renderSsChart(pia, fra, birthYear, birthMonth, Math.floor(ageYears), ageMonths % 12);
+        }
+
+        function getCurrentInvestmentParams() {
+            // Check if gains are enabled in optimizer
+            const gainsEnabledEl = document.getElementById('ssGainsEnabled');
+            const gainsEnabled = gainsEnabledEl ? gainsEnabledEl.checked : true;
+
+            if (!gainsEnabled) {
+                return {
+                    risk: 'none',
+                    label: 'Cash Mattress (No Gains)',
+                    nominal: 0,
+                    inflation: 0,
+                    real: 0
+                };
+            }
+
+            // Check active inputs on page first, fallback to simData or defaults
+            const riskSelect = document.getElementById('ssGainsStrategy');
+            const inflationInput = document.getElementById('settInflation');
+
+            const risk = riskSelect ? riskSelect.value : (simData?.settings?.risk_tolerance || 'moderate');
+
+            let inflationVal = inflationInput ? parseFloat(inflationInput.value) : NaN;
+            if (isNaN(inflationVal)) {
+                inflationVal = (simData?.settings?.inflation_rate !== undefined) ? (simData?.settings?.inflation_rate * 100) : 3;
+            }
+            const inflation = inflationVal / 100;
+
+            const RISK_RETURNS = {
+                lean: 0.06,
+                moderate: 0.07,
+                fat: 0.08
+            };
+            const RISK_LABELS = {
+                lean: 'Lean (60/40)',
+                moderate: 'Moderate (80/20)',
+                fat: 'Fat (100% Equity)'
+            };
+
+            const nominal = RISK_RETURNS[risk] || 0.07;
+            const label = RISK_LABELS[risk] || 'Moderate (80/20)';
+            const real = nominal - inflation;
+
+            return {
+                risk,
+                label,
+                nominal,
+                inflation,
+                real: Math.max(-0.1, real) // allow negative real return but clamp to sane minimum
+            };
+        }
+
+        function findBreakevenAgeWithGains(A1, A2, mba_A1, mba_A2, R) {
+            if (mba_A2 <= mba_A1) return null; // No break-even if later claim has lower or equal benefit
+
+            // Search for T from A2 up to 120 years
+            for (let T = A2; T <= 120; T += 0.1) {
+                let fv1, fv2;
+                if (Math.abs(R) < 0.0001) {
+                    fv1 = 12 * mba_A1 * (T - A1);
+                    fv2 = 12 * mba_A2 * (T - A2);
+                } else {
+                    fv1 = 12 * mba_A1 * (Math.pow(1 + R, T - A1) - 1) / R;
+                    fv2 = 12 * mba_A2 * (Math.pow(1 + R, T - A2) - 1) / R;
+                }
+
+                if (fv2 >= fv1) {
+                    return T; // Found break-even age
+                }
+            }
+            return null; // Never breaks even within realistic lifespan
+        }
+
+        function renderSsChart(pia, fra, birthYear, birthMonth, selectedAgeYears, selectedAgeMonths) {
+            const container = document.getElementById('ssChart');
+            if (ssChartInstance) ssChartInstance.dispose();
+            ssChartInstance = echarts.init(container, null, { renderer: 'canvas' });
+
+            const ages = [];
+            for (let a = 62; a <= 90; a++) {
+                ages.push('Age ' + a);
+            }
+
+            const params = getCurrentInvestmentParams();
+            const R = params.real;
+
+            const lineColors = {
+                62: '#ef4444', // Red
+                63: '#f97316', // Orange
+                64: '#f59e0b', // Amber
+                65: '#eab308', // Yellow
+                66: '#84cc16', // Lime
+                67: '#22c55e', // Green
+                68: '#06b6d4', // Cyan
+                69: '#3b82f6', // Blue
+                70: '#8b5cf6', // Violet
+            };
+
+            const series = [];
+            const claimAges = [62, 63, 64, 65, 66, 67, 68, 69, 70];
+            const activeCompareAge = Math.min(70, Math.max(62, selectedAgeYears));
+
+            claimAges.forEach(C => {
+                const mba_C = calculateSocialSecurityMbaJS(pia, fra, birthYear, birthMonth, birthYear + C, birthMonth);
+                const lineData = [];
+                for (let x = 62; x <= 90; x++) {
+                    if (x < C) {
+                        lineData.push(0);
+                    } else {
+                        const yearsCollected = x - C;
+                        if (Math.abs(R) < 0.0001) {
+                            lineData.push(Math.round(yearsCollected * mba_C * 12));
+                        } else {
+                            const val = 12 * mba_C * (Math.pow(1 + R, yearsCollected) - 1) / R;
+                            lineData.push(Math.round(val));
+                        }
+                    }
+                }
+
+                const isActive = (C === activeCompareAge);
+                const baseColor = lineColors[C] || '#94a3b8';
+                series.push({
+                    name: 'Claim at ' + C,
+                    type: 'line',
+                    data: lineData,
+                    symbol: 'none',
+                    smooth: false,
+                    lineStyle: {
+                        color: baseColor,
+                        width: isActive ? 4 : 1.5,
+                        opacity: isActive ? 1.0 : 0.45,
+                        shadowBlur: isActive ? 12 : 0,
+                        shadowColor: isActive ? baseColor : 'transparent',
+                    },
+                    z: isActive ? 10 : 1
+                });
+            });
+
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    textStyle: { color: '#f0f0f5', fontSize: 11 },
+                    formatter: function (params) {
+                        const ageStr = params[0].axisValue;
+                        const paramsInfo = getCurrentInvestmentParams();
+                        const rateText = (paramsInfo.real * 100).toFixed(1) + '% Real Return';
+                        let html = `<strong>${ageStr} Cumulative Benefits (${rateText})</strong><br/>`;
+                        const sortedParams = [...params].sort((a, b) => b.value - a.value);
+                        sortedParams.forEach(p => {
+                            const isSelected = p.seriesName === ('Claim at ' + activeCompareAge);
+                            const style = isSelected ? 'color: #fff; font-weight: bold;' : 'color: var(--text-secondary);';
+                            html += `<span style="${style}">${p.marker} ${p.seriesName}: $${formatNum(p.value)}</span><br/>`;
+                        });
+                        return html;
+                    }
+                },
+                grid: {
+                    top: 15,
+                    right: 15,
+                    bottom: 20,
+                    left: 10,
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ages,
+                    axisLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 9 },
+                    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        color: 'rgba(255,255,255,0.4)',
+                        fontSize: 9,
+                        formatter: val => '$' + formatCompact(val)
+                    },
+                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)' } },
+                },
+                series: series
+            };
+
+            ssChartInstance.setOption(option);
+            updateBreakevenText(pia, fra, birthYear, birthMonth, activeCompareAge);
+        }
+
+        function updateBreakevenText(pia, fra, birthYear, birthMonth, activeCompareAge) {
+            const el = document.getElementById('ssBreakevenText');
+            if (pia <= 0) {
+                el.innerHTML = `<div class="ss-breakeven-title">💡 Break-Even Insights</div>Enter your benefit details to run the actuarial optimization analysis.`;
+                return;
+            }
+
+            const params = getCurrentInvestmentParams();
+            const R = params.real;
+
+            const mba_active = calculateSocialSecurityMbaJS(pia, fra, birthYear, birthMonth, birthYear + activeCompareAge, birthMonth);
+            const mba_62 = calculateSocialSecurityMbaJS(pia, fra, birthYear, birthMonth, birthYear + 62, birthMonth);
+            const mba_70 = calculateSocialSecurityMbaJS(pia, fra, birthYear, birthMonth, birthYear + 70, birthMonth);
+
+            let html = `<div class="ss-breakeven-title">💡 Actuarial Break-Even Insights (${(R * 100).toFixed(1)}% Real Return)</div>`;
+            html += `<p style="margin-bottom: 6px;">Claiming at <strong>Age ${activeCompareAge}</strong> yields a benefit of <strong>$${formatNum(mba_active)}/mo</strong>.</p>`;
+
+            if (activeCompareAge > 62 && mba_active > mba_62) {
+                const be_62 = findBreakevenAgeWithGains(62, activeCompareAge, mba_62, mba_active, R);
+                if (be_62) {
+                    html += `<p style="margin-bottom: 6px;">• <strong>Age ${activeCompareAge} vs Age 62:</strong> Breaks even at <strong>Age ${be_62.toFixed(1)}</strong>.</p>`;
+                }
+            }
+
+            if (activeCompareAge < 70 && mba_70 > mba_active) {
+                const be_70 = findBreakevenAgeWithGains(activeCompareAge, 70, mba_active, mba_70, R);
+                if (be_70) {
+                    html += `<p style="margin-bottom: 6px;">• <strong>Age 70 vs Age ${activeCompareAge}:</strong> Breaks even at <strong>Age ${be_70.toFixed(1)}</strong>.</p>`;
+                }
+            }
+
+            el.innerHTML = html;
+        }
+
+        function openSsModal() {
+            let s = simData?.settings;
+            if (window.IS_DEMO) {
+                const stored = localStorage.getItem('fire_demo_settings');
+                if (stored) s = JSON.parse(stored);
+            }
+
+            if (s) {
+                document.getElementById('ssEnabledToggle').checked = s.social_security_enabled || false;
+                document.getElementById('ssFra').value = s.social_security_fra || 67;
+                document.getElementById('ssPia').value = s.social_security_pia || "";
+                document.getElementById('ssBirthMonth').value = s.social_security_birth_month || 1;
+                document.getElementById('ssBirthYear').value = s.social_security_birth_year || 1980;
+                document.getElementById('ssWithdrawMonth').value = s.social_security_withdrawal_month || 1;
+                document.getElementById('ssWithdrawYear').value = s.social_security_withdrawal_year || 2047;
+
+                if (!s.social_security_pia || s.social_security_pia === 0) {
+                    const curYear = new Date().getFullYear();
+                    const deducedBirthYear = curYear - (s.current_age || 45);
+                    document.getElementById('ssBirthYear').value = deducedBirthYear;
+                    document.getElementById('ssWithdrawYear').value = deducedBirthYear + 67;
+                }
+            }
+
+            // Sync/load capital gains strategy settings
+            const currentRisk = s ? (s.risk_tolerance || 'moderate') : 'moderate';
+            document.getElementById('ssGainsStrategy').value = currentRisk;
+
+            const savedGainsEnabled = localStorage.getItem('ss_gains_enabled');
+            if (savedGainsEnabled !== null) {
+                document.getElementById('ssGainsEnabled').checked = (savedGainsEnabled === 'true');
+            } else {
+                document.getElementById('ssGainsEnabled').checked = true;
+            }
+            const savedGainsStrategy = localStorage.getItem('ss_gains_strategy');
+            if (savedGainsStrategy !== null) {
+                document.getElementById('ssGainsStrategy').value = savedGainsStrategy;
+            }
+
+            document.getElementById('ssModal').style.display = 'flex';
+            updateSsCalculation();
+
+            setTimeout(() => {
+                if (ssChartInstance) ssChartInstance.resize();
+            }, 100);
+        }
+
+        function closeSsModal() {
+            document.getElementById('ssModal').style.display = 'none';
+        }
+
+        async function saveSsSettings() {
+            const pia = parseInt(document.getElementById('ssPia').value) || 0;
+            const fra = parseInt(document.getElementById('ssFra').value) || 67;
+            const birthMonth = parseInt(document.getElementById('ssBirthMonth').value) || 1;
+            const birthYear = parseInt(document.getElementById('ssBirthYear').value) || 1980;
+            const withdrawMonth = parseInt(document.getElementById('ssWithdrawMonth').value) || 1;
+            const withdrawYear = parseInt(document.getElementById('ssWithdrawYear').value) || 2047;
+            const enabled = document.getElementById('ssEnabledToggle').checked;
+
+            const birthMonths = birthYear * 12 + birthMonth;
+            const withdrawMonths = withdrawYear * 12 + withdrawMonth;
+            const ageYears = (withdrawMonths - birthMonths) / 12;
+
+            if (ageYears < 62) {
+                alert('Social Security retirement benefits cannot be claimed prior to age 62.');
+                return;
+            }
+
+            const payload = {
+                social_security_enabled: enabled,
+                social_security_pia: pia,
+                social_security_fra: fra,
+                social_security_birth_month: birthMonth,
+                social_security_birth_year: birthYear,
+                social_security_withdrawal_month: withdrawMonth,
+                social_security_withdrawal_year: withdrawYear
+            };
+
+            // Save modal optimizer preferences
+            localStorage.setItem('ss_gains_enabled', document.getElementById('ssGainsEnabled').checked);
+            localStorage.setItem('ss_gains_strategy', document.getElementById('ssGainsStrategy').value);
+
+            try {
+                if (window.IS_DEMO) {
+                    let demoSettings = {};
+                    const stored = localStorage.getItem('fire_demo_settings');
+                    if (stored) demoSettings = JSON.parse(stored);
+
+                    demoSettings = { ...demoSettings, ...payload };
+                    localStorage.setItem('fire_demo_settings', JSON.stringify(demoSettings));
+                    closeSsModal();
+                    runSimulation();
+                } else {
+                    const btn = document.getElementById('ssSaveBtn');
+                    btn.textContent = 'Saving...';
+                    btn.disabled = true;
+
+                    const res = await fetch('/api/fire/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error('Failed to save settings.');
+                    closeSsModal();
+                    runSimulation();
+                }
+            } catch (e) {
+                alert('Failed to save: ' + e.message);
+            } finally {
+                const btn = document.getElementById('ssSaveBtn');
+                btn.textContent = '💾 Save & Update FIRE Projection';
+                btn.disabled = false;
+            }
+        }
 
         // ===== API =====
         async function runSimulation() {
@@ -1252,6 +1985,7 @@
 
         // ===== Render =====
         function renderDashboard(data) {
+            const s = data.settings || {};
             // Metrics
             document.getElementById('probScore').textContent = data.retirement_probability + '%';
             document.getElementById('probSub').textContent = probabilityLabel(data.retirement_probability);
@@ -1309,6 +2043,34 @@
             document.getElementById('portfolioTotal').textContent = '$' + formatNum(data.current_portfolio);
             renderAccounts(data.account_breakdown);
 
+            // Update Social Security Header Bar status
+            const ssValEl = document.getElementById('ssHeaderValue');
+            const ssBtnEl = document.getElementById('ssCalcBtn');
+            if (s.social_security_enabled && s.social_security_pia > 0) {
+                const mba = calculateSocialSecurityMbaJS(
+                    s.social_security_pia,
+                    s.social_security_fra,
+                    s.social_security_birth_year,
+                    s.social_security_birth_month,
+                    s.social_security_withdrawal_year,
+                    s.social_security_withdrawal_month
+                );
+
+                const claimAgeMonths = (s.social_security_withdrawal_year * 12 + s.social_security_withdrawal_month) -
+                    (s.social_security_birth_year * 12 + s.social_security_birth_month);
+                const claimAgeY = Math.floor(claimAgeMonths / 12);
+                const claimAgeM = claimAgeMonths % 12;
+                const claimAgeStr = claimAgeY + "y" + (claimAgeM > 0 ? " " + claimAgeM + "m" : "");
+
+                ssValEl.innerHTML = `<span style="color: var(--accent-green); font-weight: 600;">Active:</span> $${formatNum(mba)}/mo starting ${getMonthName(s.social_security_withdrawal_month)} ${s.social_security_withdrawal_year} (Age ${claimAgeStr})`;
+                ssBtnEl.textContent = '⚙️ Edit Benefits';
+                ssBtnEl.classList.add('is-active');
+            } else {
+                ssValEl.textContent = 'Not included in projection.';
+                ssBtnEl.textContent = 'Calculate my Social Security Benefits!';
+                ssBtnEl.classList.remove('is-active');
+            }
+
             // Show dashboard before rendering chart so ECharts can get correct container width
             showDashboard();
 
@@ -1363,6 +2125,7 @@
             if (chartInstance) chartInstance.dispose();
             chartInstance = echarts.init(container, null, { renderer: 'canvas' });
 
+            const s = data.settings || {};
             const years = data.years;
             // Clone the percentiles to prevent in-place mutation affecting other charts
             let p5 = [...data.percentile_5];
@@ -1382,14 +2145,20 @@
                 p95 = p95.map(clamp);
             }
 
-            const targetRetireAge = data.settings.retirement_age;
+            const targetRetireAge = s.retirement_age;
             const targetRetireIdx = years.indexOf(targetRetireAge);
 
             const fireAge = data.fire_date_age;
             const fireIdx = fireAge !== null ? years.indexOf(fireAge) : -1;
 
-            const finalAge = data.settings.final_age;
+            const finalAge = s.final_age;
             const finalAgeIdx = finalAge !== null ? years.indexOf(finalAge) : -1;
+
+            // Social Security claiming age index
+            const claimAgeMonths = (s.social_security_withdrawal_year * 12 + s.social_security_withdrawal_month) -
+                (s.social_security_birth_year * 12 + s.social_security_birth_month);
+            const claimAgeY = Math.floor(claimAgeMonths / 12);
+            const ssIdx = (s.social_security_enabled && s.social_security_pia > 0) ? years.indexOf(claimAgeY) : -1;
 
             // Find "Freeze" date (when 5th percentile hits 0)
             let freezeIdx = -1;
@@ -1402,6 +2171,7 @@
             let fireOffset = [0, 0];
             let freezeOffset = [0, 0];
             let finalAgeOffset = [0, 0];
+            let ssOffset = [0, 0];
 
             if (targetRetireIdx >= 0) {
                 if (fireIdx >= 0 && Math.abs(targetRetireIdx - fireIdx) <= 3) {
@@ -1412,6 +2182,18 @@
                 }
                 if (finalAgeIdx >= 0 && Math.abs(targetRetireIdx - finalAgeIdx) <= 3) {
                     finalAgeOffset = [0, 16]; // shift down
+                }
+            }
+
+            if (ssIdx >= 0) {
+                if (targetRetireIdx >= 0 && Math.abs(ssIdx - targetRetireIdx) <= 3) {
+                    ssOffset = [0, 16]; // shift down
+                }
+                if (fireIdx >= 0 && Math.abs(ssIdx - fireIdx) <= 3) {
+                    ssOffset = [0, 32]; // shift further down
+                }
+                if (freezeIdx >= 0 && Math.abs(ssIdx - freezeIdx) <= 3) {
+                    ssOffset = [0, 48]; // shift down
                 }
             }
 
@@ -1617,6 +2399,24 @@
                                 offset: finalAgeOffset
                             },
                             data: [{ xAxis: finalAgeIdx }]
+                        },
+                        data: [],
+                    }] : []),
+                    // Social Security Claim Age marker
+                    ...(ssIdx >= 0 ? [{
+                        type: 'line',
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            lineStyle: { color: 'rgba(34, 197, 94, 0.7)', type: 'dashed', width: 1.5 },
+                            label: {
+                                formatter: '🔑 Social Secutiy',
+                                color: '#22c55e',
+                                fontSize: 10,
+                                position: 'end',
+                                offset: ssOffset
+                            },
+                            data: [{ xAxis: ssIdx }]
                         },
                         data: [],
                     }] : [])

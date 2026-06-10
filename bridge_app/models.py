@@ -42,4 +42,11 @@ class FireSettings(Base):
     risk_tolerance = Column(String, default="moderate")  # "lean", "moderate", "fat"
     inflation_rate = Column(Float, default=0.03)
     final_age = Column(Integer, default=85)
+    social_security_enabled = Column(Boolean, default=False)
+    social_security_pia = Column(Integer, default=0)
+    social_security_fra = Column(Integer, default=67)
+    social_security_birth_month = Column(Integer, default=1)
+    social_security_birth_year = Column(Integer, default=1980)
+    social_security_withdrawal_month = Column(Integer, default=1)
+    social_security_withdrawal_year = Column(Integer, default=2047)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

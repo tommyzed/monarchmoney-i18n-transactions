@@ -24,6 +24,26 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            
+        # Non-destructive migrations for Social Security fields in fire_settings table
+        # Adding columns individually in separate transactions if they don't already exist.
+        from sqlalchemy import text
+        for col_name, col_type in [
+            ("social_security_enabled", "BOOLEAN DEFAULT FALSE"),
+            ("social_security_pia", "INTEGER DEFAULT 0"),
+            ("social_security_fra", "INTEGER DEFAULT 67"),
+            ("social_security_birth_month", "INTEGER DEFAULT 1"),
+            ("social_security_birth_year", "INTEGER DEFAULT 1980"),
+            ("social_security_withdrawal_month", "INTEGER DEFAULT 1"),
+            ("social_security_withdrawal_year", "INTEGER DEFAULT 2047")
+        ]:
+            try:
+                async with engine.begin() as conn2:
+                    await conn2.execute(text(f"ALTER TABLE fire_settings ADD COLUMN {col_name} {col_type}"))
+                print(f"Added column {col_name} to fire_settings.")
+            except Exception:
+                # Catch and ignore errors if the column already exists
+                pass
         print("✅ LIFESPAN: Database tables created/verified.")
     except Exception as e:
         print(f"❌ LIFESPAN: Database initialization failed: {e}")
@@ -894,7 +914,7 @@ LOADING_HTML = """
                 const picker = document.getElementById('datePicker');
                 // Ensure value reflects the current displayed date
                 // Strip any emoji from the pill text to get the raw date
-                const currentText = document.getElementById('dateValue').textContent.replace(/[^\d\-]/g, '').trim();
+                const currentText = document.getElementById('dateValue').textContent.replace(/[^\\d\\-]/g, '').trim();
                 if (currentText) picker.value = currentText;
                 picker.showPicker ? picker.showPicker() : picker.click();
             }
@@ -1306,6 +1326,13 @@ class FireSettingsUpdate(BaseModel):
     risk_tolerance: Optional[str] = None
     inflation_rate: Optional[float] = None
     final_age: Optional[int] = None
+    social_security_enabled: Optional[bool] = None
+    social_security_pia: Optional[int] = None
+    social_security_fra: Optional[int] = None
+    social_security_birth_month: Optional[int] = None
+    social_security_birth_year: Optional[int] = None
+    social_security_withdrawal_month: Optional[int] = None
+    social_security_withdrawal_year: Optional[int] = None
 
 
 @app.get("/api/fire/settings")
@@ -1321,6 +1348,13 @@ async def get_fire_settings(request: Request, db: AsyncSession = Depends(get_db)
             "risk_tolerance": "moderate",
             "inflation_rate": 0.03,
             "final_age": 85,
+            "social_security_enabled": False,
+            "social_security_pia": 0,
+            "social_security_fra": 67,
+            "social_security_birth_month": 1,
+            "social_security_birth_year": 1980,
+            "social_security_withdrawal_month": 1,
+            "social_security_withdrawal_year": 2047,
         }
 
     result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
@@ -1341,6 +1375,13 @@ async def get_fire_settings(request: Request, db: AsyncSession = Depends(get_db)
         "risk_tolerance": settings.risk_tolerance,
         "inflation_rate": settings.inflation_rate,
         "final_age": settings.final_age,
+        "social_security_enabled": settings.social_security_enabled,
+        "social_security_pia": settings.social_security_pia,
+        "social_security_fra": settings.social_security_fra,
+        "social_security_birth_month": settings.social_security_birth_month,
+        "social_security_birth_year": settings.social_security_birth_year,
+        "social_security_withdrawal_month": settings.social_security_withdrawal_month,
+        "social_security_withdrawal_year": settings.social_security_withdrawal_year,
     }
 
 
@@ -1382,6 +1423,13 @@ async def update_fire_settings(
         "risk_tolerance": settings.risk_tolerance,
         "inflation_rate": settings.inflation_rate,
         "final_age": settings.final_age,
+        "social_security_enabled": settings.social_security_enabled,
+        "social_security_pia": settings.social_security_pia,
+        "social_security_fra": settings.social_security_fra,
+        "social_security_birth_month": settings.social_security_birth_month,
+        "social_security_birth_year": settings.social_security_birth_year,
+        "social_security_withdrawal_month": settings.social_security_withdrawal_month,
+        "social_security_withdrawal_year": settings.social_security_withdrawal_year,
     }
 
 
@@ -1415,21 +1463,39 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
                 risk_tolerance="moderate",
                 inflation_rate=0.03,
                 final_age=85,
+                social_security_enabled=False,
+                social_security_pia=0,
+                social_security_fra=67,
+                social_security_birth_month=1,
+                social_security_birth_year=1980,
+                social_security_withdrawal_month=1,
+                social_security_withdrawal_year=2047,
             )
 
         demo_portfolio = 500_000
         if req and req.current_portfolio is not None:
             demo_portfolio = req.current_portfolio
 
+        def get_val(obj, attr, default):
+            v = getattr(obj, attr, None)
+            return v if v is not None else default
+
         sim_input = SimulationInput(
             current_portfolio=demo_portfolio,
-            current_age=settings_obj.current_age,
-            retirement_age=settings_obj.retirement_age,
-            annual_contribution=settings_obj.annual_contribution,
-            annual_retirement_spending=settings_obj.annual_retirement_spending,
-            risk_tolerance=settings_obj.risk_tolerance,
-            inflation_rate=settings_obj.inflation_rate,
-            final_age=settings_obj.final_age,
+            current_age=get_val(settings_obj, "current_age", 45),
+            retirement_age=get_val(settings_obj, "retirement_age", 65),
+            annual_contribution=get_val(settings_obj, "annual_contribution", 100000),
+            annual_retirement_spending=get_val(settings_obj, "annual_retirement_spending", 80000),
+            risk_tolerance=get_val(settings_obj, "risk_tolerance", "moderate"),
+            inflation_rate=get_val(settings_obj, "inflation_rate", 0.03),
+            final_age=get_val(settings_obj, "final_age", 85),
+            social_security_enabled=get_val(settings_obj, "social_security_enabled", False),
+            social_security_pia=get_val(settings_obj, "social_security_pia", 0),
+            social_security_fra=get_val(settings_obj, "social_security_fra", 67),
+            social_security_birth_month=get_val(settings_obj, "social_security_birth_month", 1),
+            social_security_birth_year=get_val(settings_obj, "social_security_birth_year", 1980),
+            social_security_withdrawal_month=get_val(settings_obj, "social_security_withdrawal_month", 1),
+            social_security_withdrawal_year=get_val(settings_obj, "social_security_withdrawal_year", 2047),
         )
         result = simulate(sim_input)
         return {
@@ -1449,13 +1515,20 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
             "account_breakdown": [],
             "monthly_spend_avg": 6015,
             "settings": {
-                "current_age": settings_obj.current_age,
-                "retirement_age": settings_obj.retirement_age,
-                "annual_contribution": settings_obj.annual_contribution,
-                "annual_retirement_spending": settings_obj.annual_retirement_spending,
-                "risk_tolerance": settings_obj.risk_tolerance,
-                "inflation_rate": settings_obj.inflation_rate,
-                "final_age": settings_obj.final_age,
+                "current_age": sim_input.current_age,
+                "retirement_age": sim_input.retirement_age,
+                "annual_contribution": sim_input.annual_contribution,
+                "annual_retirement_spending": sim_input.annual_retirement_spending,
+                "risk_tolerance": sim_input.risk_tolerance,
+                "inflation_rate": sim_input.inflation_rate,
+                "final_age": sim_input.final_age,
+                "social_security_enabled": sim_input.social_security_enabled,
+                "social_security_pia": sim_input.social_security_pia,
+                "social_security_fra": sim_input.social_security_fra,
+                "social_security_birth_month": sim_input.social_security_birth_month,
+                "social_security_birth_year": sim_input.social_security_birth_year,
+                "social_security_withdrawal_month": sim_input.social_security_withdrawal_month,
+                "social_security_withdrawal_year": sim_input.social_security_withdrawal_year,
             }
         }
     # ── End Demo Mode ──────────────────────────────────────────────────────
@@ -1507,6 +1580,13 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
         risk_tolerance=settings.risk_tolerance,
         inflation_rate=settings.inflation_rate,
         final_age=settings.final_age,
+        social_security_enabled=settings.social_security_enabled,
+        social_security_pia=settings.social_security_pia,
+        social_security_fra=settings.social_security_fra,
+        social_security_birth_month=settings.social_security_birth_month,
+        social_security_birth_year=settings.social_security_birth_year,
+        social_security_withdrawal_month=settings.social_security_withdrawal_month,
+        social_security_withdrawal_year=settings.social_security_withdrawal_year,
     )
 
     # 6. Run simulation
@@ -1540,6 +1620,13 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
             "risk_tolerance": settings.risk_tolerance,
             "inflation_rate": settings.inflation_rate,
             "final_age": settings.final_age,
+            "social_security_enabled": settings.social_security_enabled,
+            "social_security_pia": settings.social_security_pia,
+            "social_security_fra": settings.social_security_fra,
+            "social_security_birth_month": settings.social_security_birth_month,
+            "social_security_birth_year": settings.social_security_birth_year,
+            "social_security_withdrawal_month": settings.social_security_withdrawal_month,
+            "social_security_withdrawal_year": settings.social_security_withdrawal_year,
         }
     }
 

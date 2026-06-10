@@ -15,6 +15,7 @@ from bridge_app.services.fire_engine import (
     simulate,
     filter_accounts,
     calc_monthly_spend,
+    calculate_social_security_mba,
 )
 
 
@@ -186,6 +187,134 @@ class TestCalcMonthlySpend(unittest.TestCase):
         """Returns 0 for empty cashflow data."""
         self.assertEqual(calc_monthly_spend({}), 0.0)
         self.assertEqual(calc_monthly_spend({"summary": []}), 0.0)
+
+
+class TestSocialSecurity(unittest.TestCase):
+    """Tests for Social Security benefit calculation and integration."""
+
+    def test_calculate_social_security_mba_early(self):
+        # FRA = 67, Birth Year = 1980, Month = 11 (Nov)
+        # Withdrawal Year = 2042, Month = 11 (Nov) -> Age 62 (60 months early)
+        # PIA = 3000
+        # Expected Reduction: 36 * 5/900 + 24 * 5/1200 = 0.20 + 0.10 = 0.30 (30% reduction)
+        # MBA = 3000 * 0.70 = 2100
+        mba = calculate_social_security_mba(
+            pia=3000,
+            fra=67,
+            birth_year=1980,
+            birth_month=11,
+            withdrawal_year=2042,
+            withdrawal_month=11
+        )
+        self.assertEqual(mba, 2100)
+
+        # Withdrawal Year = 2044, Month = 11 (Nov) -> Age 64 (36 months early)
+        # Expected Reduction: 36 * 5/900 = 0.20 (20% reduction)
+        # MBA = 3000 * 0.80 = 2400
+        mba = calculate_social_security_mba(
+            pia=3000,
+            fra=67,
+            birth_year=1980,
+            birth_month=11,
+            withdrawal_year=2044,
+            withdrawal_month=11
+        )
+        self.assertEqual(mba, 2400)
+
+    def test_calculate_social_security_mba_delayed(self):
+        # FRA = 67, Birth Year = 1980, Month = 11 (Nov)
+        # Withdrawal Year = 2050, Month = 11 (Nov) -> Age 70 (36 months late)
+        # PIA = 3000
+        # Expected Credit: 36 * 2/300 = 0.24 (24% increase)
+        # MBA = 3000 * 1.24 = 3720
+        mba = calculate_social_security_mba(
+            pia=3000,
+            fra=67,
+            birth_year=1980,
+            birth_month=11,
+            withdrawal_year=2050,
+            withdrawal_month=11
+        )
+        self.assertEqual(mba, 3720)
+
+    def test_calculate_social_security_mba_delayed_cap(self):
+        # Delayed credits cap at age 70 (36 months late for FRA 67)
+        # Withdrawal Year = 2055, Month = 11 (Nov) -> Age 75 (96 months late)
+        # Expected MBA should be same as age 70: 3720
+        mba = calculate_social_security_mba(
+            pia=3000,
+            fra=67,
+            birth_year=1980,
+            birth_month=11,
+            withdrawal_year=2055,
+            withdrawal_month=11
+        )
+        self.assertEqual(mba, 3720)
+
+    def test_simulate_with_social_security(self):
+        # Run simulation with social security enabled vs disabled
+        inp_disabled = SimulationInput(
+            current_portfolio=2_000_000,
+            current_age=50,
+            retirement_age=60,
+            annual_contribution=50_000,
+            annual_retirement_spending=60_000,
+            social_security_enabled=False,
+            social_security_pia=3000,
+            social_security_fra=67,
+            social_security_birth_year=1980,
+            social_security_birth_month=1,
+            social_security_withdrawal_year=1980+62,
+            social_security_withdrawal_month=1,
+            iterations=100
+        )
+        res_disabled = simulate(inp_disabled)
+
+        inp_enabled = SimulationInput(
+            current_portfolio=2_000_000,
+            current_age=50,
+            retirement_age=60,
+            annual_contribution=50_000,
+            annual_retirement_spending=60_000,
+            social_security_enabled=True,
+            social_security_pia=3000,
+            social_security_fra=67,
+            social_security_birth_year=1980,
+            social_security_birth_month=1,
+            social_security_withdrawal_year=1980+62,
+            social_security_withdrawal_month=1,
+            iterations=100
+        )
+        res_enabled = simulate(inp_enabled)
+
+        # Enabling Social Security should increase probability of survival/median portfolio at the end
+        self.assertGreaterEqual(res_enabled.retirement_probability, res_disabled.retirement_probability)
+        self.assertGreater(res_enabled.percentile_50[-1], res_disabled.percentile_50[-1])
+
+    def test_simulation_input_coercion_handles_nones(self):
+        # Verify that SimulationInput coerces all potential NoneType values to default values without raising exceptions
+        inp = SimulationInput(
+            current_portfolio=500_000,
+            current_age=45,
+            retirement_age=65,
+            annual_contribution=50_000,
+            annual_retirement_spending=40_000,
+            social_security_enabled=None,
+            social_security_pia=None,
+            social_security_fra=None,
+            social_security_birth_year=None,
+            social_security_birth_month=None,
+            social_security_withdrawal_year=None,
+            social_security_withdrawal_month=None
+        )
+        self.assertEqual(inp.social_security_enabled, False)
+        self.assertEqual(inp.social_security_pia, 0.0)
+        self.assertEqual(inp.social_security_fra, 67)
+        self.assertEqual(inp.social_security_birth_year, 1980)
+        self.assertEqual(inp.social_security_birth_month, 1)
+        self.assertEqual(inp.social_security_withdrawal_year, 2047)
+        self.assertEqual(inp.social_security_withdrawal_month, 1)
+        self.assertEqual(inp.social_security_mba, 0.0)
 
 
 if __name__ == "__main__":
