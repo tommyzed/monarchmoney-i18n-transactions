@@ -40,7 +40,7 @@ async def test_category_name_lookup():
     # Case 1: Category Name provided and matches
     print("\nCase 1: Category Name 'Food & Dining' -> Should map to 'cat_food_id'")
     data_1 = {
-        "date": "2023-11-01",
+        "date": "2026-11-01",
         "amount": 10.0,
         "currency": "USD",
         "merchant": "Restaurant",
@@ -64,7 +64,7 @@ async def test_category_name_lookup():
     # Case 2: Category Name case-insensitive match
     print("\nCase 2: Category Name 'transportation' (lower) -> Should map to 'cat_transport_id'")
     data_2 = {
-        "date": "2023-11-01",
+        "date": "2026-11-01",
         "amount": 10.0,
         "currency": "USD",
         "merchant": "Uber",
@@ -83,7 +83,7 @@ async def test_category_name_lookup():
     # Case 3: Category Name not found -> Fallback to ID
     print("\nCase 3: Category Name 'Invalid' but valid ID provided -> Should map to 'cat_fallback_id'")
     data_3 = {
-        "date": "2023-11-01",
+        "date": "2026-11-01",
         "amount": 10.0,
         "currency": "USD",
         "merchant": "Unknown",
@@ -103,7 +103,7 @@ async def test_category_name_lookup():
     # Case 4: Category Name not found, No ID -> Fallback to Uncategorized
     print("\nCase 4: Category Name 'Invalid', No ID -> Should map to 'cat_uncat_id'")
     data_4 = {
-        "date": "2023-11-01",
+        "date": "2026-11-01",
         "amount": 10.0,
         "currency": "USD",
         "merchant": "Unknown",

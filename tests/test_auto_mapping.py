@@ -35,7 +35,7 @@ async def test_auto_mapping():
 
         # Test Data
         data = {
-            "date": "2023-10-27",
+            "date": "2026-10-27",
             "amount": 10.00,
             "currency": "USD",
             "merchant": "test cafe" # Lowercase to test case-insensitivity

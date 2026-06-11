@@ -36,7 +36,7 @@ async def test_push_transaction_category():
     # Case 1: Category ID provided in data
     print("Case 1: Explicit Category ID")
     data_with_cat = {
-        "date": "2023-11-01",
+        "date": "2026-11-01",
         "amount": 10.0,
         "currency": "USD",
         "merchant": "Test Merchant",
@@ -60,7 +60,7 @@ async def test_push_transaction_category():
     # Case 2: No Category ID provided (Fallback)
     print("\nCase 2: No Category ID (Fallback)")
     data_no_cat = {
-        "date": "2023-11-01",
+        "date": "2026-11-01",
         "amount": 10.0,
         "currency": "USD",
         "merchant": "Test Merchant"
@@ -101,7 +101,7 @@ async def test_push_transaction_notes():
     # Case 1: No notes in data
     print("Case 1: No notes")
     data_no_notes = {
-        "date": "2023-11-01",
+        "date": "2026-11-01",
         "amount": 10.0,
         "currency": "USD",
         "merchant": "Test Merchant"
@@ -116,7 +116,7 @@ async def test_push_transaction_notes():
     # Case 2: Notes in data (Manual Entry flow)
     print("Case 2: Notes present")
     data_with_notes = {
-        "date": "2023-11-01",
+        "date": "2026-11-01",
         "amount": 10.0,
         "currency": "USD",
         "merchant": "Test Merchant",

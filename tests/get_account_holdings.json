@@ -33,7 +33,7 @@
                             "currentPrice": 2,
                             "currentPriceUpdatedAt": "2024-02-16T21:00:04.365428+00:00",
                             "closingPrice": 2,
-                            "closingPriceUpdatedAt": "2023-12-06T00:00:00+00:00",
+                            "closingPriceUpdatedAt": "2026-12-06T00:00:00+00:00",
                             "oneDayChangePercent": 0.01,
                             "oneDayChangeDollars": 0.02,
                             "__typename": "Security"
@@ -73,7 +73,7 @@
                             "currentPrice": 100.00,
                             "currentPriceUpdatedAt": "2024-02-16T21:05:46.879464+00:00",
                             "closingPrice": 100.00,
-                            "closingPriceUpdatedAt": "2023-12-07T07:00:00+00:00",
+                            "closingPriceUpdatedAt": "2026-12-07T07:00:00+00:00",
                             "oneDayChangePercent": 0,
                             "oneDayChangeDollars": 0,
                             "__typename": "Security"

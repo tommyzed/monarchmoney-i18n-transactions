@@ -337,7 +337,7 @@ class MonarchMoney(object):
         `timeframe` is one of "year" or "month".
 
         Note, `month` in the snapshot results is not a full ISO datestring, as it doesn't include the day.
-        Instead, it looks like, e.g., 2023-01
+        Instead, it looks like, e.g., 2026-01
         """
         if timeframe not in ("year", "month"):
             raise Exception(f'Unknown timeframe "{timeframe}"')
@@ -2472,7 +2472,7 @@ class MonarchMoney(object):
             to avoid errors in the API.
         - date:  This parameter is only needed when the user wants to update
             the existing transaction date. Empty strings are explicitly ignored by this code
-            to avoid errors in the API.  Required format is "2023-10-30"
+            to avoid errors in the API.  Required format is "2026-10-30"
         - hide_from_reports: This parameter is only needed when the user wants to update the
             existing transaction's hide-from-reports value.  If passed, the parameter is cast to
             Booleans to avoid API issues.
@@ -2498,7 +2498,7 @@ class MonarchMoney(object):
                 merchant_name="Amazon",
                 goal_id="160826408575920275",
                 amount=123.45,
-                date="2023-11-09",
+                date="2026-11-09",
                 hide_from_reports=False,
                 needs_review="ThisWillBeCastToTrue",
                 notes=f'Updated On: {datetime.now().strftime("%m/%d/%Y %H:%M:%S")}',
@@ -2623,7 +2623,7 @@ class MonarchMoney(object):
             The timeframe of the budget. As of writing, it is believed that `month` is the
             only valid value for this parameter.
         :param start_date:
-            The beginning of the given timeframe (ex: 2023-12-01). If not specified, then the
+            The beginning of the given timeframe (ex: 2026-12-01). If not specified, then the
             beginning of today's month will be used.
         :param apply_to_future:
             Whether to apply the new budget amount to all proceeding timeframes

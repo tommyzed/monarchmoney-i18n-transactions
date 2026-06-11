@@ -46,7 +46,7 @@ async def test_orchestrator_emoji_lookup():
         
         # Test Data
         data = {
-            "date": "2023-11-01",
+            "date": "2026-11-01",
             "amount": 10.0, 
             "currency": "USD",
             "merchant": "Burger King",

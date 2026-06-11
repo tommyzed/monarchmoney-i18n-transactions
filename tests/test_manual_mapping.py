@@ -50,7 +50,7 @@ async def test_manual_mapping():
         manual_data = {
             "amount": 5.50,
             "currency": "USD",
-            "date": "2023-11-01",
+            "date": "2026-11-01",
             "merchant": receipt_name.lower() # lowercase to test case-insensitivity
         }
 

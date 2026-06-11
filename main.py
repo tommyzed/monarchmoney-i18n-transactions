@@ -66,7 +66,7 @@ def main() -> None:
 
     # Cashflow
     cashflow = asyncio.run(
-        mm.get_cashflow(start_date="2023-10-01", end_date="2023-10-31")
+        mm.get_cashflow(start_date="2026-10-01", end_date="2026-10-31")
     )
     with open("cashflow.json", "w") as outfile:
         json.dump(cashflow, outfile)
