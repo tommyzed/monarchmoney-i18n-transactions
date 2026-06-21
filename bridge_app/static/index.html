@@ -54,42 +54,90 @@
             z-index: 50;
         }
 
-        .deep-link-trigger {
-            font-size: 1.5rem;
+        /* Hamburger Button */
+        .hamburger-btn {
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             cursor: pointer;
-            transition: transform 0.2s;
-            user-select: none;
-            display: inline-block;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 100;
+            padding: 0;
+            box-sizing: border-box;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
-        .deep-link-trigger:hover {
-            transform: scale(1.1);
+        .hamburger-btn:hover {
+            background: rgba(255, 255, 255, 0.45);
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .hamburger-btn:active {
+            transform: scale(0.95);
+        }
+
+        .hamburger-bar {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background-color: #d35400; /* Matching the orange text/logo accent */
+            border-radius: 2px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Animate Hamburger to X */
+        .hamburger-btn.open .hamburger-bar:nth-child(1) {
+            transform: translateY(7px) rotate(45deg);
+            background-color: #667eea;
+        }
+
+        .hamburger-btn.open .hamburger-bar:nth-child(2) {
+            opacity: 0;
+            transform: scale(0);
+        }
+
+        .hamburger-btn.open .hamburger-bar:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg);
+            background-color: #667eea;
         }
 
         .deep-link-dropdown {
             display: none;
             position: absolute;
             right: 0;
-            top: 100%;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-            width: 180px;
+            top: calc(100% + 8px);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 200px;
             overflow: hidden;
-            margin-top: 5px;
             flex-direction: column;
             text-align: left;
-            border: 1px solid #eee;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 99;
         }
 
         .deep-link-item {
-            padding: 12px 15px;
+            padding: 12px 18px;
             text-decoration: none;
             color: #333;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 10px;
             font-size: 0.95rem;
             border-bottom: 1px solid #f0f0f0;
-            transition: background 0.2s;
+            transition: all 0.25s ease;
         }
 
         .deep-link-item:last-child {
@@ -99,6 +147,7 @@
         .deep-link-item:hover {
             background: #f8faff;
             color: #667eea;
+            padding-left: 24px;
         }
 
         h1 {
@@ -209,21 +258,33 @@
 
 <body>
     <div class="container" style="position: relative;">
-        <!-- 🔥 Ignite FIRE Link -->
-        <a href="/fire" title="🔥 FIRE Dashboard"
-            style="position: absolute; top: 20px; left: 20px; font-size: 1.5rem; text-decoration: none; cursor: pointer; transition: transform 0.2s; z-index: 50; display: inline-block;"
-            onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">🔥</a>
-
-        <!-- Deep Link Menu -->
+        <!-- Deep Link & Nav Menu -->
         <div class="deep-link-menu">
-            <div class="deep-link-trigger" id="deepLinkTrigger" title="Quick Links">🔗</div>
+            <button class="hamburger-btn" id="deepLinkTrigger" title="Menu" aria-label="Toggle Menu">
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+            </button>
             <div class="deep-link-dropdown" id="deepLinkDropdown">
+                <a href="/fire" class="deep-link-item">
+                    <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔥</span>
+                    <span>FIRE Dashboard</span>
+                </a>
                 <a href="intent://accounts#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Faccounts;end"
-                    target="_blank" class="deep-link-item">Accounts</a>
+                    target="_blank" class="deep-link-item">
+                    <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">💳</span>
+                    <span>Accounts</span>
+                </a>
                 <a href="intent://transactions?needsReview=true&needsReviewUnassigned=true&transactionVisibility=all_transactions#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%3FisPending%3Dtrue;end"
-                    target="_blank" class="deep-link-item">Needs Review</a>
+                    target="_blank" class="deep-link-item">
+                    <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔍</span>
+                    <span>Needs Review</span>
+                </a>
                 <a href="intent://transactions?isPending=true#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%3FisPending%3Dtrue;end"
-                    target="_blank" class="deep-link-item">Pending Txns</a>
+                    target="_blank" class="deep-link-item">
+                    <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⏳</span>
+                    <span>Pending Txns</span>
+                </a>
             </div>
         </div>
         <br>
@@ -396,7 +457,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260610.2245 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260621.2329 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- Manual Entry Modal -->
@@ -587,16 +648,20 @@
 
         dlTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (dlDropdown.style.display === 'flex') {
+            const isOpen = dlDropdown.style.display === 'flex';
+            if (isOpen) {
                 dlDropdown.style.display = 'none';
+                dlTrigger.classList.remove('open');
             } else {
                 dlDropdown.style.display = 'flex';
+                dlTrigger.classList.add('open');
             }
         });
 
         document.addEventListener('click', (e) => {
             if (!dlTrigger.contains(e.target) && !dlDropdown.contains(e.target)) {
                 dlDropdown.style.display = 'none';
+                dlTrigger.classList.remove('open');
             }
         });
 
@@ -605,6 +670,7 @@
         dlLinks.forEach(link => {
             link.addEventListener('click', () => {
                 dlDropdown.style.display = 'none';
+                dlTrigger.classList.remove('open');
             });
         });
     </script>
