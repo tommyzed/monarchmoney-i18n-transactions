@@ -33,6 +33,12 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     *   **Auto-Category Resolution**: When a historical name is matched, the associated category is automatically looked up from the mapping table and applied — no manual step required.
     *   **💜 Result Card Indicators**: The Merchant and Category fields display a 💜 prefix when a historical name was used, with a legend below the result card. The "Add Mapping" button is hidden in this case since the merchant is already mapped.
     *   **New API Endpoint**: `GET /api/merchant-names` returns the sorted, distinct list of Monarch merchant names for use by other tools.
+*   **📋 v1.5: Hamburger Navigation & History Log**:
+    -   **Unified Hamburger Menu**: Replaced the floating links with a clean, CSS-animated hamburger menu that morphs into an "X" when clicked. Consolidates both the FIRE Dashboard and deep links.
+    -   **Transaction History Modal**: Access a modal from the menu displaying a table of the last 10 transactions processed by the app.
+    -   **Visual Enhancements**: Displays merchant names with a `💵` cash emoji for cash transactions, color-codes debits in red (-) and credits in green (+), and shows pre-converted foreign currency amounts.
+    -   **Deep Link Integration**: Includes clickable deep links to navigate directly to each transaction within the Monarch mobile app (or desktop browser fallback).
+    -   **Automatic Synchronization**: Endpoints such as transaction date/amount updates automatically keep the history log database in sync.
 
 ## 🖼 Demo (v1.1 only)
 

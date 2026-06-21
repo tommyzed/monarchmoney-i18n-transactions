@@ -50,3 +50,17 @@ class FireSettings(Base):
     social_security_withdrawal_month = Column(Integer, default=1)
     social_security_withdrawal_year = Column(Integer, default=2047)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+class Log(Base):
+    __tablename__ = "logs"
+    id = Column(Integer, primary_key=True, index=True)
+    merchant = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    currency = Column(String, nullable=False)
+    date = Column(String, nullable=False)
+    original_amount = Column(Float, nullable=True)
+    original_currency = Column(String, nullable=True)
+    is_cash = Column(Boolean, default=False)
+    monarch_tx_id = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+

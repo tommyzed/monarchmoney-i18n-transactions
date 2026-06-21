@@ -1249,6 +1249,20 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
                 transaction_id=req.monarch_tx_id,
                 date=new_date,
             )
+
+            # Update logs table record if it exists
+            try:
+                from .models import Log
+                log_stmt = select(Log).where(Log.monarch_tx_id == req.monarch_tx_id)
+                log_res = await db.execute(log_stmt)
+                log_entry = log_res.scalar_one_or_none()
+                if log_entry:
+                    log_entry.date = new_date
+                    print(f"Updated history log entry for transaction {req.monarch_tx_id}: new date={new_date} (USD)")
+                    await db.commit()
+            except Exception as e:
+                print(f"Failed to update history log entry: {e}")
+
             print(f"Updated transaction {req.monarch_tx_id}: new date={new_date} (USD, no conversion)")
             return {
                 "status": "success",
@@ -1277,6 +1291,21 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
                 amount=signed_amount,
                 notes=notes,
             )
+
+            # Update logs table record if it exists
+            try:
+                from .models import Log
+                log_stmt = select(Log).where(Log.monarch_tx_id == req.monarch_tx_id)
+                log_res = await db.execute(log_stmt)
+                log_entry = log_res.scalar_one_or_none()
+                if log_entry:
+                    log_entry.date = new_date
+                    log_entry.amount = signed_amount
+                    print(f"Updated history log entry for transaction {req.monarch_tx_id}: new date={new_date}, amount={signed_amount}")
+                    await db.commit()
+            except Exception as e:
+                print(f"Failed to update history log entry: {e}")
+
             print(
                 f"Updated transaction {req.monarch_tx_id}: new date={new_date}, "
                 f"{original_currency} {original_amount:.2f} -> USD {new_usd:.2f} @ {rate} "
@@ -1296,6 +1325,36 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
     except Exception as e:
         import traceback
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/logs")
+async def get_logs(db: AsyncSession = Depends(get_db)):
+    """
+    Get the last 10 processed transactions from the log.
+    """
+    try:
+        from .models import Log
+        stmt = select(Log).order_by(Log.created_at.desc()).limit(10)
+        result = await db.execute(stmt)
+        logs = result.scalars().all()
+        
+        return [
+            {
+                "id": log.id,
+                "merchant": log.merchant,
+                "amount": log.amount,
+                "currency": log.currency,
+                "date": log.date,
+                "original_amount": log.original_amount,
+                "original_currency": log.original_currency,
+                "is_cash": log.is_cash,
+                "monarch_tx_id": log.monarch_tx_id,
+                "created_at": log.created_at.isoformat() if log.created_at else None
+            }
+            for log in logs
+        ]
+    except Exception as e:
+        print(f"Error fetching logs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # =============================================================================

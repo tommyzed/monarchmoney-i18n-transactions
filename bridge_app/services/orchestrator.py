@@ -278,6 +278,34 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
         
     new_tx = Transaction(image_hash=image_hash, parsed_data=data)
     db.add(new_tx)
+
+    # --- Add to Logs ---
+    try:
+        from ..models import Log
+        raw_amt = data.get("amount")
+        raw_original_amt = data.get("original_amount")
+        
+        amount_val = float(raw_amt) if raw_amt is not None else 0.0
+        original_amount_val = float(raw_original_amt) if raw_original_amt is not None else None
+        
+        is_credit = bool(data.get("is_credit", False))
+        signed_amount = abs(amount_val) if is_credit else -abs(amount_val)
+        
+        new_log = Log(
+            merchant=data.get("merchant", "Unknown Merchant"),
+            amount=signed_amount,
+            currency=data.get("currency", "USD"),
+            date=data.get("date", ""),
+            original_amount=original_amount_val,
+            original_currency=data.get("original_currency"),
+            is_cash=bool(data.get("is_cash", False)),
+            monarch_tx_id=data.get("monarch_tx_id")
+        )
+        db.add(new_log)
+        print(f"Adding transaction to history logs: {new_log.merchant} ({new_log.amount} {new_log.currency})")
+    except Exception as e:
+        print(f"Failed to log transaction: {e}")
+        
     await db.commit()
     
     return data
