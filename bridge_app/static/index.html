@@ -137,12 +137,12 @@
             align-items: center;
             gap: 10px;
             font-size: 0.95rem;
-            border-bottom: 1px solid #f0f0f0;
             transition: all 0.25s ease;
         }
 
-        .deep-link-item:last-child {
-            border-bottom: none;
+        .menu-divider {
+            border-top: 1px solid #e2e8f0;
+            margin: 0;
         }
 
         .deep-link-item:hover {
@@ -304,14 +304,16 @@
                 <span class="hamburger-bar"></span>
             </button>
             <div class="deep-link-dropdown" id="deepLinkDropdown">
-                <a href="/fire" class="deep-link-item">
-                    <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔥</span>
-                    <span>FIRE Dashboard</span>
-                </a>
                 <a href="#" id="historyLogLink" class="deep-link-item">
                     <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">📜</span>
                     <span>History Log</span>
                 </a>
+                <div class="menu-divider"></div>
+                <a href="/fire" class="deep-link-item">
+                    <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔥</span>
+                    <span>FIRE Dashboard</span>
+                </a>
+                <div class="menu-divider"></div>
                 <a href="intent://accounts#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Faccounts;end"
                     target="_blank" class="deep-link-item">
                     <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">💳</span>
@@ -499,7 +501,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260621.2351 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260622.1635 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -740,7 +742,7 @@
 
                     if (log.original_amount && log.original_currency) {
                         const originalText = `(${parseFloat(log.original_amount).toFixed(2)} ${log.original_currency})`;
-                        amountCell.innerHTML = `<span>${amountText}</span><br><span style="font-size: 0.75rem; color: #5c4044; font-style: italic; font-weight: normal;">${originalText}</span>`;
+                        amountCell.innerHTML = `<span>${amountText}</span><br><span style="font-size: 0.75rem; color: #352224; font-style: italic; font-weight: normal;">${originalText}</span>`;
                     } else {
                         amountCell.textContent = amountText;
                     }

@@ -677,7 +677,7 @@ LOADING_HTML = """
                     if (data.exchange_rate) {
                         rateInfo = ` @ ${parseFloat(data.exchange_rate).toFixed(3)}`;
                     }
-                    amountHtml += `<br><span style="font-size: 0.8em; color: #777;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
+                    amountHtml += `<br><span style="font-size: 0.8em; color: #352224;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
                 }
                 
                 if (data.used_historical_name) {
@@ -983,7 +983,7 @@ LOADING_HTML = """
                         if (result.exchange_rate) {
                             rateInfo = ` @ ${parseFloat(result.exchange_rate).toFixed(3)}`;
                         }
-                        amountHtml += `<br><span style="font-size: 0.8em; color: #777;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
+                        amountHtml += `<br><span style="font-size: 0.8em; color: #352224;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
                     }
                     document.getElementById('amountValue').innerHTML = amountHtml;
 
