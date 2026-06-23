@@ -231,14 +231,33 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
 async def health():
     return {"status": "ok"}
 
+ALLOWED_MIME_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    "application/pdf"
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 @app.post("/upload")
 async def upload_receipt(
     file: UploadFile = File(...),
     currency: str = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
+
+    if file.size and file.size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
     try:
         content = await file.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
         result = await process_transaction(content, db, user_currency=currency)
         return {"status": "success", "data": result}
     except HTTPException as e:
