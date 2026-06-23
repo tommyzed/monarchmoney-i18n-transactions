@@ -127,7 +127,7 @@ async def test_push_transaction_notes():
     print(f"Called with notes: {repr(call_args['notes'])}")
     assert "Original Price: USD 10.00" in call_args['notes']
     assert "Lunch with business client" in call_args['notes']
-    assert call_args['notes'] == "Original Price: USD 10.00\n\nLunch with business client"
+    assert call_args["notes"] == "Original Price: USD 10.00\nLunch with business client"
     print("✅ SUCCESS: Appended user-entered notes to generated notes")
 
 if __name__ == "__main__":

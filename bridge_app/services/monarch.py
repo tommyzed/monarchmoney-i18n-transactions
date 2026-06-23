@@ -134,29 +134,7 @@ async def update_transaction_fields(
 
     return result
 
-async def push_transaction(mm: MonarchMoney, data: dict):
-
-    # data: date, amount, currency, merchant
-    # Find manual account
-    accounts = await mm.get_accounts()
-    # Logic to pick account
-    # We look for a specific account named "Euro Transactions"
-    target_account = None
-    target_name = os.environ.get("MM_ACCOUNT", "Euro Transactions")
-    
-    for acc in accounts['accounts']:
-        if acc['displayName'] == target_name:
-             target_account = acc
-             break
-    
-    if not target_account:
-        raise ValueError(f"No account found with name '{target_name}'. Please create a new Manual account in Monarch named '{target_name}'.")
-
-    # Determine amount sign: positive for credits, negative for expenses/debits
-    parsed_amount = float(data['amount'])
-    is_credit = data.get('is_credit', False)
-    amount = abs(parsed_amount) if is_credit else -abs(parsed_amount)
-    
+def _format_notes(data: dict, amount: float) -> str:
     # Check for original currency conversion data
     if "original_amount" in data:
         notes = (
@@ -174,7 +152,64 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     if user_notes and user_notes.strip():
         notes = f"{notes}\n{user_notes.strip()}"
 
-    # Fetch categories to find a valid category_id (required by API)
+    return notes
+
+async def _apply_post_creation_updates(mm: MonarchMoney, tx_id: str, is_cash: bool) -> None:
+    # Mark as Needs Review
+    # create_transaction doesn't support this flag, so we update it immediately after.
+    try:
+        await mm.update_transaction(transaction_id=tx_id, needs_review=True)
+        print(f"Marked transaction {tx_id} as 'Needs Review'")
+
+        # Apply Tags
+        tags_to_apply = []
+
+        # Base Tag
+        base_tag_name = "Imported by MM Bridge"
+        base_tag_color = "#2196F3" # Material Blue
+        base_tag_id = None
+
+        # Cash Tag
+        cash_tag_name = "Cash"
+        cash_tag_color = "#4CAF50" # Material Green
+        cash_tag_id = None
+        apply_cash_tag = is_cash
+
+        # 1. Find existing tags
+        existing_tags = await mm.get_transaction_tags()
+        for tag in existing_tags.get("householdTransactionTags", []):
+            if tag["name"] == base_tag_name:
+                base_tag_id = tag["id"]
+                print(f"Found existing tag: {base_tag_name} with ID: {base_tag_id}")
+            if apply_cash_tag and tag["name"] == cash_tag_name:
+                cash_tag_id = tag["id"]
+                print(f"Found existing tag: {cash_tag_name} with ID: {cash_tag_id}")
+
+        # 2. Create missing tags
+        if not base_tag_id:
+            new_tag_res = await mm.create_transaction_tag(name=base_tag_name, color=base_tag_color)
+            base_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
+            print(f"Created new tag: {base_tag_name} with ID: {base_tag_id}")
+
+        if apply_cash_tag and not cash_tag_id:
+            new_tag_res = await mm.create_transaction_tag(name=cash_tag_name, color=cash_tag_color)
+            cash_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
+            print(f"Created new tag: {cash_tag_name} with ID: {cash_tag_id}")
+
+        if base_tag_id:
+            tags_to_apply.append(base_tag_id)
+        if cash_tag_id:
+            tags_to_apply.append(cash_tag_id)
+
+        # 3. Apply tags
+        if tags_to_apply:
+            await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=tags_to_apply)
+            print(f"Tagged transaction {tx_id} with {len(tags_to_apply)} tags")
+
+    except Exception as e:
+        print(f"Failed to apply post-creation updates (Needs Review / Tags): {e}")
+
+async def _resolve_category(mm: MonarchMoney, data: dict) -> str:
     category_id = None
     target_category_name = data.get('category_name')
     fallback_category_id = data.get('category_id')
@@ -229,6 +264,36 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     if not category_id:
          raise ValueError("Could not determine a valid category_id for the transaction.")
 
+    return category_id
+
+async def _get_target_account(mm: MonarchMoney, target_name: str) -> dict:
+    accounts = await mm.get_accounts()
+    target_account = None
+    for acc in accounts['accounts']:
+        if acc['displayName'] == target_name:
+             target_account = acc
+             break
+
+    if not target_account:
+        raise ValueError(f"No account found with name '{target_name}'. Please create a new Manual account in Monarch named '{target_name}'.")
+    return target_account
+
+async def push_transaction(mm: MonarchMoney, data: dict):
+
+    # data: date, amount, currency, merchant
+    target_name = os.environ.get("MM_ACCOUNT", "Euro Transactions")
+    target_account = await _get_target_account(mm, target_name)
+
+    # Determine amount sign: positive for credits, negative for expenses/debits
+    parsed_amount = float(data['amount'])
+    is_credit = data.get('is_credit', False)
+    amount = abs(parsed_amount) if is_credit else -abs(parsed_amount)
+
+    notes = _format_notes(data, amount)
+
+    # Fetch categories to find a valid category_id (required by API)
+    category_id = await _resolve_category(mm, data)
+
     # Monarch API `create_transaction` date format? YYYY-MM-DD
     # LOG PAYLOAD
     payload_log = {
@@ -251,62 +316,11 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         update_balance=True
     )
     
-    # Mark as Needs Review
-    # create_transaction doesn't support this flag, so we update it immediately after.
     try:
         tx_id = result['createTransaction']['transaction']['id']
-        await mm.update_transaction(transaction_id=tx_id, needs_review=True)
-        print(f"Marked transaction {tx_id} as 'Needs Review'")
-        
-        # Apply Tags
-        tags_to_apply = []
-        
-        # Base Tag
-        base_tag_name = "Imported by MM Bridge"
-        base_tag_color = "#2196F3" # Material Blue
-        base_tag_id = None
-        
-        # Cash Tag
-        cash_tag_name = "Cash"
-        cash_tag_color = "#4CAF50" # Material Green
-        cash_tag_id = None
-        apply_cash_tag = data.get('is_cash')
-        
-        # 1. Find existing tags
-        existing_tags = await mm.get_transaction_tags()
-        for tag in existing_tags.get("householdTransactionTags", []):
-            if tag["name"] == base_tag_name:
-                base_tag_id = tag["id"]
-                print(f"Found existing tag: {base_tag_name} with ID: {base_tag_id}")
-            if apply_cash_tag and tag["name"] == cash_tag_name:
-                cash_tag_id = tag["id"]
-                print(f"Found existing tag: {cash_tag_name} with ID: {cash_tag_id}")
-                
-        # 2. Create missing tags
-        if not base_tag_id:
-            new_tag_res = await mm.create_transaction_tag(name=base_tag_name, color=base_tag_color)
-            base_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
-            print(f"Created new tag: {base_tag_name} with ID: {base_tag_id}")
-            
-        if apply_cash_tag and not cash_tag_id:
-            new_tag_res = await mm.create_transaction_tag(name=cash_tag_name, color=cash_tag_color)
-            cash_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
-            print(f"Created new tag: {cash_tag_name} with ID: {cash_tag_id}")
-            
-        if base_tag_id:
-            tags_to_apply.append(base_tag_id)
-        if cash_tag_id:
-            tags_to_apply.append(cash_tag_id)
-            
-        # 3. Apply tags
-        if tags_to_apply:
-            await mm.set_transaction_tags(transaction_id=tx_id, tag_ids=tags_to_apply)
-            print(f"Tagged transaction {tx_id} with {len(tags_to_apply)} tags")
-        
+        is_cash = data.get('is_cash', False)
+        await _apply_post_creation_updates(mm, tx_id, is_cash)
         return tx_id
-            
     except Exception as e:
-        print(f"Failed to apply post-creation updates (Needs Review / Tags): {e}")
-        # If we created the transaction but failed updates, we should still return the ID if we have it
-        if 'tx_id' in locals():
-            return tx_id
+        print(f"Failed to get transaction ID from creation result: {e}")
+        return None
