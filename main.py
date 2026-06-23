@@ -4,7 +4,7 @@ import json
 
 from monarchmoney import MonarchMoney
 
-_SESSION_FILE_ = ".mm/mm_session.pickle"
+_SESSION_FILE_ = ".mm/mm_session.json"
 
 
 def main() -> None:

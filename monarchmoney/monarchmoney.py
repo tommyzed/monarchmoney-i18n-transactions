@@ -5,7 +5,6 @@ import getpass
 import json
 import mimetypes
 import os
-import pickle
 import time
 from dataclasses import dataclass
 from io import StringIO
@@ -24,7 +23,7 @@ DEFAULT_RECORD_LIMIT = 100
 DEFAULT_DELAY_SECS = 10
 ERRORS_KEY = "error_code"
 SESSION_DIR = ".mm"
-SESSION_FILE = f"{SESSION_DIR}/mm_session.pickle"
+SESSION_FILE = f"{SESSION_DIR}/mm_session.json"
 DEFAULT_TIMEOUT_SECS = 300
 
 
@@ -3168,18 +3167,18 @@ class MonarchMoney(object):
 
         session_data = {"token": self._token}
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-        with open(filename, "wb") as fh:
-            pickle.dump(session_data, fh)
+        with open(filename, "w", encoding="utf-8") as fh:
+            json.dump(session_data, fh)
 
     def load_session(self, filename: Optional[str] = None) -> None:
         """
-        Loads pre-existing auth token from a Python pickle file.
+        Loads pre-existing auth token from a JSON file.
         """
         if filename is None:
             filename = self._session_file
 
-        with open(filename, "rb") as fh:
-            data = pickle.load(fh)
+        with open(filename, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
             self.set_token(data["token"])
             self._headers["Authorization"] = f"Token {self._token}"
 

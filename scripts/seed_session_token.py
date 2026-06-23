@@ -1,7 +1,7 @@
 import asyncio
 import os
 import sys
-import pickle
+import json
 from dotenv import load_dotenv
 
 # Add project root to path
@@ -54,7 +54,7 @@ async def seed_session():
         }
     }
     
-    session_bytes = pickle.dumps(session_data)
+    session_bytes = json.dumps(session_data).encode("utf-8")
 
     async for db in get_db():
         from sqlalchemy import select

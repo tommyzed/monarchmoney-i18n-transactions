@@ -1,7 +1,7 @@
 import asyncio
 import os
 import sys
-import pickle
+import json
 from dotenv import load_dotenv
 
 # Add project root to path
@@ -60,9 +60,9 @@ async def interactive_login_flow():
     else:
         print("⚠️  No cookies captured — auth will fall back to token/pickle")
 
-    # Legacy: pickle session bytes (kept for backward compat)
+    # Legacy: JSON session bytes (kept for backward compat)
     session_data = {"token": mm._token, "headers": mm._headers}
-    session_bytes = pickle.dumps(session_data)
+    session_bytes = json.dumps(session_data).encode("utf-8")
     long_lived_token = mm._token
 
     # Save to user's credentials in DB

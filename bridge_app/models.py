@@ -7,7 +7,7 @@ class Credentials(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
     encrypted_payload = Column(LargeBinary, nullable=False)
-    monarch_session = Column(LargeBinary, nullable=True)   # Legacy pickle (deprecated)
+    monarch_session = Column(LargeBinary, nullable=True)    # Legacy session (deprecated)
     monarch_token = Column(String, nullable=True)           # Legacy long-lived token (deprecated)
     monarch_cookies = Column(JSON, nullable=True)           # New: cookie jar dict for cookie-based auth
     last_update_date = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

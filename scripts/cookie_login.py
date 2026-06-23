@@ -16,7 +16,7 @@ HOW TO GET YOUR COOKIES:
 import asyncio
 import os
 import sys
-import pickle
+import json
 from datetime import datetime, timezone
 
 sys.path.append(os.getcwd())
@@ -80,7 +80,7 @@ async def manual_session_save():
     if not session_id:
         print("⚠️  Warning: no session_id found — session may not persist!")
 
-    # Build legacy pickle blob for backward compat
+    # Build legacy session blob for backward compat
     headers = {
         "Accept": "*/*",
         "Client-Platform": "web",
@@ -91,7 +91,7 @@ async def manual_session_save():
         "cookie": cookie_string,
         "X-Csrftoken": csrf or "",
     }
-    session_bytes = pickle.dumps({"token": None, "headers": headers})
+    session_bytes = json.dumps({"token": None, "headers": headers}).encode("utf-8")
 
     email = os.getenv("MM_EMAIL") or input("\nEmail to save session for: ").strip()
     print(f"\n💾 Saving cookies for {email}...")

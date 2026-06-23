@@ -1,6 +1,5 @@
 import os
 import asyncio
-import pickle
 import pyotp
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +8,7 @@ from ..models import Credentials
 from ..utils.crypto import decrypt
 
 # Path for session persistence - logic says store in DB, but library uses file.
-# We will use DB to store/retrieve the session pickle bytes.
+# We will use DB to store/retrieve the session bytes.
 
 async def get_monarch_client(db: AsyncSession, user_id: int):
     # Fetch credentials
@@ -47,7 +46,7 @@ async def get_monarch_client(db: AsyncSession, user_id: int):
             print(f"Long-lived token validation failed: {e}")
             del mm._headers["Authorization"]
 
-    # --- Strategy 3: Cookie/session pickle (oldest legacy fallback) ---
+    # --- Strategy 3: Cookie/session bytes (oldest legacy fallback) ---
     if creds.monarch_session:
         import tempfile
         try:
@@ -57,10 +56,10 @@ async def get_monarch_client(db: AsyncSession, user_id: int):
             mm.load_session(tmp_path)
             os.unlink(tmp_path)
             await mm.get_subscription_details()
-            print("✅ Authenticated via session pickle (oldest legacy)")
+            print("✅ Authenticated via session bytes (oldest legacy)")
             return mm
         except Exception as e:
-            print(f"Session pickle failed: {e}")
+            print(f"Session load failed: {e}")
 
     raise ValueError(
         "Monarch auth expired or missing. "
