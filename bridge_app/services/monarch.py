@@ -272,9 +272,11 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         cash_tag_id = None
         apply_cash_tag = data.get('is_cash')
         
-        # 1. Find existing tags
-        existing_tags = await mm.get_transaction_tags()
-        for tag in existing_tags.get("householdTransactionTags", []):
+        # 1. Find existing tags (using cache if available)
+        if getattr(mm, "_tags_cache", None) is None:
+            mm._tags_cache = await mm.get_transaction_tags()
+
+        for tag in mm._tags_cache.get("householdTransactionTags", []):
             if tag["name"] == base_tag_name:
                 base_tag_id = tag["id"]
                 print(f"Found existing tag: {base_tag_name} with ID: {base_tag_id}")
@@ -282,15 +284,19 @@ async def push_transaction(mm: MonarchMoney, data: dict):
                 cash_tag_id = tag["id"]
                 print(f"Found existing tag: {cash_tag_name} with ID: {cash_tag_id}")
                 
-        # 2. Create missing tags
+        # 2. Create missing tags and update cache
         if not base_tag_id:
             new_tag_res = await mm.create_transaction_tag(name=base_tag_name, color=base_tag_color)
-            base_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
+            new_tag = new_tag_res["createTransactionTag"]["tag"]
+            base_tag_id = new_tag["id"]
+            mm._tags_cache.setdefault("householdTransactionTags", []).append(new_tag)
             print(f"Created new tag: {base_tag_name} with ID: {base_tag_id}")
             
         if apply_cash_tag and not cash_tag_id:
             new_tag_res = await mm.create_transaction_tag(name=cash_tag_name, color=cash_tag_color)
-            cash_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
+            new_tag = new_tag_res["createTransactionTag"]["tag"]
+            cash_tag_id = new_tag["id"]
+            mm._tags_cache.setdefault("householdTransactionTags", []).append(new_tag)
             print(f"Created new tag: {cash_tag_name} with ID: {cash_tag_id}")
             
         if base_tag_id:
