@@ -1,10 +1,9 @@
 import hashlib
 import asyncio
 import json
-from sqlalchemy import func
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import UploadFile, HTTPException
+from fastapi import HTTPException
 from ..models import Transaction, MerchantMapping
 from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, push_transaction
