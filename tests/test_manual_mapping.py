@@ -22,7 +22,7 @@ async def test_manual_mapping():
             print(f"Found existing mapping: '{existing.receipt_merchant_name}' -> '{existing.monarch_merchant_name}'")
             receipt_name = existing.receipt_merchant_name
             target_name = existing.monarch_merchant_name
-            target_cat = existing.category_id
+            target_cat = existing.category_name
         else:
             print("No existing mappings found. Attempting to insert one...")
             try:
