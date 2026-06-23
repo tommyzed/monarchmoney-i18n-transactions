@@ -110,43 +110,24 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
 
     return await _process_transaction_data(data, image_hash, db, report, user_currency, force_override=force_override)
 
-async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSession, report_func, user_currency_override: str = None, force_override: bool = False):
-    """
-    Shared logic for processing transaction data, converting currency, pushing to Monarch, and saving.
-    """
-    
-    # re-check duplicates here? 
-    # For manual, we haven't checked yet. For File, we checked before OCR.
-    # It doesn't hurt to check again, but for File it is redundant if we trust previous check.
-    # Let's do a quick check if "manual_" prefix involves.
+
+async def _check_duplicates(image_hash: str, db: AsyncSession, report_func, force_override: bool):
     if image_hash.startswith("manual_") and not force_override:
         await report_func("Checking for duplicates...", 20)
         stmt = select(Transaction).where(Transaction.image_hash == image_hash)
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
         if existing:
-            return {"status": "duplicate", "data": existing.parsed_data}
+            return existing
+    return None
 
-    # 3a. Auto-Mapping Check
+async def _apply_auto_mapping(data: dict, db: AsyncSession, report_func):
     await report_func("Checking merchant mapping...", 25)
-    
-    # helper for case-insensitive lookup
-    # We do this in python or SQL? SQL is better.
-    # Note: SQLite 'LIKE' is case-insensitive for ASCII, but specific collation might be needed.
-    # ILIKE is postgres.
-    # Let's try to match exact first, then lower.
-    # Actually, we can just start with a simple select where we lower(receipt_merchant_name) == lower(target)
-    # But since we added a unique constraint on receipt_merchant_name, let's assume it's stored effectively.
-    # We can fetch all or just try to match.
-    
     current_merchant = data.get("merchant", "").strip()
     if current_merchant:
-        # Case insensitive search / Lowercase lookup (since we standardized on lowercase keys)
         stmt = select(MerchantMapping).where(MerchantMapping.receipt_merchant_name == current_merchant.lower())
         result = await db.execute(stmt)
-        # Use first() to avoid MultipleResultsFound error if duplicates exist (though PK should prevent exact duplicates, case-insensitivity might match multiple)
         mapping = result.scalars().first()
-        
         if mapping:
             print(f"Applying auto-mapping: '{current_merchant}' -> '{mapping.monarch_merchant_name}'")
             await report_func(f"Mapped to '{mapping.monarch_merchant_name}'...", 28)
@@ -157,11 +138,7 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
         else:
             print(f"No mapping found for '{current_merchant}'")
 
-    # 3a-ii. Historical-name category lookup
-    # When Gemini matched a historical merchant name (used_historical_name=true), the receipt
-    # merchant name is gone — the AI already resolved it to the canonical form. In that case we
-    # won't have hit the receipt-name lookup above, so we look up the category by monarch_merchant_name
-    # instead, using the first matching row (the mapping is deterministically 1:1).
+async def _apply_historical_category_lookup(data: dict, db: AsyncSession, report_func):
     if data.get("used_historical_name") and not data.get("category_name"):
         hist_merchant = data.get("merchant", "").strip()
         if hist_merchant:
@@ -177,19 +154,12 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
             else:
                 print(f"No category found for historical merchant '{hist_merchant}'")
 
-
-
-    # 3b. Currency Conversion
+async def _convert_currency(data: dict, report_func, user_currency_override: str = None):
     raw_currency = str(data.get("currency", "")).upper().strip()
-    
-    # Determine the effective original currency
-    # If user_currency_override is set (from upload form), use it IF the OCR'd one is ambiguous or we trust user more?
-    # Original logic used user_currency if present, else OCR.
     target_original = user_currency_override if user_currency_override else raw_currency
     if target_original:
         target_original = target_original.upper().strip()
     
-    # Normalize
     if target_original in ["EURO", "€"]: target_original = "EUR"
     if target_original in ["£", "POUND"]: target_original = "GBP"
     if target_original in ["¥", "YEN"]: target_original = "JPY"
@@ -200,18 +170,14 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     
     if target_original == "USD":
         data["currency"] = "USD"
-        
     elif target_original in ["EUR", "GBP", "JPY", "CZK", "HUF"]:
         try:
             await report_func(f"Converting {target_original} to USD...", 60)
             from .currency import get_exchange_rate
-            
             rate = await get_exchange_rate(target_original, "USD", data["date"])
-            original_amount = float(data["amount"]) # Ensure float
+            original_amount = float(data["amount"])
             converted_amount = round(original_amount * rate, 2)
-            
             print(f"Converting {target_original} {original_amount} to USD {converted_amount} (Rate: {rate})")
-            
             data["original_amount"] = original_amount
             data["original_currency"] = target_original
             data["amount"] = converted_amount
@@ -224,7 +190,7 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
         print(f"Skipping conversion: '{target_original}' not in supported list.")
         data["currency"] = target_original
 
-    # 4. Monarch Push
+async def _push_to_monarch(data: dict, db: AsyncSession, report_func):
     await report_func("Connecting to Monarch Money...", 70)
     from ..models import Credentials
     import os
@@ -253,9 +219,8 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
             data['monarch_tx_id'] = tx_id
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Monarch Error: {str(e)}")
-    
-    
-    # 4b. Fetch Category Emoji
+
+async def _fetch_category_emoji(data: dict, db: AsyncSession):
     try:
         if data.get("category_name"):
             from ..models import Category
@@ -266,12 +231,10 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
                 data["category_emoji"] = cat.category_emoji
     except Exception as e:
         print(f"Failed to fetch category emoji: {e}")
-    
-    # 5. Save Record
+
+async def _save_transaction_and_log(data: dict, image_hash: str, db: AsyncSession, report_func, force_override: bool):
     await report_func("Finalizing...", 95)
     
-    # If forcing, we need to alter the hash to avoid unique constraint violation
-    # We still want to save the record of this specific run.
     if force_override:
         import uuid
         image_hash = f"{image_hash}_forced_{uuid.uuid4().hex[:8]}"
@@ -279,12 +242,10 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     new_tx = Transaction(image_hash=image_hash, parsed_data=data)
     db.add(new_tx)
 
-    # --- Add to Logs ---
     try:
         from ..models import Log
         raw_amt = data.get("amount")
         raw_original_amt = data.get("original_amount")
-        
         amount_val = float(raw_amt) if raw_amt is not None else 0.0
         original_amount_val = float(raw_original_amt) if raw_original_amt is not None else None
         
@@ -307,5 +268,33 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
         print(f"Failed to log transaction: {e}")
         
     await db.commit()
+
+async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSession, report_func, user_currency_override: str = None, force_override: bool = False):
+    """
+    Shared logic for processing transaction data, converting currency, pushing to Monarch, and saving.
+    """
+
+    # 1. Check Duplicates
+    existing = await _check_duplicates(image_hash, db, report_func, force_override)
+    if existing:
+        return {"status": "duplicate", "data": existing.parsed_data}
+
+    # 3a. Auto-Mapping Check
+    await _apply_auto_mapping(data, db, report_func)
+
+    # 3a-ii. Historical-name category lookup
+    await _apply_historical_category_lookup(data, db, report_func)
+
+    # 3b. Currency Conversion
+    await _convert_currency(data, report_func, user_currency_override)
+
+    # 4. Monarch Push
+    await _push_to_monarch(data, db, report_func)
+
+    # 4b. Fetch Category Emoji
+    await _fetch_category_emoji(data, db)
+
+    # 5. Save Record
+    await _save_transaction_and_log(data, image_hash, db, report_func, force_override)
     
     return data
