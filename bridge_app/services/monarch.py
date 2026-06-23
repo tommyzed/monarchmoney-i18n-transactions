@@ -1,5 +1,4 @@
 import os
-import asyncio
 import pickle
 import pyotp
 from sqlalchemy.future import select
