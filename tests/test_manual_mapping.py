@@ -1,8 +1,7 @@
 import asyncio
-import os
-from sqlalchemy import select, func, text, update
-from bridge_app.database import get_db, engine, Base
-from bridge_app.models import MerchantMapping, Transaction
+from sqlalchemy import select
+from bridge_app.database import get_db
+from bridge_app.models import MerchantMapping
 from bridge_app.services.orchestrator import process_manual_transaction
 
 # Mock report function
