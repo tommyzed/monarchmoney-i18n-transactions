@@ -1554,6 +1554,24 @@ async def delete_mapping(req: DeleteMappingRequest, db: AsyncSession = Depends(g
         if isinstance(e, HTTPException): raise e
         raise HTTPException(status_code=500, detail=str(e))
 
+async def _update_history_log(db: AsyncSession, monarch_tx_id: str, new_date: str, new_amount: Optional[float] = None):
+    """Helper to update the date and optionally the amount in the history log."""
+    try:
+        from .models import Log
+        log_stmt = select(Log).where(Log.monarch_tx_id == monarch_tx_id)
+        log_res = await db.execute(log_stmt)
+        log_entry = log_res.scalar_one_or_none()
+        if log_entry:
+            log_entry.date = new_date
+            if new_amount is not None:
+                log_entry.amount = new_amount
+                print(f"Updated history log entry for transaction {monarch_tx_id}: new date={new_date}, amount={new_amount}")
+            else:
+                print(f"Updated history log entry for transaction {monarch_tx_id}: new date={new_date} (USD)")
+            await db.commit()
+    except Exception as e:
+        print(f"Failed to update history log entry: {e}")
+
 class UpdateDateRequest(BaseModel):
     monarch_tx_id: str
     new_date: str            # YYYY-MM-DD
@@ -1594,17 +1612,7 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
             )
 
             # Update logs table record if it exists
-            try:
-                from .models import Log
-                log_stmt = select(Log).where(Log.monarch_tx_id == req.monarch_tx_id)
-                log_res = await db.execute(log_stmt)
-                log_entry = log_res.scalar_one_or_none()
-                if log_entry:
-                    log_entry.date = new_date
-                    print(f"Updated history log entry for transaction {req.monarch_tx_id}: new date={new_date} (USD)")
-                    await db.commit()
-            except Exception as e:
-                print(f"Failed to update history log entry: {e}")
+            await _update_history_log(db, req.monarch_tx_id, new_date)
 
             print(f"Updated transaction {req.monarch_tx_id}: new date={new_date} (USD, no conversion)")
             return {
@@ -1636,18 +1644,7 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
             )
 
             # Update logs table record if it exists
-            try:
-                from .models import Log
-                log_stmt = select(Log).where(Log.monarch_tx_id == req.monarch_tx_id)
-                log_res = await db.execute(log_stmt)
-                log_entry = log_res.scalar_one_or_none()
-                if log_entry:
-                    log_entry.date = new_date
-                    log_entry.amount = signed_amount
-                    print(f"Updated history log entry for transaction {req.monarch_tx_id}: new date={new_date}, amount={signed_amount}")
-                    await db.commit()
-            except Exception as e:
-                print(f"Failed to update history log entry: {e}")
+            await _update_history_log(db, req.monarch_tx_id, new_date, signed_amount)
 
             print(
                 f"Updated transaction {req.monarch_tx_id}: new date={new_date}, "
