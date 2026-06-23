@@ -390,11 +390,12 @@ class MonarchMoney(object):
 
         if start_date is None:
             # The mobile app defaults to 150 years ago today
-            # The mobile app might have a leap year bug, so instead default to setting day=1
             today = date.today()
-            start_date = date(
-                year=today.year - 150, month=today.month, day=1
-            ).isoformat()
+            try:
+                start_date = today.replace(year=today.year - 150).isoformat()
+            except ValueError:
+                # Handle leap year bug (Feb 29 -> Feb 28)
+                start_date = today.replace(year=today.year - 150, day=28).isoformat()
 
         return await self.gql_call(
             operation="GetAggregateSnapshots",
