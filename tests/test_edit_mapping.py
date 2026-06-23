@@ -1,5 +1,4 @@
 import asyncio
-import json
 from httpx import AsyncClient, ASGITransport
 from bridge_app.main import app
 from bridge_app.database import AsyncSessionLocal
@@ -7,7 +6,6 @@ from bridge_app.models import MerchantMapping, Category
 from sqlalchemy.future import select
 
 import hashlib
-import os
 
 async def test_edit_mapping_endpoints():
     print("Testing Edit Mapping Endpoints...")
