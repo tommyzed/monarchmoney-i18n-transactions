@@ -325,6 +325,146 @@ LOADING_HTML = """
                 display: none; /* Hidden by default */
                 flex-direction: column;
                 align-items: center;
+                position: relative;
+            }
+            .deep-link-menu {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                z-index: 50;
+            }
+
+            /* Hamburger Button */
+            .hamburger-btn {
+                background: rgba(255, 255, 255, 0.25);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                cursor: pointer;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 5px;
+                width: 42px;
+                height: 42px;
+                border-radius: 50%;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                z-index: 100;
+                padding: 0;
+                box-sizing: border-box;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            }
+
+            .hamburger-btn:hover {
+                background: rgba(255, 255, 255, 0.45);
+                transform: scale(1.05);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            }
+
+            .hamburger-btn:active {
+                transform: scale(0.95);
+            }
+
+            .hamburger-bar {
+                display: block;
+                width: 20px;
+                height: 2px;
+                background-color: #d35400;
+                border-radius: 2px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            /* Animate Hamburger to X */
+            .hamburger-btn.open .hamburger-bar:nth-child(1) {
+                transform: translateY(7px) rotate(45deg);
+                background-color: #667eea;
+            }
+
+            .hamburger-btn.open .hamburger-bar:nth-child(2) {
+                opacity: 0;
+                transform: scale(0);
+            }
+
+            .hamburger-btn.open .hamburger-bar:nth-child(3) {
+                transform: translateY(-7px) rotate(-45deg);
+                background-color: #667eea;
+            }
+
+            .deep-link-dropdown {
+                display: none;
+                position: absolute;
+                right: 0;
+                top: calc(100% + 8px);
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border-radius: 16px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+                width: 200px;
+                overflow: hidden;
+                flex-direction: column;
+                text-align: left;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                z-index: 99;
+            }
+
+            .deep-link-item {
+                padding: 12px 18px;
+                text-decoration: none;
+                color: #333;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 0.95rem;
+                transition: all 0.25s ease;
+            }
+
+            .menu-divider {
+                border-top: 1px solid #e2e8f0;
+                margin: 0;
+            }
+
+            .deep-link-item:hover {
+                background: #f8faff;
+                color: #667eea;
+                padding-left: 24px;
+            }
+
+            /* History Table Styles */
+            .history-table {
+                width: 100%;
+                border-collapse: collapse;
+                text-align: left;
+                font-size: 0.9rem;
+                margin-top: 1rem;
+            }
+
+            .history-table th {
+                font-weight: bold;
+                color: #d35400;
+                border-bottom: 2px solid #fcc5a7;
+                padding: 12px 8px;
+            }
+
+            .history-table td {
+                padding: 12px 8px;
+                border-bottom: 1px solid #f0f0f0;
+                color: #444;
+                vertical-align: middle;
+            }
+
+            .history-table tr:last-child td {
+                border-bottom: none;
+            }
+
+            .amount-green, .history-table td.amount-green {
+                color: #16a34a;
+                font-weight: bold;
+            }
+
+            .amount-red, .history-table td.amount-red {
+                color: #dc2626;
+                font-weight: bold;
             }
             .title { font-weight: bold; font-size: 1.5rem; margin-top: 0; margin-bottom: 1rem; color: green; }
             .btn { 
@@ -489,6 +629,41 @@ LOADING_HTML = """
         
         <!-- Success/duplicate/Error Card (Hidden initially) -->
         <div id="resultCard" class="card">
+            <!-- Deep Link & Nav Menu -->
+            <div class="deep-link-menu">
+                <button class="hamburger-btn" id="deepLinkTrigger" title="Menu" aria-label="Toggle Menu">
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                </button>
+                <div class="deep-link-dropdown" id="deepLinkDropdown">
+                    <a href="#" id="historyLogLink" class="deep-link-item">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">📜</span>
+                        <span>History Log</span>
+                    </a>
+                    <div class="menu-divider"></div>
+                    <a href="/fire" class="deep-link-item">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔥</span>
+                        <span>FIRE Dashboard</span>
+                    </a>
+                    <div class="menu-divider"></div>
+                    <a href="intent://accounts#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Faccounts;end"
+                        target="_blank" class="deep-link-item">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">💳</span>
+                        <span>Accounts</span>
+                    </a>
+                    <a href="intent://transactions?needsReview=true&needsReviewUnassigned=true&transactionVisibility=all_transactions#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%3FisPending%3Dtrue;end"
+                        target="_blank" class="deep-link-item">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔍</span>
+                        <span>Needs Review</span>
+                    </a>
+                    <a href="intent://transactions?isPending=true#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%3FisPending%3Dtrue;end"
+                        target="_blank" class="deep-link-item">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⏳</span>
+                        <span>Pending Txns</span>
+                    </a>
+                </div>
+            </div>
             <div id="cardIcon" style="font-size: 3rem; margin-bottom: 0.2rem;">🎉</div>
             <p id="cardTitle" class="title">Transaction Processed</p>
             
@@ -529,6 +704,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260623.1858 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -579,6 +755,40 @@ LOADING_HTML = """
 
         <!-- Toast Notification -->
         <div id="toast" class="toast">Mapping saved!</div>
+
+        <!-- History Log Modal -->
+        <div id="historyModal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2500; justify-content:center; align-items:center;">
+            <div style="position:relative; margin: 1rem; max-width: 600px; width: 95%; background: linear-gradient(135deg, #f5d6cd 0%, #e2b4a7 100%); border-radius: 20px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+                <span id="closeHistoryModal"
+                    style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #aaa;">&times;</span>
+                <h2
+                    style="color: #4a4a4a; margin-top: 0; display: flex; align-items: center; gap: 10px; font-size: 1.8rem; justify-content: center; font-family: 'Sriracha', cursive;">
+                    📜 History Log</h2>
+
+                <div id="historyTableContainer"
+                    style="overflow-x: auto; margin-top: 1rem; max-height: 400px; overflow-y: auto;">
+                    <table class="history-table">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #eee; color: #666;">
+                                <th style="padding: 10px 5px;">Merchant</th>
+                                <th style="padding: 10px 5px; text-align: right;">Amount</th>
+                                <th style="padding: 10px 5px; text-align: center;">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <!-- Loaded dynamically -->
+                        </tbody>
+                    </table>
+                    <div id="historyLoading" style="text-align: center; padding: 2rem 0; color: #666;">
+                        Loading transactions... ⏳
+                    </div>
+                    <div id="historyNoData" style="display: none; text-align: center; padding: 2rem 0; color: #666;">
+                        No transactions processed yet. 📂
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <script>
             const jobId = "__JOB_ID__";
@@ -1000,9 +1210,142 @@ LOADING_HTML = """
             }
             // ── End Editable Date ──────────────────────────────────────────
 
+            // --- Hamburger Menu and History Modal Logic ---
+            const dlTrigger = document.getElementById('deepLinkTrigger');
+            const dlDropdown = document.getElementById('deepLinkDropdown');
+
+            dlTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = dlDropdown.style.display === 'flex';
+                if (isOpen) {
+                    dlDropdown.style.display = 'none';
+                    dlTrigger.classList.remove('open');
+                } else {
+                    dlDropdown.style.display = 'flex';
+                    dlTrigger.classList.add('open');
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!dlTrigger.contains(e.target) && !dlDropdown.contains(e.target)) {
+                    dlDropdown.style.display = 'none';
+                    dlTrigger.classList.remove('open');
+                }
+            });
+
+            // Close dropdown when a link is clicked
+            const dlLinks = document.querySelectorAll('.deep-link-item');
+            dlLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    dlDropdown.style.display = 'none';
+                    dlTrigger.classList.remove('open');
+                });
+            });
+
+            // History Modal Logic
+            const historyModal = document.getElementById('historyModal');
+            const openHistoryBtn = document.getElementById('historyLogLink');
+            const closeHistoryBtn = document.getElementById('closeHistoryModal');
+            const historyTableBody = document.getElementById('historyTableBody');
+            const historyLoading = document.getElementById('historyLoading');
+            const historyNoData = document.getElementById('historyNoData');
+
+            openHistoryBtn.onclick = function (e) {
+                e.preventDefault();
+                historyModal.style.display = "flex";
+                fetchHistoryLogs();
+            }
+
+            closeHistoryBtn.onclick = function () {
+                historyModal.style.display = "none";
+            }
+
+            window.addEventListener('click', (event) => {
+                if (event.target === historyModal) {
+                    historyModal.style.display = "none";
+                }
+            });
+
+            async function fetchHistoryLogs() {
+                try {
+                    historyLoading.style.display = "block";
+                    historyNoData.style.display = "none";
+                    historyTableBody.innerHTML = "";
+
+                    const res = await fetch("/api/logs");
+                    if (!res.ok) throw new Error("Failed to fetch logs");
+                    const logs = await res.json();
+
+                    historyLoading.style.display = "none";
+
+                    if (logs.length === 0) {
+                        historyNoData.style.display = "block";
+                        return;
+                    }
+
+                    logs.forEach(log => {
+                        const row = document.createElement("tr");
+
+                        // Merchant
+                        const merchantCell = document.createElement("td");
+                        const merchantText = log.merchant;
+                        const cashEmoji = log.is_cash ? " 💵" : "";
+
+                        if (log.monarch_tx_id) {
+                            const deepLink = `intent://transactions/${log.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${log.monarch_tx_id};end`;
+                            merchantCell.innerHTML = `<a href="${deepLink}" target="_blank" style="text-decoration: underline; color: #667eea;" title="View in Monarch">${merchantText}</a>${cashEmoji}`;
+                        } else {
+                            merchantCell.textContent = merchantText + cashEmoji;
+                        }
+                        row.appendChild(merchantCell);
+
+                        // Amount (signed, green/red)
+                        const amountCell = document.createElement("td");
+                        amountCell.style.textAlign = "right";
+                        const isPositive = log.amount >= 0;
+                        amountCell.className = isPositive ? "amount-green" : "amount-red";
+
+                        const getCurrencySymbol = (code) => {
+                            if (code === "USD") return "$";
+                            if (code === "EUR") return "€";
+                            if (code === "GBP") return "£";
+                            if (code === "JPY") return "¥";
+                            return code + " ";
+                        };
+
+                        const symbol = getCurrencySymbol(log.currency);
+                        const prefix = isPositive ? "+" : "-";
+                        const absAmount = Math.abs(log.amount).toFixed(2);
+
+                        let amountText = `${prefix}${symbol}${absAmount}`;
+
+                        if (log.original_amount && log.original_currency) {
+                            const originalText = `(${parseFloat(log.original_amount).toFixed(2)} ${log.original_currency})`;
+                            amountCell.innerHTML = `<span>${amountText}</span><br><span style="font-size: 0.75rem; color: #352224; font-style: italic; font-weight: normal;">${originalText}</span>`;
+                        } else {
+                            amountCell.textContent = amountText;
+                        }
+                        row.appendChild(amountCell);
+
+                        // Date
+                        const dateCell = document.createElement("td");
+                        dateCell.style.textAlign = "center";
+                        dateCell.textContent = log.date;
+                        row.appendChild(dateCell);
+
+                        historyTableBody.appendChild(row);
+                    });
+                } catch (err) {
+                    console.error(err);
+                    historyLoading.style.display = "none";
+                    historyTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #dc2626; padding: 2rem 0;">Error loading history logs.</td></tr>`;
+                }
+            }
+
             // Start polling
             setTimeout(checkStatus, 100);
         </script>
+
     </body>
 </html>
 """

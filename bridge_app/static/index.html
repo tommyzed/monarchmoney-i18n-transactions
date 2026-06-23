@@ -178,12 +178,12 @@
             border-bottom: none;
         }
 
-        .amount-green {
+        .amount-green, .history-table td.amount-green {
             color: #16a34a;
             font-weight: bold;
         }
 
-        .amount-red {
+        .amount-red, .history-table td.amount-red {
             color: #dc2626;
             font-weight: bold;
         }
@@ -501,7 +501,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260622.1635 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260623.1858 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -708,12 +708,13 @@
                     // Merchant
                     const merchantCell = document.createElement("td");
                     const merchantText = log.merchant;
+                    const cashEmoji = log.is_cash ? " 💵" : "";
 
                     if (log.monarch_tx_id) {
                         const deepLink = `intent://transactions/${log.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${log.monarch_tx_id};end`;
-                        merchantCell.innerHTML = `<a href="${deepLink}" target="_blank" style="text-decoration: underline; color: #667eea;" title="View in Monarch">${merchantText}</a>`;
+                        merchantCell.innerHTML = `<a href="${deepLink}" target="_blank" style="text-decoration: underline; color: #667eea;" title="View in Monarch">${merchantText}</a>${cashEmoji}`;
                     } else {
-                        merchantCell.textContent = merchantText;
+                        merchantCell.textContent = merchantText + cashEmoji;
                     }
                     row.appendChild(merchantCell);
 
@@ -736,9 +737,6 @@
                     const absAmount = Math.abs(log.amount).toFixed(2);
 
                     let amountText = `${prefix}${symbol}${absAmount}`;
-                    if (log.is_cash) {
-                        amountText += " 💵";
-                    }
 
                     if (log.original_amount && log.original_currency) {
                         const originalText = `(${parseFloat(log.original_amount).toFixed(2)} ${log.original_currency})`;
