@@ -10,8 +10,7 @@ Provides:
 
 import numpy as np
 from dataclasses import dataclass, field
-from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 
 # Historical return parameters by risk tolerance
 # Based on S&P 500 historical data + bond blending
