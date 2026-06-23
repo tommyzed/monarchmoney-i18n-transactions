@@ -1837,6 +1837,102 @@ class SimulateRequest(BaseModel):
     current_portfolio: Optional[float] = None
     is_demo: bool = False
 
+
+def _build_simulation_response(result, current_portfolio: float, account_breakdown: list, monthly_spend_avg: float, settings_obj) -> dict:
+    return {
+        "years": result.years,
+        "percentile_5": result.percentile_5,
+        "percentile_25": result.percentile_25,
+        "percentile_50": result.percentile_50,
+        "percentile_75": result.percentile_75,
+        "percentile_95": result.percentile_95,
+        "retirement_probability": result.retirement_probability,
+        "fire_date_age": result.fire_date_age,
+        "fire_date_year": result.fire_date_year,
+        "swr": result.swr,
+        "required_spend_for_target": result.required_spend_for_target,
+        "current_portfolio": current_portfolio,
+        "risk_profile_label": result.risk_profile_label,
+        "account_breakdown": account_breakdown,
+        "monthly_spend_avg": monthly_spend_avg,
+        "settings": {
+            "current_age": settings_obj.current_age,
+            "retirement_age": settings_obj.retirement_age,
+            "annual_contribution": settings_obj.annual_contribution,
+            "annual_retirement_spending": settings_obj.annual_retirement_spending,
+            "risk_tolerance": settings_obj.risk_tolerance,
+            "inflation_rate": settings_obj.inflation_rate,
+            "final_age": settings_obj.final_age,
+            "social_security_enabled": settings_obj.social_security_enabled,
+            "social_security_pia": settings_obj.social_security_pia,
+            "social_security_fra": settings_obj.social_security_fra,
+            "social_security_birth_month": settings_obj.social_security_birth_month,
+            "social_security_birth_year": settings_obj.social_security_birth_year,
+            "social_security_withdrawal_month": settings_obj.social_security_withdrawal_month,
+            "social_security_withdrawal_year": settings_obj.social_security_withdrawal_year,
+        }
+    }
+
+
+def _handle_demo_simulation(req: Optional[SimulateRequest]) -> dict:
+    from .services.fire_engine import SimulationInput, simulate
+
+    if req and req.settings:
+        settings_obj = req.settings
+    else:
+        settings_obj = FireSettings(
+            current_age=45,
+            retirement_age=65,
+            annual_contribution=100000,
+            annual_retirement_spending=80000,
+            risk_tolerance="moderate",
+            inflation_rate=0.03,
+            final_age=85,
+            social_security_enabled=False,
+            social_security_pia=0,
+            social_security_fra=67,
+            social_security_birth_month=1,
+            social_security_birth_year=1980,
+            social_security_withdrawal_month=1,
+            social_security_withdrawal_year=2047,
+        )
+
+    demo_portfolio = 500_000
+    if req and req.current_portfolio is not None:
+        demo_portfolio = req.current_portfolio
+
+    def get_val(obj, attr, default):
+        v = getattr(obj, attr, None)
+        return v if v is not None else default
+
+    sim_input = SimulationInput(
+        current_portfolio=demo_portfolio,
+        current_age=get_val(settings_obj, "current_age", 45),
+        retirement_age=get_val(settings_obj, "retirement_age", 65),
+        annual_contribution=get_val(settings_obj, "annual_contribution", 100000),
+        annual_retirement_spending=get_val(settings_obj, "annual_retirement_spending", 80000),
+        risk_tolerance=get_val(settings_obj, "risk_tolerance", "moderate"),
+        inflation_rate=get_val(settings_obj, "inflation_rate", 0.03),
+        final_age=get_val(settings_obj, "final_age", 85),
+        social_security_enabled=get_val(settings_obj, "social_security_enabled", False),
+        social_security_pia=get_val(settings_obj, "social_security_pia", 0),
+        social_security_fra=get_val(settings_obj, "social_security_fra", 67),
+        social_security_birth_month=get_val(settings_obj, "social_security_birth_month", 1),
+        social_security_birth_year=get_val(settings_obj, "social_security_birth_year", 1980),
+        social_security_withdrawal_month=get_val(settings_obj, "social_security_withdrawal_month", 1),
+        social_security_withdrawal_year=get_val(settings_obj, "social_security_withdrawal_year", 2047),
+    )
+    result = simulate(sim_input)
+
+    return _build_simulation_response(
+        result=result,
+        current_portfolio=demo_portfolio,
+        account_breakdown=[],
+        monthly_spend_avg=6015,
+        settings_obj=sim_input,
+    )
+
+
 @app.post("/api/fire/simulate")
 async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] = None, db: AsyncSession = Depends(get_db)):
     """
@@ -1851,85 +1947,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     is_demo = (req and req.is_demo) or not request.state.is_authenticated
 
     if is_demo:
-        if req and req.settings:
-            settings_obj = req.settings
-        else:
-            settings_obj = FireSettings(
-                current_age=45,
-                retirement_age=65,
-                annual_contribution=100000,
-                annual_retirement_spending=80000,
-                risk_tolerance="moderate",
-                inflation_rate=0.03,
-                final_age=85,
-                social_security_enabled=False,
-                social_security_pia=0,
-                social_security_fra=67,
-                social_security_birth_month=1,
-                social_security_birth_year=1980,
-                social_security_withdrawal_month=1,
-                social_security_withdrawal_year=2047,
-            )
-
-        demo_portfolio = 500_000
-        if req and req.current_portfolio is not None:
-            demo_portfolio = req.current_portfolio
-
-        def get_val(obj, attr, default):
-            v = getattr(obj, attr, None)
-            return v if v is not None else default
-
-        sim_input = SimulationInput(
-            current_portfolio=demo_portfolio,
-            current_age=get_val(settings_obj, "current_age", 45),
-            retirement_age=get_val(settings_obj, "retirement_age", 65),
-            annual_contribution=get_val(settings_obj, "annual_contribution", 100000),
-            annual_retirement_spending=get_val(settings_obj, "annual_retirement_spending", 80000),
-            risk_tolerance=get_val(settings_obj, "risk_tolerance", "moderate"),
-            inflation_rate=get_val(settings_obj, "inflation_rate", 0.03),
-            final_age=get_val(settings_obj, "final_age", 85),
-            social_security_enabled=get_val(settings_obj, "social_security_enabled", False),
-            social_security_pia=get_val(settings_obj, "social_security_pia", 0),
-            social_security_fra=get_val(settings_obj, "social_security_fra", 67),
-            social_security_birth_month=get_val(settings_obj, "social_security_birth_month", 1),
-            social_security_birth_year=get_val(settings_obj, "social_security_birth_year", 1980),
-            social_security_withdrawal_month=get_val(settings_obj, "social_security_withdrawal_month", 1),
-            social_security_withdrawal_year=get_val(settings_obj, "social_security_withdrawal_year", 2047),
-        )
-        result = simulate(sim_input)
-        return {
-            "years": result.years,
-            "percentile_5": result.percentile_5,
-            "percentile_25": result.percentile_25,
-            "percentile_50": result.percentile_50,
-            "percentile_75": result.percentile_75,
-            "percentile_95": result.percentile_95,
-            "retirement_probability": result.retirement_probability,
-            "fire_date_age": result.fire_date_age,
-            "fire_date_year": result.fire_date_year,
-            "swr": result.swr,
-            "required_spend_for_target": result.required_spend_for_target,
-            "current_portfolio": demo_portfolio,
-            "risk_profile_label": result.risk_profile_label,
-            "account_breakdown": [],
-            "monthly_spend_avg": 6015,
-            "settings": {
-                "current_age": sim_input.current_age,
-                "retirement_age": sim_input.retirement_age,
-                "annual_contribution": sim_input.annual_contribution,
-                "annual_retirement_spending": sim_input.annual_retirement_spending,
-                "risk_tolerance": sim_input.risk_tolerance,
-                "inflation_rate": sim_input.inflation_rate,
-                "final_age": sim_input.final_age,
-                "social_security_enabled": sim_input.social_security_enabled,
-                "social_security_pia": sim_input.social_security_pia,
-                "social_security_fra": sim_input.social_security_fra,
-                "social_security_birth_month": sim_input.social_security_birth_month,
-                "social_security_birth_year": sim_input.social_security_birth_year,
-                "social_security_withdrawal_month": sim_input.social_security_withdrawal_month,
-                "social_security_withdrawal_year": sim_input.social_security_withdrawal_year,
-            }
-        }
+        return _handle_demo_simulation(req)
     # ── End Demo Mode ──────────────────────────────────────────────────────
 
     # 1. Get Monarch client
@@ -1995,39 +2013,13 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
         raise HTTPException(status_code=500, detail=f"Simulation failed: {e}")
 
     # 7. Return results
-    return {
-        "years": result.years,
-        "percentile_5": result.percentile_5,
-        "percentile_25": result.percentile_25,
-        "percentile_50": result.percentile_50,
-        "percentile_75": result.percentile_75,
-        "percentile_95": result.percentile_95,
-        "retirement_probability": result.retirement_probability,
-        "fire_date_age": result.fire_date_age,
-        "fire_date_year": result.fire_date_year,
-        "swr": result.swr,
-        "required_spend_for_target": result.required_spend_for_target,
-        "current_portfolio": result.current_portfolio,
-        "risk_profile_label": result.risk_profile_label,
-        "account_breakdown": account_breakdown,
-        "monthly_spend_avg": monthly_spend,
-        "settings": {
-            "current_age": settings.current_age,
-            "retirement_age": settings.retirement_age,
-            "annual_contribution": settings.annual_contribution,
-            "annual_retirement_spending": settings.annual_retirement_spending,
-            "risk_tolerance": settings.risk_tolerance,
-            "inflation_rate": settings.inflation_rate,
-            "final_age": settings.final_age,
-            "social_security_enabled": settings.social_security_enabled,
-            "social_security_pia": settings.social_security_pia,
-            "social_security_fra": settings.social_security_fra,
-            "social_security_birth_month": settings.social_security_birth_month,
-            "social_security_birth_year": settings.social_security_birth_year,
-            "social_security_withdrawal_month": settings.social_security_withdrawal_month,
-            "social_security_withdrawal_year": settings.social_security_withdrawal_year,
-        }
-    }
+    return _build_simulation_response(
+        result=result,
+        current_portfolio=result.current_portfolio,
+        account_breakdown=account_breakdown,
+        monthly_spend_avg=monthly_spend,
+        settings_obj=settings,
+    )
 
 
 app.mount("/", StaticFiles(directory="bridge_app/static", html=True), name="static")
