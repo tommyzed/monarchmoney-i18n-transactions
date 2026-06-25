@@ -704,7 +704,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260623.1858 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260625.2010 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -922,6 +922,12 @@ LOADING_HTML = """
 
                 // Show/hide legend
                 document.getElementById('historicalLegend').style.display = isHistorical ? 'block' : 'none';
+
+                // Update "Added to" account value based on cash status
+                const accountValueEl = document.getElementById('accountValue');
+                if (accountValueEl) {
+                    accountValueEl.textContent = data.is_cash ? "Cash On Hand" : "__MM_ACCOUNT__";
+                }
                 
                 window.currentTransactionData = data;
                 // Prefetch categories

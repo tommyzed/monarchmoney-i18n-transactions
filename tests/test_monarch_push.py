@@ -130,8 +130,94 @@ async def test_push_transaction_notes():
     assert call_args['notes'] == "Original Price: USD 10.00\nLunch with business client"
     print("✅ SUCCESS: Appended user-entered notes to generated notes")
 
+import datetime
+
+async def test_push_transaction_cash():
+    print("\nTesting push_transaction cash routing logic...")
+    
+    # Mock MonarchMoney client
+    mm = MagicMock()
+    
+    # Mock get_accounts
+    mm.get_accounts = AsyncMock(return_value={
+        "accounts": [
+            {"id": "acc_standard", "displayName": "Euro Transactions"},
+            {"id": "acc_cash_123", "displayName": "Cash Account"}
+        ]
+    })
+    mm.get_transaction_categories = AsyncMock(return_value={
+        "categories": [{"id": "cat_uncategorized", "name": "Uncategorized"}]
+    })
+    mm.create_transaction = AsyncMock(return_value={
+        "createTransaction": {"transaction": {"id": "tx123"}}
+    })
+    mm.update_transaction = AsyncMock()
+    mm.get_transaction_tags = AsyncMock(return_value={"householdTransactionTags": []})
+    mm.create_transaction_tag = AsyncMock(return_value={"createTransactionTag": {"tag": {"id": "tag1"}}})
+    mm.set_transaction_tags = AsyncMock()
+
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+
+    # Case 1: is_cash is True, MM_ACCOUNT_CASH is set and matches
+    print("Case 1: is_cash is True, MM_ACCOUNT_CASH matches")
+    data_cash = {
+        "date": today_str,
+        "amount": 15.0,
+        "currency": "USD",
+        "merchant": "Cash Merchant",
+        "is_cash": True
+    }
+    
+    os.environ["MM_ACCOUNT_CASH"] = "acc_cash_123"
+    await push_transaction(mm, data_cash)
+    call_args = mm.create_transaction.call_args[1]
+    assert call_args['account_id'] == "acc_cash_123"
+    assert call_args['date'] == today_str
+    print("✅ SUCCESS: Routed to cash account ID successfully")
+
+    # Case 2: is_cash is True, MM_ACCOUNT_CASH is NOT set
+    print("Case 2: is_cash is True, MM_ACCOUNT_CASH not set")
+    if "MM_ACCOUNT_CASH" in os.environ:
+        del os.environ["MM_ACCOUNT_CASH"]
+    
+    try:
+        await push_transaction(mm, data_cash)
+        print("❌ FAILURE: Expected ValueError when MM_ACCOUNT_CASH is not set")
+        assert False
+    except ValueError as e:
+        assert "MM_ACCOUNT_CASH environment variable is not set" in str(e)
+        print("✅ SUCCESS: Raised ValueError when MM_ACCOUNT_CASH is not set")
+
+    # Case 3: is_cash is True, MM_ACCOUNT_CASH is set but does not match any account
+    print("Case 3: is_cash is True, MM_ACCOUNT_CASH does not match")
+    os.environ["MM_ACCOUNT_CASH"] = "nonexistent_id"
+    try:
+        await push_transaction(mm, data_cash)
+        print("❌ FAILURE: Expected ValueError when cash account is not found")
+        assert False
+    except ValueError as e:
+        assert "No account found with ID" in str(e)
+        print("✅ SUCCESS: Raised ValueError when cash account is not found")
+
+    # Case 4: is_cash is False, falls back to display name MM_ACCOUNT
+    print("Case 4: is_cash is False, falls back to display name")
+    data_non_cash = {
+        "date": today_str,
+        "amount": 15.0,
+        "currency": "USD",
+        "merchant": "Standard Merchant",
+        "is_cash": False
+    }
+    os.environ["MM_ACCOUNT"] = "Euro Transactions"
+    await push_transaction(mm, data_non_cash)
+    call_args = mm.create_transaction.call_args[1]
+    assert call_args['account_id'] == "acc_standard"
+    assert call_args['date'] == today_str
+    print("✅ SUCCESS: Fallback to standard displayName matching worked")
+
 if __name__ == "__main__":
     async def main():
         await test_push_transaction_category()
         await test_push_transaction_notes()
+        await test_push_transaction_cash()
     asyncio.run(main())

@@ -139,17 +139,27 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     # Find manual account
     accounts = await mm.get_accounts()
     # Logic to pick account
-    # We look for a specific account named "Euro Transactions"
     target_account = None
-    target_name = os.environ.get("MM_ACCOUNT", "Euro Transactions")
-    
-    for acc in accounts['accounts']:
-        if acc['displayName'] == target_name:
-             target_account = acc
-             break
-    
-    if not target_account:
-        raise ValueError(f"No account found with name '{target_name}'. Please create a new Manual account in Monarch named '{target_name}'.")
+    is_cash = bool(data.get("is_cash", False))
+
+    if is_cash:
+        cash_account_id = os.environ.get("MM_ACCOUNT_CASH")
+        if not cash_account_id:
+            raise ValueError("Transaction is marked as cash, but MM_ACCOUNT_CASH environment variable is not set.")
+        for acc in accounts.get('accounts', []):
+            if str(acc.get('id')) == str(cash_account_id):
+                target_account = acc
+                break
+        if not target_account:
+            raise ValueError(f"No account found with ID '{cash_account_id}' for cash transaction (MM_ACCOUNT_CASH).")
+    else:
+        target_name = os.environ.get("MM_ACCOUNT", "Euro Transactions")
+        for acc in accounts.get('accounts', []):
+            if acc.get('displayName') == target_name:
+                 target_account = acc
+                 break
+        if not target_account:
+            raise ValueError(f"No account found with name '{target_name}'. Please create a new Manual account in Monarch named '{target_name}'.")
 
     # Determine amount sign: positive for credits, negative for expenses/debits
     parsed_amount = float(data['amount'])
