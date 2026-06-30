@@ -173,7 +173,7 @@ async def _convert_currency(data: dict, report_func, user_currency_override: str
         try:
             await report_func(f"Converting {target_original} to USD...", 60)
             from .currency import get_exchange_rate
-            rate = await get_exchange_rate(target_original, "USD", data["date"])
+            rate = await get_exchange_rate(target_original, "USD", data["date"], report_func=report_func)
             original_amount = float(data["amount"])
             converted_amount = round(original_amount * rate, 2)
             print(f"Converting {target_original} {original_amount} to USD {converted_amount} (Rate: {rate})")
