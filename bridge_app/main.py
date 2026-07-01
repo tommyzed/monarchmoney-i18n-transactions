@@ -19,34 +19,14 @@ from datetime import datetime, timedelta
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 LIFESPAN: Starting application startup...")
-    print("📦 LIFESPAN: Initializing database tables (this might take a moment if connecting remotely)...")
+    print("📦 LIFESPAN: Checking database connection (this might take a moment if connecting remotely)...")
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            
-        # Non-destructive migrations for Social Security fields in fire_settings table
-        # Adding columns individually in separate transactions if they don't already exist.
         from sqlalchemy import text
-        for col_name, col_type in [
-            ("social_security_enabled", "BOOLEAN DEFAULT FALSE"),
-            ("social_security_pia", "INTEGER DEFAULT 0"),
-            ("social_security_fra", "INTEGER DEFAULT 67"),
-            ("social_security_birth_month", "INTEGER DEFAULT 1"),
-            ("social_security_birth_year", "INTEGER DEFAULT 1980"),
-            ("social_security_withdrawal_month", "INTEGER DEFAULT 1"),
-            ("social_security_withdrawal_year", "INTEGER DEFAULT 2047")
-        ]:
-            try:
-                async with engine.begin() as conn2:
-                    await conn2.execute(text(f"ALTER TABLE fire_settings ADD COLUMN {col_name} {col_type}"))
-                print(f"Added column {col_name} to fire_settings.")
-            except Exception:
-                # Catch and ignore errors if the column already exists
-                pass
-        print("✅ LIFESPAN: Database tables created/verified.")
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        print("✅ LIFESPAN: Database connected.")
     except Exception as e:
-        print(f"❌ LIFESPAN: Database initialization failed: {e}")
+        print(f"❌ LIFESPAN: Database connection failed: {e}")
         # We might want to re-raise or continue depending on severity, but for diagnosis, printing is key.
         raise e
     print("✨ LIFESPAN: Startup complete.")
@@ -704,7 +684,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260625.2010 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260701.1602 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
