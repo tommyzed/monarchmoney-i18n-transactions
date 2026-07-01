@@ -3,7 +3,7 @@ import pickle
 import pyotp
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from monarchmoney import MonarchMoney, RequireMFAException
+from monarchmoney import MonarchMoney
 from ..models import Credentials
 from ..utils.crypto import decrypt
 
