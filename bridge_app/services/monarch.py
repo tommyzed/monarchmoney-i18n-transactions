@@ -5,7 +5,6 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from monarchmoney import MonarchMoney, RequireMFAException
 from ..models import Credentials
-from ..utils.crypto import decrypt
 
 # Path for session persistence - logic says store in DB, but library uses file.
 # We will use DB to store/retrieve the session pickle bytes.
