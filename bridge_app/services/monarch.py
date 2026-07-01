@@ -192,39 +192,49 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         categories_data = await mm.get_transaction_categories()
         categories = categories_data.get('categories', [])
         
-        # 1. Try to match by Name if provided
-        if target_category_name:
-            for cat in categories:
-                if cat['name'].lower() == target_category_name.lower():
-                    category_id = cat['id']
-                    data['category_name'] = cat['name'] # Update with official name (case)
-                    print(f"Mapped category name '{target_category_name}' to ID '{category_id}'")
-                    break
-            if not category_id:
+        target_name_lower = target_category_name.lower() if target_category_name else None
+        
+        cat_match = None
+        matched_by_id = None
+        uncategorized = None
+        
+        # Single pass over categories to find all potential matches
+        for cat in categories:
+            cat_name = cat['name']
+
+            # Priority 1: Try to match by Name if provided
+            if target_name_lower and cat_name.lower() == target_name_lower:
+                cat_match = cat
+                break
+
+            # Priority 2: Keep track of ID match
+            if not matched_by_id and fallback_category_id and cat['id'] == fallback_category_id:
+                matched_by_id = cat
+
+            # Priority 3: Keep track of "Uncategorized"
+            if not uncategorized and cat_name == 'Uncategorized':
+                uncategorized = cat
+
+        # Resolve category_id and data updates based on priorities
+        if cat_match:
+            category_id = cat_match['id']
+            data['category_name'] = cat_match['name'] # Update with official name (case)
+            print(f"Mapped category name '{target_category_name}' to ID '{category_id}'")
+        else:
+            if target_category_name:
                 print(f"Warning: Category name '{target_category_name}' not found in Monarch.")
-        
-        # 2. Fallback to provided ID if Name lookup failed or wasn't provided
-        if not category_id and fallback_category_id:
-            category_id = fallback_category_id
-            # Try to find name for this ID
-            for cat in categories:
-                if cat['id'] == category_id:
-                    data['category_name'] = cat['name']
-                    break
-        
-        # 3. Fallback to "Uncategorized"
-        if not category_id:
-            for cat in categories:
-                if cat['name'] == 'Uncategorized':
-                    category_id = cat['id']
-                    data['category_name'] = cat['name']
-                    break
-        
-        # 4. Fallback to first available
-        if not category_id and categories:
-             category_id = categories[0]['id']
-             data['category_name'] = categories[0]['name']
-             print(f"Warning: 'Uncategorized' and provided mapping not found. Using fallback: {categories[0]['name']}")
+
+            if fallback_category_id:
+                category_id = fallback_category_id
+                if matched_by_id:
+                    data['category_name'] = matched_by_id['name']
+            elif uncategorized:
+                category_id = uncategorized['id']
+                data['category_name'] = uncategorized['name']
+            elif categories:
+                category_id = categories[0]['id']
+                data['category_name'] = categories[0]['name']
+                print(f"Warning: 'Uncategorized' and provided mapping not found. Using fallback: {categories[0]['name']}")
 
     except Exception as e:
         print(f"Failed to fetch/resolve categories: {e}")
