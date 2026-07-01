@@ -14,8 +14,25 @@ from .services.monarch import get_monarch_client
 from .models import Credentials, MerchantMapping, Category, FireSettings
 from sqlalchemy.future import select
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime, timedelta
+
+DEMO_DEFAULTS = {
+    "current_age": 45,
+    "retirement_age": 65,
+    "annual_contribution": 100000,
+    "annual_retirement_spending": 80000,
+    "risk_tolerance": "moderate",
+    "inflation_rate": 0.03,
+    "final_age": 85,
+    "social_security_enabled": False,
+    "social_security_pia": 0,
+    "social_security_fra": 67,
+    "social_security_birth_month": 1,
+    "social_security_birth_year": 1980,
+    "social_security_withdrawal_month": 1,
+    "social_security_withdrawal_year": 2047,
+}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -1745,22 +1762,7 @@ async def get_fire_settings(request: Request, db: AsyncSession = Depends(get_db)
     """Get current FIRE simulation settings."""
     if not request.state.is_authenticated:
         # Return default values for unauthenticated users instead of reading DB
-        return {
-            "current_age": 45,
-            "retirement_age": 65,
-            "annual_contribution": 100000,
-            "annual_retirement_spending": 80000,
-            "risk_tolerance": "moderate",
-            "inflation_rate": 0.03,
-            "final_age": 85,
-            "social_security_enabled": False,
-            "social_security_pia": 0,
-            "social_security_fra": 67,
-            "social_security_birth_month": 1,
-            "social_security_birth_year": 1980,
-            "social_security_withdrawal_month": 1,
-            "social_security_withdrawal_year": 2047,
-        }
+        return DEMO_DEFAULTS.copy()
 
     result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
     settings = result.scalar_one_or_none()
@@ -1880,54 +1882,48 @@ def _build_simulation_response(result, current_portfolio: float, account_breakdo
     }
 
 
-def _handle_demo_simulation(req: Optional[SimulateRequest]) -> dict:
-    from .services.fire_engine import SimulationInput, simulate
-
+def _get_demo_settings(req: Optional[SimulateRequest]) -> Any:
     if req and req.settings:
-        settings_obj = req.settings
-    else:
-        settings_obj = FireSettings(
-            current_age=45,
-            retirement_age=65,
-            annual_contribution=100000,
-            annual_retirement_spending=80000,
-            risk_tolerance="moderate",
-            inflation_rate=0.03,
-            final_age=85,
-            social_security_enabled=False,
-            social_security_pia=0,
-            social_security_fra=67,
-            social_security_birth_month=1,
-            social_security_birth_year=1980,
-            social_security_withdrawal_month=1,
-            social_security_withdrawal_year=2047,
-        )
+        return req.settings
+    return FireSettings(**DEMO_DEFAULTS)
+
+
+def _build_demo_sim_input(settings_obj: Any, demo_portfolio: float) -> "SimulationInput":
+    from .services.fire_engine import SimulationInput
+
+    def get_val(attr):
+        v = getattr(settings_obj, attr, None)
+        return v if v is not None else DEMO_DEFAULTS[attr]
+
+    return SimulationInput(
+        current_portfolio=demo_portfolio,
+        current_age=get_val("current_age"),
+        retirement_age=get_val("retirement_age"),
+        annual_contribution=get_val("annual_contribution"),
+        annual_retirement_spending=get_val("annual_retirement_spending"),
+        risk_tolerance=get_val("risk_tolerance"),
+        inflation_rate=get_val("inflation_rate"),
+        final_age=get_val("final_age"),
+        social_security_enabled=get_val("social_security_enabled"),
+        social_security_pia=get_val("social_security_pia"),
+        social_security_fra=get_val("social_security_fra"),
+        social_security_birth_month=get_val("social_security_birth_month"),
+        social_security_birth_year=get_val("social_security_birth_year"),
+        social_security_withdrawal_month=get_val("social_security_withdrawal_month"),
+        social_security_withdrawal_year=get_val("social_security_withdrawal_year"),
+    )
+
+
+def _handle_demo_simulation(req: Optional[SimulateRequest]) -> dict:
+    from .services.fire_engine import simulate
+
+    settings_obj = _get_demo_settings(req)
 
     demo_portfolio = 500_000
     if req and req.current_portfolio is not None:
         demo_portfolio = req.current_portfolio
 
-    def get_val(obj, attr, default):
-        v = getattr(obj, attr, None)
-        return v if v is not None else default
-
-    sim_input = SimulationInput(
-        current_portfolio=demo_portfolio,
-        current_age=get_val(settings_obj, "current_age", 45),
-        retirement_age=get_val(settings_obj, "retirement_age", 65),
-        annual_contribution=get_val(settings_obj, "annual_contribution", 100000),
-        annual_retirement_spending=get_val(settings_obj, "annual_retirement_spending", 80000),
-        risk_tolerance=get_val(settings_obj, "risk_tolerance", "moderate"),
-        inflation_rate=get_val(settings_obj, "inflation_rate", 0.03),
-        final_age=get_val(settings_obj, "final_age", 85),
-        social_security_enabled=get_val(settings_obj, "social_security_enabled", False),
-        social_security_pia=get_val(settings_obj, "social_security_pia", 0),
-        social_security_fra=get_val(settings_obj, "social_security_fra", 67),
-        social_security_birth_month=get_val(settings_obj, "social_security_birth_month", 1),
-        social_security_birth_year=get_val(settings_obj, "social_security_birth_year", 1980),
-        social_security_withdrawal_month=get_val(settings_obj, "social_security_withdrawal_month", 1),
-        social_security_withdrawal_year=get_val(settings_obj, "social_security_withdrawal_year", 2047),
-    )
+    sim_input = _build_demo_sim_input(settings_obj, demo_portfolio)
     result = simulate(sim_input)
 
     return _build_simulation_response(
