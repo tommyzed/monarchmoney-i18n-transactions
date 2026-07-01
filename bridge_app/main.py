@@ -1468,9 +1468,7 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
         cat_data = await mm.get_transaction_categories()
         
         # Transform for frontend
-        categories = []
-        for c in cat_data.get('categories', []):
-             categories.append({"name": c['name'], "emoji": ""}) # API doesn't give emoji easily here?
+        categories = [{"name": c['name'], "emoji": ""} for c in cat_data.get('categories', [])] # API doesn't give emoji easily here?
         
         # Sort by name
         categories.sort(key=lambda x: x['name'].lower())
