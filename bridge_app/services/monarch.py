@@ -2,9 +2,8 @@ import os
 import pickle
 import pyotp
 from sqlalchemy.ext.asyncio import AsyncSession
-from monarchmoney import MonarchMoney, RequireMFAException
+from monarchmoney import MonarchMoney
 from ..models import Credentials
-from ..utils.crypto import decrypt
 
 # Path for session persistence - logic says store in DB, but library uses file.
 # We will use DB to store/retrieve the session pickle bytes.
@@ -145,18 +144,16 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         cash_account_id = os.environ.get("MM_ACCOUNT_CASH")
         if not cash_account_id:
             raise ValueError("Transaction is marked as cash, but MM_ACCOUNT_CASH environment variable is not set.")
-        for acc in accounts.get('accounts', []):
-            if str(acc.get('id')) == str(cash_account_id):
-                target_account = acc
-                break
+
+        target_account = next((acc for acc in accounts.get('accounts', []) if str(acc.get('id')) == str(cash_account_id)), None)
+
         if not target_account:
             raise ValueError(f"No account found with ID '{cash_account_id}' for cash transaction (MM_ACCOUNT_CASH).")
     else:
         target_name = os.environ.get("MM_ACCOUNT", "Euro Transactions")
-        for acc in accounts.get('accounts', []):
-            if acc.get('displayName') == target_name:
-                 target_account = acc
-                 break
+
+        target_account = next((acc for acc in accounts.get('accounts', []) if acc.get('displayName') == target_name), None)
+
         if not target_account:
             raise ValueError(f"No account found with name '{target_name}'. Please create a new Manual account in Monarch named '{target_name}'.")
 

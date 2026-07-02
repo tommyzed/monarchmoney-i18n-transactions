@@ -1,7 +1,6 @@
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 from bridge_app.services.orchestrator import _process_transaction_data
-# from bridge_app.models import Category # Importing models might need DB connection context or cause issues if not careful, but usually okay for class def
 
 async def test_orchestrator_emoji_lookup():
     print("Testing orchestrator category emoji lookup...")

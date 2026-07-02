@@ -9,9 +9,9 @@ def kill_process_on_port(port):
         # Check for processes on the port using lsof
         # -t: terse mode (only PIDs)
         # -i: select internet address matching
-        cmd = f"lsof -t -i:{port}"
-        # using shell=True to allow pipe if needed, but here simple execution is enough
-        output = subprocess.check_output(cmd, shell=True)
+        cmd = ["lsof", "-t", f"-i:{port}"]
+        # using shell=False for security
+        output = subprocess.check_output(cmd, shell=False)
         
         pids = output.decode().strip().split('\n')
         
