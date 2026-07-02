@@ -759,7 +759,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1808 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1816 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -845,11 +845,44 @@ LOADING_HTML = """
             const jobId = "__JOB_ID__";
             const pollInterval = 500; // 0.5 seconds
             
+            let toastTimeout = null;
+
             function showToast(message, type = 'success') {
                 const toast = document.getElementById("toast");
+                if (toastTimeout) clearTimeout(toastTimeout);
+                
                 toast.textContent = message;
                 toast.className = "toast show " + type; // Reset class
-                setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+                
+                toastTimeout = setTimeout(function(){ 
+                    toast.className = toast.className.replace("show", ""); 
+                    toastTimeout = null;
+                }, 3000);
+            }
+
+            function showConfirmToast(message, onConfirm) {
+                const toast = document.getElementById("toast");
+                if (toastTimeout) clearTimeout(toastTimeout);
+                
+                toast.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                        <span>${message}</span>
+                        <div style="display: flex; gap: 8px;">
+                            <button id="toastConfirmBtn" style="background: white; color: #be185d; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; font-family: inherit;">Delete</button>
+                            <button id="toastCancelBtn" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-family: inherit;">Cancel</button>
+                        </div>
+                    </div>
+                `;
+                toast.className = "toast show error";
+                
+                document.getElementById("toastConfirmBtn").onclick = () => {
+                    toast.className = toast.className.replace("show", "");
+                    onConfirm();
+                };
+                
+                document.getElementById("toastCancelBtn").onclick = () => {
+                    toast.className = toast.className.replace("show", "");
+                };
             }
 
             function forceSubmit() {
@@ -1637,11 +1670,11 @@ LOADING_HTML = """
                         const deleteBtn = document.createElement("div");
                         deleteBtn.className = "history-row-delete-btn";
                         deleteBtn.textContent = "Delete";
-                        deleteBtn.onclick = async (e) => {
+                        deleteBtn.onclick = (e) => {
                             e.stopPropagation();
-                            if (confirm(`Delete transaction for "${log.merchant}"?`)) {
+                            showConfirmToast(`Delete "${log.merchant}"?`, async () => {
                                 await deleteLogEntry(log.id, rowWrapper);
-                            }
+                            });
                         };
                         rowWrapper.appendChild(deleteBtn);
                         

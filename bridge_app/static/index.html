@@ -331,10 +331,39 @@
                 transform: translateY(-20px) rotate(5deg);
             }
         }
+        /* Toast Notification */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px;
+            position: fixed;
+            z-index: 3000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 0.95rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+        
+        .toast.success { background-color: #be185d; } /* Dark Pink */
+        .toast.error { background-color: #9f1239; } /* Darker Pink/Red for error */
     </style>
 </head>
 
 <body>
+    <div id="toast" class="toast">Mapping saved!</div>
     <div class="container" style="position: relative;">
         <!-- Deep Link & Nav Menu -->
         <div class="deep-link-menu">
@@ -541,7 +570,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260702.1808 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260702.1816 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -701,6 +730,46 @@
             if (event.target == historyModal) {
                 historyModal.style.display = "none";
             }
+        }
+
+        let toastTimeout = null;
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById("toast");
+            if (toastTimeout) clearTimeout(toastTimeout);
+            
+            toast.textContent = message;
+            toast.className = "toast show " + type; // Reset class
+            
+            toastTimeout = setTimeout(function(){ 
+                toast.className = toast.className.replace("show", ""); 
+                toastTimeout = null;
+            }, 3000);
+        }
+
+        function showConfirmToast(message, onConfirm) {
+            const toast = document.getElementById("toast");
+            if (toastTimeout) clearTimeout(toastTimeout);
+            
+            toast.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                    <span>${message}</span>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="toastConfirmBtn" style="background: white; color: #be185d; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; font-family: inherit;">Delete</button>
+                        <button id="toastCancelBtn" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-family: inherit;">Cancel</button>
+                    </div>
+                </div>
+            `;
+            toast.className = "toast show error";
+            
+            document.getElementById("toastConfirmBtn").onclick = () => {
+                toast.className = toast.className.replace("show", "");
+                onConfirm();
+            };
+            
+            document.getElementById("toastCancelBtn").onclick = () => {
+                toast.className = toast.className.replace("show", "");
+            };
         }
 
         // Touch handlers for swipe-to-delete on mobile
@@ -915,11 +984,11 @@
                     const deleteBtn = document.createElement("div");
                     deleteBtn.className = "history-row-delete-btn";
                     deleteBtn.textContent = "Delete";
-                    deleteBtn.onclick = async (e) => {
+                    deleteBtn.onclick = (e) => {
                         e.stopPropagation();
-                        if (confirm(`Delete transaction for "${log.merchant}"?`)) {
+                        showConfirmToast(`Delete "${log.merchant}"?`, async () => {
                             await deleteLogEntry(log.id, rowWrapper);
-                        }
+                        });
                     };
                     rowWrapper.appendChild(deleteBtn);
                     
