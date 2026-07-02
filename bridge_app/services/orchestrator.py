@@ -150,6 +150,8 @@ async def _apply_historical_category_lookup(data: dict, db: AsyncSession, report
                 print(f"Historical name category lookup: '{hist_merchant}' -> '{hist_mapping.category_name}'")
                 await report_func(f"Category resolved from history...", 29)
                 data["category_name"] = hist_mapping.category_name
+                if "original_merchant_name" not in data:
+                    data["original_merchant_name"] = hist_mapping.receipt_merchant_name
             else:
                 print(f"No category found for historical merchant '{hist_merchant}'")
 

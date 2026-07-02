@@ -684,7 +684,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260701.1602 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1255 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -870,10 +870,7 @@ LOADING_HTML = """
                     amountHtml += `<br><span style="font-size: 0.8em; color: #352224;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
                 }
                 
-                if (data.used_historical_name) {
-                    // Already mapped — button is irrelevant
-                    document.getElementById('editMappingBtn').style.display = 'none';
-                } else if (data.original_merchant_name) {
+                if (data.used_historical_name || data.original_merchant_name) {
                     document.getElementById('editMappingBtn').style.display = 'inline-block';
                     document.getElementById('editMappingBtn').textContent = "Edit Mapping";
                 } else {
