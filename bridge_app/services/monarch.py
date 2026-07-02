@@ -2,7 +2,7 @@ import os
 import pickle
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from monarchmoney import MonarchMoney, RequireMFAException
+from monarchmoney import MonarchMoney
 from ..models import Credentials
 
 # Path for session persistence - logic says store in DB, but library uses file.
