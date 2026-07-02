@@ -2077,11 +2077,11 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
 @app.get("/api/logs")
 async def get_logs(db: AsyncSession = Depends(get_db)):
     """
-    Get the last 10 processed transactions from the log.
+    Get the last 20 processed transactions from the log.
     """
     try:
         from .models import Log
-        stmt = select(Log).order_by(Log.created_at.desc()).limit(10)
+        stmt = select(Log).order_by(Log.created_at.desc()).limit(20)
         result = await db.execute(stmt)
         logs = result.scalars().all()
         
