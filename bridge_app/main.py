@@ -447,16 +447,19 @@ LOADING_HTML = """
 
             .history-row-wrapper {
                 position: relative;
-                overflow: hidden;
+                overflow: visible;
                 width: 100%;
-                border-bottom: 1px solid #f0f0f0;
+                transition: transform 0.15s ease-out;
+                box-sizing: border-box;
+                background: transparent;
+                border-bottom: 1px solid #fcc5a7;
             }
             .history-row-wrapper:last-child {
                 border-bottom: none;
             }
             .history-row-delete-btn {
                 position: absolute;
-                right: 0;
+                right: -80px;
                 top: 0;
                 bottom: 0;
                 width: 80px;
@@ -468,38 +471,27 @@ LOADING_HTML = """
                 font-weight: bold;
                 font-size: 0.85rem;
                 cursor: pointer;
-                transform: translateX(80px);
-                transition: transform 0.2s ease-out;
-                z-index: 1;
+                box-sizing: border-box;
             }
             .history-row-content {
+                width: 100%;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 padding: 12px 8px;
-                background: white;
-                position: relative;
-                z-index: 2;
-                transition: transform 0.2s ease-out;
-                width: 100%;
+                background: transparent;
                 box-sizing: border-box;
                 font-size: 0.9rem;
             }
             
             @media (hover: hover) {
-                .history-row-wrapper:hover .history-row-content {
+                .history-row-wrapper:hover {
                     transform: translateX(-80px);
-                }
-                .history-row-wrapper:hover .history-row-delete-btn {
-                    transform: translateX(0);
                 }
             }
 
-            .history-row-wrapper.swiped .history-row-content {
+            .history-row-wrapper.swiped {
                 transform: translateX(-80px);
-            }
-            .history-row-wrapper.swiped .history-row-delete-btn {
-                transform: translateX(0);
             }
 
             .amount-green {
@@ -767,7 +759,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1745 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1808 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1430,42 +1422,77 @@ LOADING_HTML = """
             // Touch handlers for swipe-to-delete on mobile
             let touchStartX = 0;
             let touchStartY = 0;
+            let isSwiping = false;
 
             function initSwipeToDelete(rowWrapper) {
                 const content = rowWrapper.querySelector('.history-row-content');
+                let dx = 0;
                 
-                content.addEventListener('touchstart', (e) => {
+                rowWrapper.addEventListener('touchstart', (e) => {
                     touchStartX = e.touches[0].clientX;
                     touchStartY = e.touches[0].clientY;
+                    dx = 0;
+                    isSwiping = false;
+                    rowWrapper.style.transition = 'none';
                 }, { passive: true });
 
-                content.addEventListener('touchmove', (e) => {
-                    const diffX = touchStartX - e.touches[0].clientX;
-                    const diffY = Math.abs(touchStartY - e.touches[0].clientY);
+                rowWrapper.addEventListener('touchmove', (e) => {
+                    const currentX = e.touches[0].clientX;
+                    const currentY = e.touches[0].clientY;
+                    dx = touchStartX - currentX;
+                    const dy = Math.abs(touchStartY - currentY);
                     
-                    if (diffX > 30 && diffY < 20) {
+                    if (dy > Math.abs(dx)) {
+                        return;
+                    }
+
+                    if (Math.abs(dx) > 10) {
+                        isSwiping = true;
+                    }
+
+                    if (isSwiping) {
                         if (e.cancelable) e.preventDefault();
+
+                        const baseTranslate = rowWrapper.classList.contains('swiped') ? -80 : 0;
+                        let targetX = baseTranslate - dx;
+
+                        if (targetX > 0) {
+                            targetX = 0;
+                        } else if (targetX < -120) {
+                            targetX = -120;
+                        }
+
+                        rowWrapper.style.transform = `translateX(${targetX}px)`;
                     }
                 }, { passive: false });
 
-                content.addEventListener('touchend', (e) => {
-                    const diffX = touchStartX - e.changedTouches[0].clientX;
-                    const diffY = Math.abs(touchStartY - e.changedTouches[0].clientY);
+                rowWrapper.addEventListener('touchend', (e) => {
+                    if (!isSwiping) return;
+                    
+                    rowWrapper.style.transition = 'transform 0.15s ease-out';
+                    const baseTranslate = rowWrapper.classList.contains('swiped') ? -80 : 0;
+                    const finalTranslate = baseTranslate - dx;
 
-                    if (diffY < 30) {
-                        if (diffX > 50) {
-                            document.querySelectorAll('.history-row-wrapper.swiped').forEach(el => {
-                                if (el !== rowWrapper) el.classList.remove('swiped');
-                            });
-                            rowWrapper.classList.add('swiped');
-                        } else if (diffX < -50) {
-                            rowWrapper.classList.remove('swiped');
-                        }
+                    if (finalTranslate < -35) {
+                        document.querySelectorAll('.history-row-wrapper.swiped').forEach(el => {
+                            if (el !== rowWrapper) {
+                                el.style.transition = 'transform 0.15s ease-out';
+                                el.style.transform = 'translateX(0)';
+                                el.classList.remove('swiped');
+                            }
+                        });
+                        rowWrapper.style.transform = 'translateX(-80px)';
+                        rowWrapper.classList.add('swiped');
+                    } else {
+                        rowWrapper.style.transform = 'translateX(0)';
+                        rowWrapper.classList.remove('swiped');
                     }
                 }, { passive: true });
 
                 window.addEventListener('touchstart', (e) => {
-                    if (!rowWrapper.contains(e.target)) {
+                    if (!rowWrapper.contains(e.target) && rowWrapper.classList.contains('swiped')) {
+                        rowWrapper.style.transition = 'transform 0.15s ease-out';
+                        rowWrapper.style.transform = 'translateX(0)';
                         rowWrapper.classList.remove('swiped');
                     }
                 }, { passive: true });
@@ -1546,18 +1573,6 @@ LOADING_HTML = """
                         const rowWrapper = document.createElement("div");
                         rowWrapper.className = "history-row-wrapper";
 
-                        // Delete button
-                        const deleteBtn = document.createElement("div");
-                        deleteBtn.className = "history-row-delete-btn";
-                        deleteBtn.textContent = "Delete";
-                        deleteBtn.onclick = async (e) => {
-                            e.stopPropagation();
-                            if (confirm(`Delete transaction for "${log.merchant}"?`)) {
-                                await deleteLogEntry(log.id, rowWrapper);
-                            }
-                        };
-                        rowWrapper.appendChild(deleteBtn);
-
                         // Content row
                         const contentRow = document.createElement("div");
                         contentRow.className = "history-row-content";
@@ -1617,6 +1632,18 @@ LOADING_HTML = """
                         contentRow.appendChild(dateCol);
 
                         rowWrapper.appendChild(contentRow);
+
+                        // Delete button (on the right)
+                        const deleteBtn = document.createElement("div");
+                        deleteBtn.className = "history-row-delete-btn";
+                        deleteBtn.textContent = "Delete";
+                        deleteBtn.onclick = async (e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete transaction for "${log.merchant}"?`)) {
+                                await deleteLogEntry(log.id, rowWrapper);
+                            }
+                        };
+                        rowWrapper.appendChild(deleteBtn);
                         
                         initSwipeToDelete(rowWrapper);
 
