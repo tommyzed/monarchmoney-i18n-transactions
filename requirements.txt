@@ -13,3 +13,4 @@ python-dotenv
 pillow
 pyotp
 numpy
+python-dateutil
