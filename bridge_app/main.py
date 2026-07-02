@@ -11,7 +11,7 @@ from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client
-from .models import Credentials, MerchantMapping, Category, FireSettings
+from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction
 from sqlalchemy.future import select
 from pydantic import BaseModel
 from typing import Optional
@@ -486,6 +486,23 @@ LOADING_HTML = """
             }
             .date-pill:hover { color: #764ba2; border-color: #764ba2; }
             .date-pill.updating { opacity: 0.5; pointer-events: none; }
+            
+            /* Editable category pill */
+            .category-pill {
+                font-weight: 600;
+                color: #667eea;
+                cursor: pointer;
+                border-bottom: 2px dashed #667eea;
+                padding-bottom: 1px;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                transition: color 0.2s, border-color 0.2s;
+                user-select: none;
+            }
+            .category-pill:hover { color: #764ba2; border-color: #764ba2; }
+            .category-pill.updating { opacity: 0.5; pointer-events: none; }
+
             #datePicker {
                 position: absolute;
                 opacity: 0;
@@ -662,9 +679,10 @@ LOADING_HTML = """
                     <span id="dateValue" class="value date-pill" title="Tap to correct date" onclick="openDatePicker()">--</span>
                     <input type="date" id="datePicker" aria-label="Date picker">
                 </div>
-                <div class="detail-row">
+                <div class="detail-row" style="position: relative;">
                     <span class="label">Category</span>
-                    <span id="categoryValue" class="value">--</span>
+                    <span id="categoryValue" class="value category-pill" title="Tap to change category" onclick="openCategorySelector()">--</span>
+                    <select id="inlineCategorySelect" style="display: none; font-size: 0.9rem; padding: 4px; border-radius: 6px; border: 1px solid #d1d5db; background: white; max-width: 180px; z-index: 10;" aria-label="Category selector"></select>
                 </div>
                 <div class="detail-row">
                     <span class="label">Added to</span>
@@ -684,7 +702,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1255 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1716 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1193,6 +1211,129 @@ LOADING_HTML = """
             }
             // ── End Editable Date ──────────────────────────────────────────
 
+            // ── Editable Category ──────────────────────────────────────────
+            async function openCategorySelector() {
+                const select = document.getElementById('inlineCategorySelect');
+                const pill = document.getElementById('categoryValue');
+                
+                // Fetch categories if we haven't yet
+                await fetchCategories();
+                
+                // Populate inline dropdown from cachedCategories
+                select.innerHTML = '<option value="">Select Category</option>';
+                if (cachedCategories) {
+                    cachedCategories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.name;
+                        opt.textContent = (cat.emoji ? cat.emoji + " " : "") + cat.name;
+                        select.appendChild(opt);
+                    });
+                }
+                
+                // Pre-select current category
+                const data = window.currentTransactionData;
+                if (data && data.category_name) {
+                    for(let i=0; i<select.options.length; i++) {
+                        if (select.options[i].value === data.category_name) {
+                            select.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
+                // Toggle display
+                pill.style.display = 'none';
+                select.style.display = 'inline-block';
+                select.focus();
+            }
+
+            document.getElementById('inlineCategorySelect').addEventListener('change', async function() {
+                const newCategory = this.value;
+                if (!newCategory) {
+                    closeCategorySelector();
+                    return;
+                }
+                await onCategoryChanged(newCategory);
+            });
+
+            document.getElementById('inlineCategorySelect').addEventListener('blur', function() {
+                closeCategorySelector();
+            });
+
+            function closeCategorySelector() {
+                document.getElementById('categoryValue').style.display = 'inline-flex';
+                document.getElementById('inlineCategorySelect').style.display = 'none';
+            }
+
+            async function onCategoryChanged(newCategory) {
+                const data = window.currentTransactionData;
+                if (!data || !data.monarch_tx_id) {
+                    showToast('Cannot update category: no transaction ID.', 'error');
+                    closeCategorySelector();
+                    return;
+                }
+
+                if (newCategory === data.category_name) {
+                    closeCategorySelector();
+                    return;
+                }
+
+                const pill = document.getElementById('categoryValue');
+                pill.classList.add('updating');
+                pill.innerHTML = newCategory + '&#160;⏳';
+                closeCategorySelector();
+
+                try {
+                    const payload = {
+                        monarch_tx_id: data.monarch_tx_id,
+                        category_name: newCategory
+                    };
+
+                    const res = await fetch('/api/transaction/update-category', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.detail || 'Update failed');
+                    }
+
+                    const result = await res.json();
+
+                    // Update stored data
+                    data.category_name = newCategory;
+                    if (result.category_emoji !== undefined) {
+                        data.category_emoji = result.category_emoji;
+                    } else {
+                        delete data.category_emoji;
+                    }
+
+                    // Update UI text (preserving historical prefix 💜 if it existed)
+                    const isHistorical = !!data.used_historical_name;
+                    let catDisplay = newCategory;
+                    if (data.category_emoji) {
+                        catDisplay = data.category_emoji + ' ' + catDisplay;
+                    }
+                    pill.innerHTML = (isHistorical ? '💜 ' : '') + catDisplay;
+
+                    showToast('✅ Category updated in Monarch!', 'success');
+
+                } catch(e) {
+                    const isHistorical = !!data.used_historical_name;
+                    let origDisplay = data.category_name || '--';
+                    if (data.category_emoji) {
+                        origDisplay = data.category_emoji + ' ' + origDisplay;
+                    }
+                    pill.innerHTML = (isHistorical ? '💜 ' : '') + origDisplay;
+                    showToast('Error: ' + e.message, 'error');
+                } finally {
+                    pill.classList.remove('updating');
+                }
+            }
+            // ── End Editable Category ──────────────────────────────────────
+
             // --- Hamburger Menu and History Modal Logic ---
             const dlTrigger = document.getElementById('deepLinkTrigger');
             const dlDropdown = document.getElementById('deepLinkDropdown');
@@ -1646,6 +1787,66 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+class UpdateCategoryRequest(BaseModel):
+    monarch_tx_id: str
+    category_name: str
+
+@app.post("/api/transaction/update-category")
+async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Update a transaction's category in Monarch Money and locally.
+    Does not edit mapping rules.
+    """
+    try:
+        creds_result = await db.execute(select(Credentials))
+        creds = creds_result.scalars().first()
+        if not creds:
+            raise HTTPException(status_code=400, detail="No Monarch credentials configured")
+
+        mm = await get_monarch_client(db, creds.id)
+
+        # Try to get the monarch_category_id from local DB
+        cat_stmt = select(Category).where(Category.category_name == req.category_name)
+        cat_result = await db.execute(cat_stmt)
+        category = cat_result.scalar_one_or_none()
+        
+        category_id = category.monarch_category_id if category else None
+        if not category_id:
+            raise HTTPException(status_code=400, detail=f"Category '{req.category_name}' not configured or missing monarch ID")
+
+        # Update in Monarch Money
+        await mm.update_transaction(
+            transaction_id=req.monarch_tx_id,
+            category_id=category_id
+        )
+
+        # Update local Transaction table's parsed_data JSON if it exists
+        tx_stmt = select(Transaction)
+        tx_result = await db.execute(tx_stmt)
+        transactions = tx_result.scalars().all()
+        for tx in transactions:
+            if tx.parsed_data and tx.parsed_data.get("monarch_tx_id") == req.monarch_tx_id:
+                parsed = dict(tx.parsed_data)
+                parsed["category_name"] = req.category_name
+                if category.category_emoji:
+                    parsed["category_emoji"] = category.category_emoji
+                else:
+                    parsed.pop("category_emoji", None)
+                tx.parsed_data = parsed
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(tx, "parsed_data")
+                await db.commit()
+                break
+
+        return {"status": "success", "category_emoji": category.category_emoji}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
