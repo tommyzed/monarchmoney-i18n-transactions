@@ -427,39 +427,87 @@ LOADING_HTML = """
                 padding-left: 24px;
             }
 
-            /* History Table Styles */
-            .history-table {
+            /* History Table Styles (Flex-based list) */
+            .history-list {
                 width: 100%;
-                border-collapse: collapse;
-                text-align: left;
-                font-size: 0.9rem;
                 margin-top: 1rem;
             }
-
-            .history-table th {
+            .history-header {
+                display: flex;
+                justify-content: space-between;
                 font-weight: bold;
                 color: #d35400;
                 border-bottom: 2px solid #fcc5a7;
                 padding: 12px 8px;
+                font-size: 0.9rem;
             }
+            .history-header-merchant { flex: 2; text-align: left; }
+            .history-header-amount { flex: 1; text-align: right; margin-right: 12px; }
+            .history-header-date { flex: 1; text-align: center; max-width: 90px; }
 
-            .history-table td {
-                padding: 12px 8px;
+            .history-row-wrapper {
+                position: relative;
+                overflow: hidden;
+                width: 100%;
                 border-bottom: 1px solid #f0f0f0;
-                color: #444;
-                vertical-align: middle;
             }
-
-            .history-table tr:last-child td {
+            .history-row-wrapper:last-child {
                 border-bottom: none;
             }
+            .history-row-delete-btn {
+                position: absolute;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                width: 80px;
+                background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 0.85rem;
+                cursor: pointer;
+                transform: translateX(80px);
+                transition: transform 0.2s ease-out;
+                z-index: 1;
+            }
+            .history-row-content {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 8px;
+                background: white;
+                position: relative;
+                z-index: 2;
+                transition: transform 0.2s ease-out;
+                width: 100%;
+                box-sizing: border-box;
+                font-size: 0.9rem;
+            }
+            
+            @media (hover: hover) {
+                .history-row-wrapper:hover .history-row-content {
+                    transform: translateX(-80px);
+                }
+                .history-row-wrapper:hover .history-row-delete-btn {
+                    transform: translateX(0);
+                }
+            }
 
-            .amount-green, .history-table td.amount-green {
+            .history-row-wrapper.swiped .history-row-content {
+                transform: translateX(-80px);
+            }
+            .history-row-wrapper.swiped .history-row-delete-btn {
+                transform: translateX(0);
+            }
+
+            .amount-green {
                 color: #16a34a;
                 font-weight: bold;
             }
 
-            .amount-red, .history-table td.amount-red {
+            .amount-red {
                 color: #dc2626;
                 font-weight: bold;
             }
@@ -719,7 +767,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1737 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1745 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -782,19 +830,15 @@ LOADING_HTML = """
                     📜 History Log</h2>
 
                 <div id="historyTableContainer"
-                    style="overflow-x: auto; margin-top: 1rem; max-height: 400px; overflow-y: auto;">
-                    <table class="history-table">
-                        <thead>
-                            <tr style="border-bottom: 2px solid #eee; color: #666;">
-                                <th style="padding: 10px 5px;">Merchant</th>
-                                <th style="padding: 10px 5px; text-align: right;">Amount</th>
-                                <th style="padding: 10px 5px; text-align: center;">Date</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyTableBody">
-                            <!-- Loaded dynamically -->
-                        </tbody>
-                    </table>
+                    style="overflow-x: hidden; margin-top: 1rem; max-height: 400px; overflow-y: auto;">
+                    <div class="history-header">
+                        <div class="history-header-merchant">Merchant</div>
+                        <div class="history-header-amount">Amount</div>
+                        <div class="history-header-date">Date</div>
+                    </div>
+                    <div id="historyTableBody">
+                        <!-- Loaded dynamically -->
+                    </div>
                     <div id="historyLoading" style="text-align: center; padding: 2rem 0; color: #666;">
                         Loading transactions... ⏳
                     </div>
@@ -1383,6 +1427,80 @@ LOADING_HTML = """
                 });
             });
 
+            // Touch handlers for swipe-to-delete on mobile
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            function initSwipeToDelete(rowWrapper) {
+                const content = rowWrapper.querySelector('.history-row-content');
+                
+                content.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                }, { passive: true });
+
+                content.addEventListener('touchmove', (e) => {
+                    const diffX = touchStartX - e.touches[0].clientX;
+                    const diffY = Math.abs(touchStartY - e.touches[0].clientY);
+                    
+                    if (diffX > 30 && diffY < 20) {
+                        if (e.cancelable) e.preventDefault();
+                    }
+                }, { passive: false });
+
+                content.addEventListener('touchend', (e) => {
+                    const diffX = touchStartX - e.changedTouches[0].clientX;
+                    const diffY = Math.abs(touchStartY - e.changedTouches[0].clientY);
+
+                    if (diffY < 30) {
+                        if (diffX > 50) {
+                            document.querySelectorAll('.history-row-wrapper.swiped').forEach(el => {
+                                if (el !== rowWrapper) el.classList.remove('swiped');
+                            });
+                            rowWrapper.classList.add('swiped');
+                        } else if (diffX < -50) {
+                            rowWrapper.classList.remove('swiped');
+                        }
+                    }
+                }, { passive: true });
+
+                window.addEventListener('touchstart', (e) => {
+                    if (!rowWrapper.contains(e.target)) {
+                        rowWrapper.classList.remove('swiped');
+                    }
+                }, { passive: true });
+            }
+
+            async function deleteLogEntry(logId, rowWrapper) {
+                try {
+                    const res = await fetch(`/api/logs/${logId}`, {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) {
+                        showToast("Transaction deleted successfully", "success");
+                        rowWrapper.style.transition = "max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out";
+                        rowWrapper.style.maxHeight = rowWrapper.offsetHeight + "px";
+                        rowWrapper.offsetHeight;
+                        rowWrapper.style.maxHeight = "0";
+                        rowWrapper.style.opacity = "0";
+                        rowWrapper.style.paddingTop = "0";
+                        rowWrapper.style.paddingBottom = "0";
+                        rowWrapper.style.border = "none";
+                        setTimeout(() => {
+                            rowWrapper.remove();
+                            if (historyTableBody.children.length === 0) {
+                                historyNoData.style.display = "block";
+                            }
+                        }, 300);
+                    } else {
+                        const err = await res.json();
+                        showToast("Error deleting: " + err.detail, "error");
+                    }
+                } catch (e) {
+                    showToast("Failed to delete transaction: " + e, "error");
+                }
+            }
+
             // History Modal Logic
             const historyModal = document.getElementById('historyModal');
             const openHistoryBtn = document.getElementById('historyLogLink');
@@ -1425,26 +1543,49 @@ LOADING_HTML = """
                     }
 
                     logs.forEach(log => {
-                        const row = document.createElement("tr");
+                        const rowWrapper = document.createElement("div");
+                        rowWrapper.className = "history-row-wrapper";
 
-                        // Merchant
-                        const merchantCell = document.createElement("td");
+                        // Delete button
+                        const deleteBtn = document.createElement("div");
+                        deleteBtn.className = "history-row-delete-btn";
+                        deleteBtn.textContent = "Delete";
+                        deleteBtn.onclick = async (e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete transaction for "${log.merchant}"?`)) {
+                                await deleteLogEntry(log.id, rowWrapper);
+                            }
+                        };
+                        rowWrapper.appendChild(deleteBtn);
+
+                        // Content row
+                        const contentRow = document.createElement("div");
+                        contentRow.className = "history-row-content";
+
+                        // Merchant column
+                        const merchantCol = document.createElement("div");
+                        merchantCol.style.flex = "2";
+                        merchantCol.style.textAlign = "left";
+                        
                         const merchantText = log.merchant;
                         const cashEmoji = log.is_cash ? " 💵" : "";
 
                         if (log.monarch_tx_id) {
                             const deepLink = `intent://transactions/${log.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${log.monarch_tx_id};end`;
-                            merchantCell.innerHTML = `<a href="${deepLink}" target="_blank" style="text-decoration: underline; color: #667eea;" title="View in Monarch">${merchantText}</a>${cashEmoji}`;
+                            merchantCol.innerHTML = `<a href="${deepLink}" target="_blank" style="text-decoration: underline; color: #667eea;" title="View in Monarch">${merchantText}</a>${cashEmoji}`;
                         } else {
-                            merchantCell.textContent = merchantText + cashEmoji;
+                            merchantCol.textContent = merchantText + cashEmoji;
                         }
-                        row.appendChild(merchantCell);
+                        contentRow.appendChild(merchantCol);
 
-                        // Amount (signed, green/red)
-                        const amountCell = document.createElement("td");
-                        amountCell.style.textAlign = "right";
+                        // Amount column
+                        const amountCol = document.createElement("div");
+                        amountCol.style.flex = "1";
+                        amountCol.style.textAlign = "right";
+                        amountCol.style.marginRight = "12px";
+                        
                         const isPositive = log.amount >= 0;
-                        amountCell.className = isPositive ? "amount-green" : "amount-red";
+                        amountCol.className = isPositive ? "amount-green" : "amount-red";
 
                         const getCurrencySymbol = (code) => {
                             if (code === "USD") return "$";
@@ -1457,24 +1598,29 @@ LOADING_HTML = """
                         const symbol = getCurrencySymbol(log.currency);
                         const prefix = isPositive ? "+" : "-";
                         const absAmount = Math.abs(log.amount).toFixed(2);
-
                         let amountText = `${prefix}${symbol}${absAmount}`;
 
                         if (log.original_amount && log.original_currency) {
                             const originalText = `(${parseFloat(log.original_amount).toFixed(2)} ${log.original_currency})`;
-                            amountCell.innerHTML = `<span>${amountText}</span><br><span style="font-size: 0.75rem; color: #352224; font-style: italic; font-weight: normal;">${originalText}</span>`;
+                            amountCol.innerHTML = `<span>${amountText}</span><br><span style="font-size: 0.75rem; color: #352224; font-style: italic; font-weight: normal;">${originalText}</span>`;
                         } else {
-                            amountCell.textContent = amountText;
+                            amountCol.textContent = amountText;
                         }
-                        row.appendChild(amountCell);
+                        contentRow.appendChild(amountCol);
 
-                        // Date
-                        const dateCell = document.createElement("td");
-                        dateCell.style.textAlign = "center";
-                        dateCell.textContent = log.date;
-                        row.appendChild(dateCell);
+                        // Date column
+                        const dateCol = document.createElement("div");
+                        dateCol.style.flex = "1";
+                        dateCol.style.textAlign = "center";
+                        dateCol.style.maxWidth = "90px";
+                        dateCol.textContent = log.date;
+                        contentRow.appendChild(dateCol);
 
-                        historyTableBody.appendChild(row);
+                        rowWrapper.appendChild(contentRow);
+                        
+                        initSwipeToDelete(rowWrapper);
+
+                        historyTableBody.appendChild(rowWrapper);
                     });
                 } catch (err) {
                     console.error(err);
@@ -1897,6 +2043,58 @@ async def get_logs(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         print(f"Error fetching logs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/logs/{log_id}")
+async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Delete a history log entry, and optionally delete the transaction in Monarch
+    and the local parsed Transaction record.
+    """
+    try:
+        from .models import Log, Transaction
+        log_stmt = select(Log).where(Log.id == log_id)
+        log_result = await db.execute(log_stmt)
+        log_entry = log_result.scalar_one_or_none()
+        
+        if not log_entry:
+            raise HTTPException(status_code=404, detail="Log entry not found")
+            
+        # Try to delete from Monarch Money if monarch_tx_id exists
+        if log_entry.monarch_tx_id:
+            try:
+                creds_result = await db.execute(select(Credentials))
+                creds = creds_result.scalars().first()
+                if creds:
+                    mm = await get_monarch_client(db, creds.id)
+                    await mm.delete_transaction(log_entry.monarch_tx_id)
+                    print(f"Deleted transaction {log_entry.monarch_tx_id} in Monarch Money.")
+            except Exception as mm_err:
+                print(f"⚠️ Failed to delete transaction {log_entry.monarch_tx_id} in Monarch Money: {mm_err}")
+
+        # Delete local Transaction cache if it matches the same monarch_tx_id
+        if log_entry.monarch_tx_id:
+            tx_stmt = select(Transaction)
+            tx_result = await db.execute(tx_stmt)
+            transactions = tx_result.scalars().all()
+            for tx in transactions:
+                if tx.parsed_data and tx.parsed_data.get("monarch_tx_id") == log_entry.monarch_tx_id:
+                    await db.delete(tx)
+                    print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
+                    break
+
+        # Delete Log entry
+        await db.delete(log_entry)
+        await db.commit()
+        
+        return {"status": "success", "message": "Log entry and transaction deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # =============================================================================
 # 🔥 IGNITE — FIRE Simulation Routes
