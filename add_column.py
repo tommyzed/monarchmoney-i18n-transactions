@@ -7,21 +7,21 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
-import urllib.parse
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 import ssl
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 
 async def main():
-    parsed = urllib.parse.urlparse(DATABASE_URL)
-    query_params = urllib.parse.parse_qs(parsed.query)
+    parsed = urlparse(DATABASE_URL)
+    query_params = parse_qs(parsed.query)
     
-    new_query = urllib.parse.urlencode({
+    new_query = urlencode({
         k: v for k, v in query_params.items() 
         if k not in ['sslmode', 'channel_binding']
     }, doseq=True)
     
-    clean_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+    clean_url = urlunparse(parsed._replace(query=new_query))
     
     ssl_ctx = ssl.create_default_context()
     ssl_ctx.check_hostname = False
