@@ -1,5 +1,4 @@
 import asyncio
-import os
 from sqlalchemy import text
 from bridge_app.database import engine
 
