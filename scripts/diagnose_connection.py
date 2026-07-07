@@ -2,7 +2,6 @@ import requests
 import asyncio
 import aiohttp
 import subprocess
-import sys
 
 URL = "https://api.monarchmoney.com/auth/login/"
 
