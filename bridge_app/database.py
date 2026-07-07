@@ -13,10 +13,12 @@ import urllib.parse
 import ssl
 
 # Fix driver and sslmode for asyncpg
-if DATABASE_URL.startswith("postgresql"):
+if DATABASE_URL.startswith("postgres"):
     # Ensure correct driver
-    if DATABASE_URL.startswith("postgresql://"):
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     
     # Parse query params robustly
     parsed = urllib.parse.urlparse(DATABASE_URL)
