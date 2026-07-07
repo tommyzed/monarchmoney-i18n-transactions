@@ -3166,20 +3166,34 @@ class MonarchMoney(object):
 
         session_data = {"token": self._token}
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-        with open(filename, "wb") as fh:
-            pickle.dump(session_data, fh)
+        with open(filename, "w") as fh:
+            json.dump(session_data, fh)
 
     def load_session(self, filename: Optional[str] = None) -> None:
         """
-        Loads pre-existing auth token from a Python pickle file.
+        Loads pre-existing auth token from a JSON or Python pickle file.
         """
+        import io
+
+        class RestrictedUnpickler(pickle.Unpickler):
+            def find_class(self, module, name):
+                raise pickle.UnpicklingError(f"Global '{module}.{name}' is forbidden")
+
         if filename is None:
             filename = self._session_file
 
         with open(filename, "rb") as fh:
-            data = pickle.load(fh)
-            self.set_token(data["token"])
-            self._headers["Authorization"] = f"Token {self._token}"
+            content = fh.read()
+
+        try:
+            # Try to load as JSON first
+            data = json.loads(content.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            # Fall back to restricted unpickling for older sessions
+            data = RestrictedUnpickler(io.BytesIO(content)).load()
+
+        self.set_token(data["token"])
+        self._headers["Authorization"] = f"Token {self._token}"
 
     def delete_session(self, filename: Optional[str] = None) -> None:
         """
