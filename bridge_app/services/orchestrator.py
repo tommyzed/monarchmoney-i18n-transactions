@@ -221,15 +221,28 @@ async def _push_to_monarch(data: dict, db: AsyncSession, report_func):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Monarch Error: {str(e)}")
 
+_CATEGORY_EMOJI_CACHE = {}
+
 async def _fetch_category_emoji(data: dict, db: AsyncSession):
     try:
         if data.get("category_name"):
+            category_name = data["category_name"]
+            if category_name in _CATEGORY_EMOJI_CACHE:
+                emoji = _CATEGORY_EMOJI_CACHE[category_name]
+                if emoji:
+                    data["category_emoji"] = emoji
+                return
+
             from ..models import Category
-            stmt = select(Category).where(Category.category_name == data["category_name"])
+            stmt = select(Category).where(Category.category_name == category_name)
             result = await db.execute(stmt)
             cat = result.scalar_one_or_none()
-            if cat and cat.category_emoji:
-                data["category_emoji"] = cat.category_emoji
+
+            emoji = cat.category_emoji if cat else None
+            _CATEGORY_EMOJI_CACHE[category_name] = emoji
+
+            if emoji:
+                data["category_emoji"] = emoji
     except Exception as e:
         print(f"Failed to fetch category emoji: {e}")
 
