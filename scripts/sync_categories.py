@@ -51,6 +51,10 @@ async def sync_categories():
             monarch_categories = cat_data.get('categories', [])
             print(f"✅ Found {len(monarch_categories)} categories in Monarch.")
             
+            # Fetch all existing categories upfront to avoid N+1 queries
+            all_categories_result = await db.execute(select(Category))
+            existing_categories = {cat.category_name: cat for cat in all_categories_result.scalars()}
+
             count_new = 0
             count_updated = 0
             
@@ -60,9 +64,7 @@ async def sync_categories():
                 emoji = guess_emoji(name)
                 
                 # Check if exists by Name
-                stmt = select(Category).where(Category.category_name == name)
-                result = await db.execute(stmt)
-                existing = result.scalar_one_or_none()
+                existing = existing_categories.get(name)
                 
                 if existing:
                     # Update ID if missing
