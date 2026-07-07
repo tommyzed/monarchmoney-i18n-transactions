@@ -1,7 +1,7 @@
 import asyncio
 import sys
 from sqlalchemy import select, func
-from bridge_app.database import get_db, engine, Base
+from bridge_app.database import get_db
 from bridge_app.models import MerchantMapping
 
 async def check_mappings(search_term=None):
