@@ -1,7 +1,6 @@
 import asyncio
 import os
 from sqlalchemy.future import select
-from sqlalchemy import update
 from bridge_app.database import AsyncSessionLocal
 from bridge_app.models import Credentials, Category
 from bridge_app.services.monarch import get_monarch_client
