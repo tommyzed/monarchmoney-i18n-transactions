@@ -1,7 +1,8 @@
 import asyncio
 from bridge_app.database import engine, Base
 # Import models to ensure they are registered on Base.metadata
-from bridge_app.models import Credentials, Transaction, MerchantMapping, Category, FireSettings, Log
+import bridge_app.models  # noqa: F401
+
 
 async def main():
     print("🚀 Initializing database schema (creating tables)...")
