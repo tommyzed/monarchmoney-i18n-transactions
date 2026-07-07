@@ -473,6 +473,31 @@ LOADING_HTML = """
                 cursor: pointer;
                 box-sizing: border-box;
             }
+            .history-row-delete-icon-btn {
+                background: none;
+                border: none;
+                color: #ef4444;
+                font-size: 1.4rem;
+                cursor: pointer;
+                padding: 0 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+                opacity: 0.5;
+                width: 30px;
+                height: 30px;
+                flex-shrink: 0;
+                border-radius: 50%;
+            }
+
+            .history-row-delete-icon-btn:hover {
+                background-color: rgba(239, 68, 68, 0.1);
+                color: #dc2626;
+                opacity: 1;
+                transform: scale(1.1);
+            }
+
             .history-row-content {
                 width: 100%;
                 display: flex;
@@ -486,7 +511,7 @@ LOADING_HTML = """
             
             @media (hover: hover) {
                 .history-row-wrapper:hover {
-                    transform: translateX(-80px);
+                    background: rgba(255, 255, 255, 0.15);
                 }
             }
 
@@ -759,7 +784,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260702.1849 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260707.1715 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -827,6 +852,7 @@ LOADING_HTML = """
                         <div class="history-header-merchant">Merchant</div>
                         <div class="history-header-amount">Amount</div>
                         <div class="history-header-date">Date</div>
+                        <div style="width: 30px; flex-shrink: 0;"></div>
                     </div>
                     <div id="historyTableBody">
                         <!-- Loaded dynamically -->
@@ -1575,13 +1601,22 @@ LOADING_HTML = """
                 fetchHistoryLogs();
             }
 
+            function dismissDeleteConfirmation() {
+                const toast = document.getElementById("toast");
+                if (toast && toast.className.includes("show") && document.getElementById("toastConfirmBtn")) {
+                    toast.className = toast.className.replace("show", "");
+                }
+            }
+
             closeHistoryBtn.onclick = function () {
                 historyModal.style.display = "none";
+                dismissDeleteConfirmation();
             }
 
             window.addEventListener('click', (event) => {
                 if (event.target === historyModal) {
                     historyModal.style.display = "none";
+                    dismissDeleteConfirmation();
                 }
             });
 
@@ -1663,6 +1698,19 @@ LOADING_HTML = """
                         dateCol.style.maxWidth = "90px";
                         dateCol.textContent = log.date;
                         contentRow.appendChild(dateCol);
+
+                        // Dedicated inline delete button (X icon)
+                        const inlineDeleteBtn = document.createElement("button");
+                        inlineDeleteBtn.className = "history-row-delete-icon-btn";
+                        inlineDeleteBtn.innerHTML = "&times;";
+                        inlineDeleteBtn.title = "Delete transaction";
+                        inlineDeleteBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            showConfirmToast(`Delete "${log.merchant}"?`, async () => {
+                                await deleteLogEntry(log.id, rowWrapper);
+                            });
+                        };
+                        contentRow.appendChild(inlineDeleteBtn);
 
                         rowWrapper.appendChild(contentRow);
 
