@@ -96,7 +96,7 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
 app.add_middleware(GhostSecurityMiddleware)
 
 @app.get("/s")
-async def activate(s: str):
+async def activate(request: Request, s: str):
     """
     Sets the Ghost Cookie to unlock the device.
     Usage: /s?s=YOUR_SECRET
@@ -131,6 +131,8 @@ async def activate(s: str):
     </html>
     """
     
+    is_secure = request.url.scheme == "https"
+
     response = HTMLResponse(content=html_content)
     response.set_cookie(
         key=DEVICE_TOKEN_COOKIE,
@@ -138,7 +140,7 @@ async def activate(s: str):
         max_age=60*60*24*365*10, # 10 years
         httponly=True,
         samesite="lax",
-        secure=False  # Set to True if running behind HTTPS
+        secure=is_secure
     )
     return response
 
