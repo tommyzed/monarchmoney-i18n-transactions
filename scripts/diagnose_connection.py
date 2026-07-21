@@ -2,6 +2,7 @@ import requests
 import asyncio
 import aiohttp
 import subprocess
+from urllib.parse import urlparse
 
 URL = "https://api.monarchmoney.com/auth/login/"
 
@@ -30,7 +31,11 @@ async def test_aiohttp():
 def test_curl():
     print("\n--- Testing with 'curl' (System) ---")
     try:
-        cmd = ["curl", "-I", URL]
+        parsed_url = urlparse(URL)
+        if parsed_url.scheme not in ("http", "https"):
+            raise ValueError("URL scheme must be http or https")
+
+        cmd = ["curl", "-I", "--", URL]
         result = subprocess.run(cmd, capture_output=True, text=True)
         print(result.stdout)
         if result.returncode != 0:
