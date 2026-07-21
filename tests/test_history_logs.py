@@ -55,7 +55,7 @@ async def test_orchestrator_saves_log():
         with patch('bridge_app.services.currency.get_exchange_rate', new_callable=AsyncMock) as mock_rate:
             mock_rate.return_value = 1.10
             
-            result = await _process_transaction_data(data, "hash123", mock_db, mock_report, force_override=True)
+            await _process_transaction_data(data, "hash123", mock_db, mock_report, force_override=True)
             
             assert mock_db.add.call_count == 2
             
