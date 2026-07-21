@@ -1,5 +1,4 @@
 import asyncio
-import os
 from sqlalchemy.future import select
 from bridge_app.database import AsyncSessionLocal
 from bridge_app.models import Credentials, Category
