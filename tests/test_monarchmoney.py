@@ -241,6 +241,60 @@ class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(LoginFailedException):
             await self.monarch_money.interactive_login(use_saved_session=False)
 
+    @patch.object(Client, "execute_async")
+    async def test_create_transaction_category(self, mock_execute_async):
+        """
+        Test the create_transaction_category method.
+        """
+        from datetime import datetime
+        mock_execute_async.return_value = {
+            "createCategory": {
+                "errors": None,
+                "category": {
+                    "id": "test_category_id",
+                    "name": "Test Category",
+                    "__typename": "Category",
+                },
+                "__typename": "CreateCategoryPayload",
+            }
+        }
+
+        group_id = "test_group_id"
+        category_name = "Test Category"
+        icon = "\U00002753"
+        rollover_start_month = datetime(2025, 1, 1)
+        rollover_enabled = True
+        rollover_type = "monthly"
+
+        result = await self.monarch_money.create_transaction_category(
+            group_id=group_id,
+            transaction_category_name=category_name,
+            rollover_start_month=rollover_start_month,
+            icon=icon,
+            rollover_enabled=rollover_enabled,
+            rollover_type=rollover_type,
+        )
+
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "Web_CreateCategory")
+        self.assertEqual(
+            kwargs["variable_values"],
+            {
+                "input": {
+                    "group": group_id,
+                    "name": category_name,
+                    "icon": icon,
+                    "rolloverEnabled": rollover_enabled,
+                    "rolloverType": rollover_type,
+                    "rolloverStartMonth": "2025-01-01",
+                }
+            },
+        )
+        self.assertEqual(
+            result["createCategory"]["category"]["id"], "test_category_id"
+        )
+
     @classmethod
     def loadTestData(cls, filename) -> dict:
         filename = f"{os.path.dirname(os.path.realpath(__file__))}/{filename}"
