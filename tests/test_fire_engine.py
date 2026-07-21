@@ -110,6 +110,21 @@ class TestFireEngine(unittest.TestCase):
 
         self.assertEqual(result.years[0], 35)
 
+    def test_fire_date_impossible(self):
+        """Verify that when retirement is impossible, _calc_fire_date returns None."""
+        inp = self._default_input(
+            current_portfolio=0,
+            annual_contribution=0,
+            annual_retirement_spending=1_000_000,
+            current_age=30,
+            retirement_age=65,
+            final_age=85,
+        )
+        result = simulate(inp)
+
+        self.assertIsNone(result.fire_date_age)
+        self.assertIsNone(result.fire_date_year)
+
 
 class TestFilterAccounts(unittest.TestCase):
     """Tests for the account filtering logic."""
