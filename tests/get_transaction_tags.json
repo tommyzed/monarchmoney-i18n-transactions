@@ -1,0 +1,20 @@
+{
+    "householdTransactionTags": [
+        {
+            "id": "tag-1",
+            "name": "Tax-Deductible",
+            "color": "#FF0000",
+            "order": 0,
+            "transactionCount": 5,
+            "__typename": "TransactionTag"
+        },
+        {
+            "id": "tag-2",
+            "name": "Reimbursable",
+            "color": "#00FF00",
+            "order": 1,
+            "transactionCount": 12,
+            "__typename": "TransactionTag"
+        }
+    ]
+}
