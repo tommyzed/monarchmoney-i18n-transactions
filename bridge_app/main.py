@@ -2098,22 +2098,20 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
         )
 
         # Update local Transaction table's parsed_data JSON if it exists
-        tx_stmt = select(Transaction)
+        tx_stmt = select(Transaction).where(Transaction.parsed_data["monarch_tx_id"].as_string() == req.monarch_tx_id)
         tx_result = await db.execute(tx_stmt)
-        transactions = tx_result.scalars().all()
-        for tx in transactions:
-            if tx.parsed_data and tx.parsed_data.get("monarch_tx_id") == req.monarch_tx_id:
-                parsed = dict(tx.parsed_data)
-                parsed["category_name"] = req.category_name
-                if category.category_emoji:
-                    parsed["category_emoji"] = category.category_emoji
-                else:
-                    parsed.pop("category_emoji", None)
-                tx.parsed_data = parsed
-                from sqlalchemy.orm.attributes import flag_modified
-                flag_modified(tx, "parsed_data")
-                await db.commit()
-                break
+        tx = tx_result.scalar_one_or_none()
+        if tx:
+            parsed = dict(tx.parsed_data) if tx.parsed_data else {}
+            parsed["category_name"] = req.category_name
+            if category.category_emoji:
+                parsed["category_emoji"] = category.category_emoji
+            else:
+                parsed.pop("category_emoji", None)
+            tx.parsed_data = parsed
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(tx, "parsed_data")
+            await db.commit()
 
         return {"status": "success", "category_emoji": category.category_emoji}
     except HTTPException:
