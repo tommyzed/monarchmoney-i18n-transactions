@@ -241,6 +241,101 @@ class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(LoginFailedException):
             await self.monarch_money.interactive_login(use_saved_session=False)
 
+    @patch.object(Client, "execute_async")
+    async def test_get_aggregate_snapshots_default_normal_day(self, mock_execute_async):
+        import datetime
+        class MetaMockDate(type):
+            def __instancecheck__(cls, instance):
+                return isinstance(instance, (datetime.date, datetime.datetime))
+
+        class MockDate(datetime.date, metaclass=MetaMockDate):
+            @classmethod
+            def today(cls):
+                return datetime.date(2023, 5, 15)
+
+        mock_execute_async.return_value = {"aggregateSnapshots": []}
+
+        with patch("monarchmoney.monarchmoney.date", MockDate):
+            await self.monarch_money.get_aggregate_snapshots()
+
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "GetAggregateSnapshots")
+        self.assertEqual(
+            kwargs["variable_values"]["filters"]["startDate"],
+            "1873-05-15",
+        )
+
+    @patch.object(Client, "execute_async")
+    async def test_get_aggregate_snapshots_default_leap_day(self, mock_execute_async):
+        import datetime
+        class MetaMockDate(type):
+            def __instancecheck__(cls, instance):
+                return isinstance(instance, (datetime.date, datetime.datetime))
+
+        class MockDate(datetime.date, metaclass=MetaMockDate):
+            @classmethod
+            def today(cls):
+                return datetime.date(2024, 2, 29)
+
+        mock_execute_async.return_value = {"aggregateSnapshots": []}
+
+        with patch("monarchmoney.monarchmoney.date", MockDate):
+            await self.monarch_money.get_aggregate_snapshots()
+
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "GetAggregateSnapshots")
+        self.assertEqual(
+            kwargs["variable_values"]["filters"]["startDate"],
+            "1874-02-28",
+        )
+
+    @patch.object(Client, "execute_async")
+    async def test_get_aggregate_snapshots_explicit_strings(self, mock_execute_async):
+        mock_execute_async.return_value = {"aggregateSnapshots": []}
+
+        await self.monarch_money.get_aggregate_snapshots(
+            start_date="2024-01-01",
+            end_date="2024-12-31",
+            account_type="depository",
+        )
+
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "GetAggregateSnapshots")
+        self.assertEqual(
+            kwargs["variable_values"]["filters"],
+            {
+                "startDate": "2024-01-01",
+                "endDate": "2024-12-31",
+                "accountType": "depository",
+            },
+        )
+
+    @patch.object(Client, "execute_async")
+    async def test_get_aggregate_snapshots_explicit_dates(self, mock_execute_async):
+        import datetime
+        mock_execute_async.return_value = {"aggregateSnapshots": []}
+
+        await self.monarch_money.get_aggregate_snapshots(
+            start_date=datetime.date(2024, 1, 1),
+            end_date=datetime.date(2024, 12, 31),
+            account_type="depository",
+        )
+
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "GetAggregateSnapshots")
+        self.assertEqual(
+            kwargs["variable_values"]["filters"],
+            {
+                "startDate": "2024-01-01",
+                "endDate": "2024-12-31",
+                "accountType": "depository",
+            },
+        )
+
     @classmethod
     def loadTestData(cls, filename) -> dict:
         filename = f"{os.path.dirname(os.path.realpath(__file__))}/{filename}"

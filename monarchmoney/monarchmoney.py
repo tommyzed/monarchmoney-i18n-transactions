@@ -12,6 +12,7 @@ from io import StringIO
 from datetime import datetime, date, timedelta
 from typing import Any, Dict, List, Optional, Union
 
+from dateutil.relativedelta import relativedelta
 import oathtool
 from aiohttp import ClientSession, FormData
 from gql import Client, gql
@@ -391,11 +392,12 @@ class MonarchMoney(object):
         if start_date is None:
             # The mobile app defaults to 150 years ago today
             today = date.today()
-            try:
-                start_date = today.replace(year=today.year - 150).isoformat()
-            except ValueError:
-                # Handle leap year bug (Feb 29 -> Feb 28)
-                start_date = today.replace(year=today.year - 150, day=28).isoformat()
+            start_date = (today - relativedelta(years=150)).isoformat()
+        elif isinstance(start_date, date):
+            start_date = start_date.isoformat()
+
+        if isinstance(end_date, date):
+            end_date = end_date.isoformat()
 
         return await self.gql_call(
             operation="GetAggregateSnapshots",
