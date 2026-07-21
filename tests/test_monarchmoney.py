@@ -1,5 +1,4 @@
 import os
-import pickle
 import unittest
 from unittest.mock import patch
 
@@ -15,14 +14,14 @@ class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
         Set up any necessary data or variables for the tests here.
         This method will be called before each test method is executed.
         """
-        with open("temp_session.pickle", "wb") as fh:
+        with open("temp_session.json", "w", encoding="utf-8") as fh:
             session_data = {
                 "cookies": {"test_cookie": "test_value"},
                 "token": "test_token",
             }
-            pickle.dump(session_data, fh)
+            json.dump(session_data, fh)
         self.monarch_money = MonarchMoney()
-        self.monarch_money.load_session("temp_session.pickle")
+        self.monarch_money.load_session("temp_session.json")
 
     @patch.object(Client, "execute_async")
     async def test_get_accounts(self, mock_execute_async):
@@ -252,7 +251,7 @@ class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
         Tear down any necessary data or variables for the tests here.
         This method will be called after each test method is executed.
         """
-        self.monarch_money.delete_session("temp_session.pickle")
+        self.monarch_money.delete_session("temp_session.json")
 
 
 if __name__ == "__main__":

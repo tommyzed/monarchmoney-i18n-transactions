@@ -5,7 +5,6 @@ import getpass
 import json
 import mimetypes
 import os
-import pickle
 import time
 from dataclasses import dataclass
 from io import StringIO
@@ -24,7 +23,7 @@ DEFAULT_RECORD_LIMIT = 100
 DEFAULT_DELAY_SECS = 10
 ERRORS_KEY = "error_code"
 SESSION_DIR = ".mm"
-SESSION_FILE = f"{SESSION_DIR}/mm_session.pickle"
+SESSION_FILE = f"{SESSION_DIR}/mm_session.json"
 DEFAULT_TIMEOUT_SECS = 300
 
 
@@ -3174,26 +3173,15 @@ class MonarchMoney(object):
 
     def load_session(self, filename: Optional[str] = None) -> None:
         """
-        Loads pre-existing auth token from a JSON or Python pickle file.
+        Loads pre-existing auth token from a JSON file.
         """
-        import io
-
-        class RestrictedUnpickler(pickle.Unpickler):
-            def find_class(self, module, name):
-                raise pickle.UnpicklingError(f"Global '{module}.{name}' is forbidden")
-
         if filename is None:
             filename = self._session_file
 
         with open(filename, "rb") as fh:
             content = fh.read()
 
-        try:
-            # Try to load as JSON first
-            data = json.loads(content.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            # Fall back to restricted unpickling for older sessions
-            data = RestrictedUnpickler(io.BytesIO(content)).load()
+        data = json.loads(content.decode("utf-8"))
 
         self.set_token(data["token"])
         self._headers["Authorization"] = f"Token {self._token}"
