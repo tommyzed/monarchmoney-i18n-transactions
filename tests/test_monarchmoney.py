@@ -221,6 +221,88 @@ class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(result["categoryGroups"]), 2, "Expected 2 category groups")
         self.assertEqual(len(result["goalsV2"]), 1, "Expected 1 goal")
 
+    @patch.object(Client, "execute_async")
+    async def test_create_transaction_all_params(self, mock_execute_async):
+        """
+        Test the create_transaction method with all parameters specified.
+        """
+        mock_execute_async.return_value = {
+            "createTransaction": {
+                "errors": None,
+                "transaction": {
+                    "id": "12345"
+                },
+                "__typename": "CreateTransactionMutation"
+            }
+        }
+
+        result = await self.monarch_money.create_transaction(
+            date="2025-01-01",
+            account_id="acc_123",
+            amount=123.456,
+            merchant_name="Test Merchant",
+            category_id="cat_123",
+            notes="Test notes",
+            update_balance=True,
+        )
+
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "Common_CreateTransactionMutation")
+        self.assertEqual(kwargs["variable_values"], {
+            "input": {
+                "date": "2025-01-01",
+                "accountId": "acc_123",
+                "amount": 123.46,
+                "merchantName": "Test Merchant",
+                "categoryId": "cat_123",
+                "notes": "Test notes",
+                "shouldUpdateBalance": True,
+            }
+        })
+        self.assertIsNotNone(result, "Expected result to not be None")
+        self.assertEqual(result["createTransaction"]["transaction"]["id"], "12345")
+
+    @patch.object(Client, "execute_async")
+    async def test_create_transaction_defaults(self, mock_execute_async):
+        """
+        Test the create_transaction method with default parameters.
+        """
+        mock_execute_async.return_value = {
+            "createTransaction": {
+                "errors": None,
+                "transaction": {
+                    "id": "54321"
+                },
+                "__typename": "CreateTransactionMutation"
+            }
+        }
+
+        result = await self.monarch_money.create_transaction(
+            date="2025-02-02",
+            account_id="acc_456",
+            amount=100.0,
+            merchant_name="Another Merchant",
+            category_id="cat_456",
+        )
+
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "Common_CreateTransactionMutation")
+        self.assertEqual(kwargs["variable_values"], {
+            "input": {
+                "date": "2025-02-02",
+                "accountId": "acc_456",
+                "amount": 100.0,
+                "merchantName": "Another Merchant",
+                "categoryId": "cat_456",
+                "notes": "",
+                "shouldUpdateBalance": False,
+            }
+        })
+        self.assertIsNotNone(result, "Expected result to not be None")
+        self.assertEqual(result["createTransaction"]["transaction"]["id"], "54321")
+
     async def test_login(self):
         """
         Test the login method with empty values for email and password.
