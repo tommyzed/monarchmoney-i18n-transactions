@@ -9,7 +9,16 @@ from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, push_transaction
 from starlette.concurrency import run_in_threadpool
 
-async def process_manual_transaction(manual_data: dict, db: AsyncSession, progress_callback=None, force_override: bool = False):
+class CachedCredentials:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def __repr__(self):
+        safe_keys = {"id", "email", "monarch_token"}
+        attrs = ", ".join(f"{k}={repr(v)}" for k, v in self.__dict__.items() if k in safe_keys)
+        return f"<CachedCredentials {attrs}>"
+
+async def process_manual_transaction(manual_data: dict, db: AsyncSession, progress_callback=None, force_override: bool = False, creds=None):
     """
     Process a manually entered transaction.
     """
@@ -25,9 +34,9 @@ async def process_manual_transaction(manual_data: dict, db: AsyncSession, progre
     data_string = json.dumps(manual_data, sort_keys=True)
     image_hash = "manual_" + hashlib.sha256(data_string.encode()).hexdigest()
     
-    return await _process_transaction_data(manual_data, image_hash, db, report, force_override=force_override)
+    return await _process_transaction_data(manual_data, image_hash, db, report, force_override=force_override, creds=creds)
 
-async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None, user_currency: str = None, force_override: bool = False):
+async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None, user_currency: str = None, force_override: bool = False, creds=None):
     """
     Process a file-based transaction (OCR).
     """
@@ -107,7 +116,7 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
         # Actually logic is in the shared block below.
         pass
 
-    return await _process_transaction_data(data, image_hash, db, report, user_currency, force_override=force_override)
+    return await _process_transaction_data(data, image_hash, db, report, user_currency, force_override=force_override, creds=creds)
 
 
 async def _check_duplicates(image_hash: str, db: AsyncSession, report_func, force_override: bool):
@@ -191,22 +200,25 @@ async def _convert_currency(data: dict, report_func, user_currency_override: str
         print(f"Skipping conversion: '{target_original}' not in supported list.")
         data["currency"] = target_original
 
-async def _push_to_monarch(data: dict, db: AsyncSession, report_func):
+async def _push_to_monarch(data: dict, db: AsyncSession, report_func, creds=None):
     await report_func("Connecting to Monarch Money...", 70)
-    from ..models import Credentials
-    import os
-    mm_email = os.getenv("MM_EMAIL")
-    print(f"DEBUG ORCHESTRATOR: MM_EMAIL from env is: {repr(mm_email)}")
     
-    if mm_email:
-        mm_email = mm_email.strip()
-        print(f"DEBUG ORCHESTRATOR: Searching for credentials with email: {mm_email}")
-        creds_result = await db.execute(select(Credentials).where(Credentials.email == mm_email))
-    else:
-        print(f"DEBUG ORCHESTRATOR: No MM_EMAIL set, searching for any credential with a session")
-        creds_result = await db.execute(select(Credentials).where(Credentials.monarch_session.isnot(None)))
+    if creds is None:
+        from ..models import Credentials
+        import os
+        mm_email = os.getenv("MM_EMAIL")
+        print(f"DEBUG ORCHESTRATOR: MM_EMAIL from env is: {repr(mm_email)}")
+
+        if mm_email:
+            mm_email = mm_email.strip()
+            print(f"DEBUG ORCHESTRATOR: Searching for credentials with email: {mm_email}")
+            creds_result = await db.execute(select(Credentials).where(Credentials.email == mm_email))
+        else:
+            print(f"DEBUG ORCHESTRATOR: No MM_EMAIL set, searching for any credential with a session")
+            creds_result = await db.execute(select(Credentials).where(Credentials.monarch_session.isnot(None)))
+
+        creds = creds_result.scalars().first()
         
-    creds = creds_result.scalars().first()
     print(f"DEBUG ORCHESTRATOR: Found credentials: {creds}")
     
     if not creds:
@@ -283,7 +295,7 @@ async def _save_transaction_and_log(data: dict, image_hash: str, db: AsyncSessio
         
     await db.commit()
 
-async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSession, report_func, user_currency_override: str = None, force_override: bool = False):
+async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSession, report_func, user_currency_override: str = None, force_override: bool = False, creds=None):
     """
     Shared logic for processing transaction data, converting currency, pushing to Monarch, and saving.
     """
@@ -303,7 +315,7 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     await _convert_currency(data, report_func, user_currency_override)
 
     # 4. Monarch Push
-    await _push_to_monarch(data, db, report_func)
+    await _push_to_monarch(data, db, report_func, creds=creds)
 
     # 4b. Fetch Category Emoji
     await _fetch_category_emoji(data, db)

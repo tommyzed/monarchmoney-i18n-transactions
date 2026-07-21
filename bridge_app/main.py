@@ -163,6 +163,27 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
             jobs[job_id]["progress"] = percent
 
     try:
+        creds = None
+        try:
+            async with AsyncSessionLocal() as db:
+                mm_email = os.getenv("MM_EMAIL")
+                if mm_email:
+                    mm_email = mm_email.strip()
+                    creds_result = await db.execute(select(Credentials).where(Credentials.email == mm_email))
+                else:
+                    creds_result = await db.execute(select(Credentials).where(Credentials.monarch_session.isnot(None)))
+                db_creds = creds_result.scalars().first()
+                if db_creds:
+                    from .services.orchestrator import CachedCredentials
+                    # Copy all credential attributes to the cached object
+                    creds_data = {}
+                    for key in ["id", "email", "monarch_session", "monarch_token", "monarch_cookies"]:
+                        if hasattr(db_creds, key):
+                            creds_data[key] = getattr(db_creds, key)
+                    creds = CachedCredentials(**creds_data)
+        except Exception as e:
+            print(f"⚠️ Error pre-fetching credentials outside retry loop: {e}")
+
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -172,9 +193,9 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
                 async with AsyncSessionLocal() as db:
                     if manual_data:
                          from .services.orchestrator import process_manual_transaction
-                         result = await process_manual_transaction(manual_data, db, progress_callback=progress_callback, force_override=force_override)
+                         result = await process_manual_transaction(manual_data, db, progress_callback=progress_callback, force_override=force_override, creds=creds)
                     else:
-                         result = await process_transaction(content, db, progress_callback=progress_callback, user_currency=user_currency, force_override=force_override)
+                         result = await process_transaction(content, db, progress_callback=progress_callback, user_currency=user_currency, force_override=force_override, creds=creds)
                 
                 # Success
                 jobs[job_id] = {
