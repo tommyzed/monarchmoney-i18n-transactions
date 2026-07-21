@@ -16,6 +16,7 @@ from bridge_app.services.fire_engine import (
     filter_accounts,
     calc_monthly_spend,
     calculate_social_security_mba,
+    _round_list,
 )
 
 
@@ -315,6 +316,32 @@ class TestSocialSecurity(unittest.TestCase):
         self.assertEqual(inp.social_security_withdrawal_year, 2047)
         self.assertEqual(inp.social_security_withdrawal_month, 1)
         self.assertEqual(inp.social_security_mba, 0.0)
+
+
+class TestRoundList(unittest.TestCase):
+    """Tests for the _round_list helper function."""
+
+    def test_round_list_default_decimals(self):
+        """Should round to 0 decimal places by default."""
+        values = [1.2, 2.5, 3.7, -4.4, -4.6]
+        expected = [1.0, 2.0, 4.0, -4.0, -5.0]
+        self.assertEqual(_round_list(values), expected)
+
+    def test_round_list_positive_decimals(self):
+        """Should round to specified positive decimal places."""
+        values = [1.234, 2.567, 3.789, -4.432]
+        expected = [1.23, 2.57, 3.79, -4.43]
+        self.assertEqual(_round_list(values, 2), expected)
+
+    def test_round_list_negative_decimals(self):
+        """Should round to specified negative decimal places."""
+        values = [12.34, 56.78, 125.6, -44.32]
+        expected = [10.0, 60.0, 130.0, -40.0]
+        self.assertEqual(_round_list(values, -1), expected)
+
+    def test_round_list_empty(self):
+        """Should return empty list for empty input."""
+        self.assertEqual(_round_list([]), [])
 
 
 if __name__ == "__main__":
