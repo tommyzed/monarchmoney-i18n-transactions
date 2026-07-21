@@ -1970,12 +1970,17 @@ async def _update_history_log(db: AsyncSession, monarch_tx_id: str, new_date: st
         print(f"Failed to update history log entry: {e}")
 
 class UpdateDateRequest(BaseModel):
-    monarch_tx_id: str
-    new_date: str            # YYYY-MM-DD
+    monarch_tx_id: Optional[str] = None
+    new_date: Optional[str] = None            # YYYY-MM-DD
     original_currency: str   # e.g. "EUR" — the foreign currency before conversion
     original_amount: float   # The original foreign-currency amount
     is_credit: Optional[bool] = False
 
+    # Compatibility fields for alternate payload format
+    monarch_id: Optional[str] = None
+    date: Optional[str] = None
+
+@app.post("/api/update-date")
 @app.post("/api/transaction/update-date")
 async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Depends(get_db)):
     """
@@ -1987,6 +1992,14 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
     try:
         from .services.currency import get_exchange_rate
 
+        new_date = req.new_date or req.date
+        monarch_tx_id = req.monarch_tx_id or req.monarch_id
+
+        if not new_date:
+            raise HTTPException(status_code=422, detail="date or new_date is required")
+        if not monarch_tx_id:
+            raise HTTPException(status_code=422, detail="monarch_tx_id or monarch_id is required")
+
         creds_result = await db.execute(select(Credentials))
         creds = creds_result.scalars().first()
         if not creds:
@@ -1995,7 +2008,6 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
         mm = await get_monarch_client(db, creds.id)
         from .services.monarch import update_transaction_fields
 
-        new_date = req.new_date
         original_currency = req.original_currency.upper().strip()
         original_amount = req.original_amount
         is_credit = req.is_credit or False
@@ -2004,14 +2016,14 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
             # No conversion needed — just update the date
             await update_transaction_fields(
                 mm,
-                transaction_id=req.monarch_tx_id,
+                transaction_id=monarch_tx_id,
                 date=new_date,
             )
 
             # Update logs table record if it exists
-            await _update_history_log(db, req.monarch_tx_id, new_date)
+            await _update_history_log(db, monarch_tx_id, new_date)
 
-            print(f"Updated transaction {req.monarch_tx_id}: new date={new_date} (USD, no conversion)")
+            print(f"Updated transaction {monarch_tx_id}: new date={new_date} (USD, no conversion)")
             return {
                 "status": "success",
                 "new_date": new_date,
@@ -2034,17 +2046,17 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
 
             update_result = await update_transaction_fields(
                 mm,
-                transaction_id=req.monarch_tx_id,
+                transaction_id=monarch_tx_id,
                 date=new_date,
                 amount=signed_amount,
                 notes=notes,
             )
 
             # Update logs table record if it exists
-            await _update_history_log(db, req.monarch_tx_id, new_date, signed_amount)
+            await _update_history_log(db, monarch_tx_id, new_date, signed_amount)
 
             print(
-                f"Updated transaction {req.monarch_tx_id}: new date={new_date}, "
+                f"Updated transaction {monarch_tx_id}: new date={new_date}, "
                 f"{original_currency} {original_amount:.2f} -> USD {new_usd:.2f} @ {rate} "
                 f"(amount_updated={update_result['amount_updated']})"
             )
