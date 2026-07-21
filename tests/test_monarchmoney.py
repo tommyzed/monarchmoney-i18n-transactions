@@ -6,7 +6,7 @@ from unittest.mock import patch
 import json
 from gql import Client
 from monarchmoney import MonarchMoney
-from monarchmoney.monarchmoney import LoginFailedException
+from monarchmoney.monarchmoney import LoginFailedException, RequestFailedException
 
 
 class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
@@ -117,6 +117,54 @@ class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(result, "Expected result to not be None")
         self.assertEqual(result["deleteAccount"]["deleted"], True)
         self.assertEqual(result["deleteAccount"]["errors"], None)
+
+    @patch.object(Client, "execute_async")
+    async def test_delete_transaction_success(self, mock_execute_async):
+        """
+        Test the delete_transaction method on successful deletion.
+        """
+        mock_execute_async.return_value = {
+            "deleteTransaction": {
+                "deleted": True,
+                "errors": None,
+                "__typename": "DeleteTransactionMutation",
+            }
+        }
+
+        result = await self.monarch_money.delete_transaction("12345678-1234-1234-1234-123456789012")
+
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "Common_DeleteTransactionMutation")
+        self.assertEqual(
+            kwargs["variable_values"],
+            {"input": {"transactionId": "12345678-1234-1234-1234-123456789012"}}
+        )
+        self.assertTrue(result, "Expected delete_transaction to return True")
+
+    @patch.object(Client, "execute_async")
+    async def test_delete_transaction_failure(self, mock_execute_async):
+        """
+        Test the delete_transaction method when deletion fails and raises RequestFailedException.
+        """
+        mock_execute_async.return_value = {
+            "deleteTransaction": {
+                "deleted": False,
+                "errors": [{"message": "Transaction not found"}],
+                "__typename": "DeleteTransactionMutation",
+            }
+        }
+
+        with self.assertRaises(RequestFailedException):
+            await self.monarch_money.delete_transaction("12345678-1234-1234-1234-123456789012")
+
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "Common_DeleteTransactionMutation")
+        self.assertEqual(
+            kwargs["variable_values"],
+            {"input": {"transactionId": "12345678-1234-1234-1234-123456789012"}}
+        )
 
     @patch.object(Client, "execute_async")
     async def test_get_account_type_options(self, mock_execute_async):
