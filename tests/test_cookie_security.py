@@ -1,7 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
 from bridge_app.main import app
-import os
 
 @pytest.fixture(autouse=True)
 def setup_unlock_secret(monkeypatch):
