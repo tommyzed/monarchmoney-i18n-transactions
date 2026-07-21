@@ -241,6 +241,69 @@ class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(LoginFailedException):
             await self.monarch_money.interactive_login(use_saved_session=False)
 
+    @patch.object(Client, "execute_async")
+    async def test_get_cashflow_both_dates(self, mock_execute_async):
+        """
+        Test get_cashflow with both start_date and end_date provided.
+        """
+        mock_execute_async.return_value = {
+            "byCategory": [],
+            "byCategoryGroup": [],
+            "byMerchant": [],
+            "summary": {"summary": {"sumIncome": 100, "sumExpense": 50, "savings": 50, "savingsRate": 0.5}}
+        }
+        result = await self.monarch_money.get_cashflow(
+            limit=50,
+            start_date="2024-01-01",
+            end_date="2024-01-31"
+        )
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "Web_GetCashFlowPage")
+        self.assertEqual(kwargs["variable_values"]["limit"], 50)
+        self.assertEqual(kwargs["variable_values"]["filters"]["startDate"], "2024-01-01")
+        self.assertEqual(kwargs["variable_values"]["filters"]["endDate"], "2024-01-31")
+        self.assertIsNotNone(result)
+
+    @patch.object(Client, "execute_async")
+    async def test_get_cashflow_no_dates(self, mock_execute_async):
+        """
+        Test get_cashflow with no dates provided (should use start/end of current month).
+        """
+        mock_execute_async.return_value = {
+            "byCategory": [],
+            "byCategoryGroup": [],
+            "byMerchant": [],
+            "summary": {"summary": {"sumIncome": 100, "sumExpense": 50, "savings": 50, "savingsRate": 0.5}}
+        }
+        result = await self.monarch_money.get_cashflow()
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "Web_GetCashFlowPage")
+
+        # Verify default dates match the start and end of current month
+        start_month = self.monarch_money._get_start_of_current_month()
+        end_month = self.monarch_money._get_end_of_current_month()
+        self.assertEqual(kwargs["variable_values"]["filters"]["startDate"], start_month)
+        self.assertEqual(kwargs["variable_values"]["filters"]["endDate"], end_month)
+        self.assertIsNotNone(result)
+
+    async def test_get_cashflow_only_start_date(self):
+        """
+        Test get_cashflow raises Exception when only start_date is provided.
+        """
+        with self.assertRaises(Exception) as ctx:
+            await self.monarch_money.get_cashflow(start_date="2024-01-01")
+        self.assertIn("You must specify both a startDate and endDate", str(ctx.exception))
+
+    async def test_get_cashflow_only_end_date(self):
+        """
+        Test get_cashflow raises Exception when only end_date is provided.
+        """
+        with self.assertRaises(Exception) as ctx:
+            await self.monarch_money.get_cashflow(end_date="2024-01-31")
+        self.assertIn("You must specify both a startDate and endDate", str(ctx.exception))
+
     @classmethod
     def loadTestData(cls, filename) -> dict:
         filename = f"{os.path.dirname(os.path.realpath(__file__))}/{filename}"
