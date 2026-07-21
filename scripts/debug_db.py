@@ -19,8 +19,10 @@ if not DATABASE_URL:
     sys.exit(1)
 
 # Fix URL for asyncpg
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 # Handle SSL/Params logic from database.py to ensure we test the EXACT same way
 parsed = urllib.parse.urlparse(DATABASE_URL)
