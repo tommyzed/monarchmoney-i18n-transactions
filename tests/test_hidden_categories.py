@@ -3,7 +3,6 @@ from bridge_app.database import AsyncSessionLocal
 from bridge_app.models import Category
 from bridge_app.main import app
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy.future import select
 
 import hashlib
 import os
