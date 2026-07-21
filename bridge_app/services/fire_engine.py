@@ -8,6 +8,7 @@ Provides:
 - calc_retirement_probability(): % of simulations surviving to final age
 """
 
+from datetime import datetime
 import numpy as np
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
@@ -188,7 +189,6 @@ def simulate(inp: SimulationInput) -> SimulationResult:
             income = 0.0
 
         if inp.social_security_enabled and inp.social_security_mba > 0:
-            from datetime import datetime
             current_year = datetime.now().year
             sim_year = current_year + yr
             if sim_year > inp.social_security_withdrawal_year:
@@ -224,7 +224,6 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     required_spend = _calc_required_spend(inp, profile)
 
     # Calendar year for FIRE date
-    from datetime import datetime
     current_year = datetime.now().year
     fire_year = None
     if fire_age is not None:
@@ -296,7 +295,6 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
                 income = 0.0
 
             if inp.social_security_enabled and inp.social_security_mba > 0:
-                from datetime import datetime
                 current_year = datetime.now().year
                 sim_year = current_year + yr
                 if sim_year > inp.social_security_withdrawal_year:
@@ -355,7 +353,6 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
         
         # Add Social Security if claimed pre-retirement
         if inp.social_security_enabled and inp.social_security_mba > 0:
-            from datetime import datetime
             current_year = datetime.now().year
             sim_year = current_year + yr
             if sim_year > inp.social_security_withdrawal_year:
@@ -397,7 +394,6 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
             # Social Security offsets portfolio withdrawals
             ss_income = 0.0
             if inp.social_security_enabled and inp.social_security_mba > 0:
-                from datetime import datetime
                 current_year = datetime.now().year
                 sim_year = current_year + post_yr
                 if sim_year > inp.social_security_withdrawal_year:
@@ -465,7 +461,6 @@ def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
                 income = 0.0
                 
             if inp.social_security_enabled and inp.social_security_mba > 0:
-                from datetime import datetime
                 current_year = datetime.now().year
                 sim_year = current_year + yr
                 if sim_year > inp.social_security_withdrawal_year:
