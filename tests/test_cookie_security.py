@@ -32,3 +32,25 @@ def test_cookie_secure_flag_https():
     # Check the set-cookie header
     set_cookie_header = response.headers.get("set-cookie", "")
     assert "Secure" in set_cookie_header
+
+
+def test_security_blocked_when_secret_not_configured(monkeypatch):
+    from bridge_app import main
+    # Set UNLOCK_SECRET to None or empty to simulate security not configured
+    monkeypatch.setattr(main, "UNLOCK_SECRET", None)
+
+    client = TestClient(app)
+
+    # 1. Protected endpoint /api/categories should return 401
+    response = client.get("/api/categories")
+    assert response.status_code == 401
+    assert "Unauthorized" in response.text
+
+    # 2. Public /fire endpoint should still be allowed
+    response_fire = client.get("/fire")
+    assert response_fire.status_code == 200
+
+    # 3. Activation endpoint /s should return 500 when not configured
+    response_s = client.get("/s?s=some_secret")
+    assert response_s.status_code == 500
+    assert "Security not configured" in response_s.text
