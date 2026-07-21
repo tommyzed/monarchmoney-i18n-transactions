@@ -241,6 +241,126 @@ class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(LoginFailedException):
             await self.monarch_money.interactive_login(use_saved_session=False)
 
+    @patch.object(Client, "execute_async")
+    async def test_update_transaction_only_id(self, mock_execute_async):
+        """
+        Test update_transaction with only the transaction_id provided.
+        """
+        mock_execute_async.return_value = {
+            "updateTransaction": {
+                "transaction": {"id": "tx_123"},
+                "errors": None,
+            }
+        }
+        await self.monarch_money.update_transaction(transaction_id="tx_123")
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        self.assertEqual(kwargs["operation_name"], "Web_TransactionDrawerUpdateTransaction")
+
+        # Verify default variable dictionary population
+        variables = kwargs["variable_values"]
+        self.assertIn("input", variables)
+        input_data = variables["input"]
+        self.assertEqual(input_data["id"], "tx_123")
+        self.assertIsNone(input_data.get("category"))
+        self.assertIsNone(input_data.get("name"))
+        self.assertNotIn("amount", input_data)
+        self.assertNotIn("date", input_data)
+        self.assertNotIn("hideFromReports", input_data)
+        self.assertNotIn("needsReview", input_data)
+        self.assertNotIn("goalId", input_data)
+        self.assertNotIn("notes", input_data)
+
+    @patch.object(Client, "execute_async")
+    async def test_update_transaction_all_arguments(self, mock_execute_async):
+        """
+        Test update_transaction with all optional arguments specified.
+        """
+        mock_execute_async.return_value = {
+            "updateTransaction": {
+                "transaction": {"id": "tx_123"},
+                "errors": None,
+            }
+        }
+        await self.monarch_money.update_transaction(
+            transaction_id="tx_123",
+            category_id="cat_456",
+            merchant_name="Amazon",
+            goal_id="goal_789",
+            amount=12.34,
+            date="2026-10-30",
+            hide_from_reports=True,
+            needs_review=False,
+            notes="Purchased book"
+        )
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        variables = kwargs["variable_values"]
+        input_data = variables["input"]
+
+        self.assertEqual(input_data["id"], "tx_123")
+        self.assertEqual(input_data["category"], "cat_456")
+        self.assertEqual(input_data["name"], "Amazon")
+        self.assertEqual(input_data["goalId"], "goal_789")
+        self.assertEqual(input_data["amount"], 12.34)
+        self.assertEqual(input_data["date"], "2026-10-30")
+        self.assertEqual(input_data["hideFromReports"], True)
+        self.assertEqual(input_data["needsReview"], False)
+        self.assertEqual(input_data["notes"], "Purchased book")
+
+    @patch.object(Client, "execute_async")
+    async def test_update_transaction_boolean_casting(self, mock_execute_async):
+        """
+        Test that hide_from_reports and needs_review are correctly cast to bool.
+        """
+        mock_execute_async.return_value = {
+            "updateTransaction": {
+                "transaction": {"id": "tx_123"},
+                "errors": None,
+            }
+        }
+        await self.monarch_money.update_transaction(
+            transaction_id="tx_123",
+            hide_from_reports="truthy_string",
+            needs_review=""
+        )
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        variables = kwargs["variable_values"]
+        input_data = variables["input"]
+
+        self.assertEqual(input_data["hideFromReports"], True)
+        self.assertEqual(input_data["needsReview"], False)
+
+    @patch.object(Client, "execute_async")
+    async def test_update_transaction_ignored_empty_values(self, mock_execute_async):
+        """
+        Test that amount and date are ignored if they are passed as empty string or None.
+        And goal_id / notes are kept as empty strings if provided (since we want empty string to clear them).
+        """
+        mock_execute_async.return_value = {
+            "updateTransaction": {
+                "transaction": {"id": "tx_123"},
+                "errors": None,
+            }
+        }
+        await self.monarch_money.update_transaction(
+            transaction_id="tx_123",
+            amount=0.0,  # Falsy, but 0.0 might be treated as falsy or truthy. Let's verify amount behavior.
+            date="",
+            goal_id="",
+            notes=""
+        )
+        mock_execute_async.assert_called_once()
+        kwargs = mock_execute_async.call_args.kwargs
+        variables = kwargs["variable_values"]
+        input_data = variables["input"]
+
+        self.assertNotIn("amount", input_data) # amount=0.0 is falsy, so code if amount: won't include it.
+        self.assertNotIn("date", input_data)
+        self.assertEqual(input_data["goalId"], "")
+        self.assertEqual(input_data["notes"], "")
+
     @classmethod
     def loadTestData(cls, filename) -> dict:
         filename = f"{os.path.dirname(os.path.realpath(__file__))}/{filename}"
