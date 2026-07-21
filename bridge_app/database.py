@@ -7,52 +7,58 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./bridge.db")
-
-connect_args = {}
-
-
-# Fix driver and sslmode for asyncpg
-if DATABASE_URL.startswith("postgres"):
-    # Ensure correct driver
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-    elif DATABASE_URL.startswith("postgresql://"):
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-    
-    # Parse query params robustly
-    parsed = urllib.parse.urlparse(DATABASE_URL)
-    query_params = urllib.parse.parse_qs(parsed.query)
-    
-    # Check for SSL requirements in query
-    # asyncpg prefers these in connect_args, not URL params usually
-    if "sslmode" in query_params or "channel_binding" in query_params:
-        # Strip them from the URL
-        new_query = urllib.parse.urlencode({
-            k: v for k, v in query_params.items() 
-            if k not in ['sslmode', 'channel_binding']
-        }, doseq=True)
+def parse_database_url(url: str) -> tuple[str, dict]:
+    """
+    Parses and corrects database URLs for asyncpg driver, handling sslmode and
+    stripping conflicting query params to build appropriate connect_args.
+    """
+    connect_args = {}
+    if url.startswith("postgres"):
+        # Ensure correct driver
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         
-        DATABASE_URL = urllib.parse.urlunparse(parsed._replace(query=new_query))
+        # Parse query params robustly
+        parsed = urllib.parse.urlparse(url)
+        query_params = urllib.parse.parse_qs(parsed.query)
         
-        sslmode = query_params.get("sslmode", [""])[0]
+        # Check for SSL requirements in query
+        # asyncpg prefers these in connect_args, not URL params usually
+        if "sslmode" in query_params or "channel_binding" in query_params:
+            # Strip them from the URL
+            new_query = urllib.parse.urlencode({
+                k: v for k, v in query_params.items()
+                if k not in ['sslmode', 'channel_binding']
+            }, doseq=True)
 
-        if sslmode == "disable":
-            ssl_ctx = False
-        elif sslmode in ["require", "allow", "prefer"]:
-            ssl_ctx = ssl.create_default_context()
-            ssl_ctx.check_hostname = False
-            ssl_ctx.verify_mode = ssl.CERT_NONE
-        else:
-            # For 'verify-ca', 'verify-full', or no explicit sslmode handled above
-            ssl_ctx = ssl.create_default_context()
-        
-        # Increase connection timeout to 300s (5m) to handle Neon cold starts/latency
-        connect_args = {
-            "ssl": ssl_ctx,
-            "timeout": 300,
-            "command_timeout": 300
-        }
+            url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+
+            sslmode = query_params.get("sslmode", [""])[0]
+
+            if sslmode == "disable":
+                ssl_ctx = False
+            elif sslmode in ["require", "allow", "prefer"]:
+                ssl_ctx = ssl.create_default_context()
+                ssl_ctx.check_hostname = False
+                ssl_ctx.verify_mode = ssl.CERT_NONE
+            else:
+                # For 'verify-ca', 'verify-full', or no explicit sslmode handled above
+                ssl_ctx = ssl.create_default_context()
+
+            # Increase connection timeout to 300s (5m) to handle Neon cold starts/latency
+            connect_args = {
+                "ssl": ssl_ctx,
+                "timeout": 300,
+                "command_timeout": 300
+            }
+    return url, connect_args
+
+
+DATABASE_URL, connect_args = parse_database_url(
+    os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./bridge.db")
+)
 
 print(f"🧱 LIFESPAN: Connecting to {DATABASE_URL.split('@')[-1]}")
 print(f"🧱 LIFESPAN: connect_args={connect_args}")
