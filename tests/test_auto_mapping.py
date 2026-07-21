@@ -28,7 +28,7 @@ async def test_auto_mapping():
             )
             session.add(mapping)
             await session.commit()
-        except:
+        except Exception:
             await session.rollback()
             # Assuming it exists, let's just proceed or fetch it to be sure
             pass
@@ -61,7 +61,7 @@ async def test_auto_mapping():
                 creds = Credentials(email="test@test.com", encrypted_payload=b"123")
                 session.add(creds)
                 await session.commit()
-            except:
+            except Exception:
                 await session.rollback()
 
             # Now run
