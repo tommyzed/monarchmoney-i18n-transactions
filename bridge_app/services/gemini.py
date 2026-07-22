@@ -54,7 +54,7 @@ Do NOT include any markdown fences or extra text — only the raw JSON object.
 
         # New SDK call
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-3.6-flash",
             contents=[prompt, image]
         )
 
