@@ -1,5 +1,7 @@
 # Monarch Money Bridge 🇪🇺🇺🇸
 
+> 🎁 **New to Monarch Money?** Sign up using this [referral link](https://www.monarch.com/referral?r_source=copy&code=42woh1ux8n)!
+
 **Seamlessly import international (EUR, GBP, etc) transaction receipts into Monarch Money.**
 
 Monarch Money is amazing, but it lacks native support for foreign banks and currencies. This application bridges that gap by allowing you to "Share" a receipt image from your phone directly to your Monarch account, automatically handling OCR, currency conversion, and upload.
