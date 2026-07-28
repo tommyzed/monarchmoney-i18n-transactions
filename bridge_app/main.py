@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
-from .services.monarch import get_monarch_client
+from .services.monarch import get_monarch_client, get_latest_credentials
 from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction
 from sqlalchemy.future import select
 from pydantic import BaseModel
@@ -786,7 +786,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260707.1715 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260728.1405 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1850,8 +1850,7 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
              return {"categories": [{"name": c.category_name, "emoji": c.category_emoji} for c in local_cats]}
 
         # 2. Fallback to Monarch API (if local empty)
-        creds_result = await db.execute(select(Credentials))
-        creds = creds_result.scalars().first()
+        creds = await get_latest_credentials(db)
         if not creds:
              raise HTTPException(status_code=400, detail="No credentials found")
              
@@ -1906,8 +1905,7 @@ async def save_mapping(mapping: MappingRequest, db: AsyncSession = Depends(get_d
             
             category_id = category.monarch_category_id if category else None
 
-            creds_result = await db.execute(select(Credentials))
-            creds = creds_result.scalars().first()
+            creds = await get_latest_credentials(db)
             if creds:
                 mm = await get_monarch_client(db, creds.id)
                 await mm.update_transaction(
@@ -1987,8 +1985,7 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
     try:
         from .services.currency import get_exchange_rate
 
-        creds_result = await db.execute(select(Credentials))
-        creds = creds_result.scalars().first()
+        creds = await get_latest_credentials(db)
         if not creds:
             raise HTTPException(status_code=400, detail="No Monarch credentials configured")
 
@@ -2075,8 +2072,7 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
     Does not edit mapping rules.
     """
     try:
-        creds_result = await db.execute(select(Credentials))
-        creds = creds_result.scalars().first()
+        creds = await get_latest_credentials(db)
         if not creds:
             raise HTTPException(status_code=400, detail="No Monarch credentials configured")
 
@@ -2088,6 +2084,18 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
         category = cat_result.scalar_one_or_none()
         
         category_id = category.monarch_category_id if category else None
+
+        # Fallback: if category_id not in local DB, fetch from Monarch API directly
+        if not category_id:
+            try:
+                cat_data = await mm.get_transaction_categories()
+                for c in cat_data.get("categories", []):
+                    if c.get("name", "").lower() == req.category_name.lower():
+                        category_id = c.get("id")
+                        break
+            except Exception as e:
+                print(f"Failed to fetch categories from Monarch API: {e}")
+
         if not category_id:
             raise HTTPException(status_code=400, detail=f"Category '{req.category_name}' not configured or missing monarch ID")
 
@@ -2172,8 +2180,7 @@ async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
         # Try to delete from Monarch Money if monarch_tx_id exists
         if log_entry.monarch_tx_id:
             try:
-                creds_result = await db.execute(select(Credentials))
-                creds = creds_result.scalars().first()
+                creds = await get_latest_credentials(db)
                 if creds:
                     mm = await get_monarch_client(db, creds.id)
                     await mm.delete_transaction(log_entry.monarch_tx_id)
@@ -2439,8 +2446,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     # ── End Demo Mode ──────────────────────────────────────────────────────
 
     # 1. Get Monarch client
-    creds_result = await db.execute(select(Credentials))
-    creds = creds_result.scalars().first()
+    creds = await get_latest_credentials(db)
     if not creds:
         raise HTTPException(status_code=503, detail="No Monarch credentials configured.")
 

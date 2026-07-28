@@ -8,6 +8,30 @@ from ..models import Credentials
 # Path for session persistence - logic says store in DB, but library uses file.
 # We will use DB to store/retrieve the session pickle bytes.
 
+async def get_latest_credentials(db: AsyncSession) -> Credentials:
+    """
+    Retrieve the most relevant and recently updated Credentials record.
+    Checks MM_EMAIL environment variable first, then orders by last_update_date and id descending.
+    """
+    from sqlalchemy import select
+    mm_email = os.getenv("MM_EMAIL")
+    if mm_email:
+        mm_email = mm_email.strip()
+        stmt = (
+            select(Credentials)
+            .where(Credentials.email == mm_email)
+            .order_by(Credentials.last_update_date.desc().nullslast(), Credentials.id.desc())
+        )
+        res = await db.execute(stmt)
+        creds = res.scalars().first()
+        if creds:
+            return creds
+
+    stmt = select(Credentials).order_by(Credentials.last_update_date.desc().nullslast(), Credentials.id.desc())
+    res = await db.execute(stmt)
+    return res.scalars().first()
+
+
 async def get_monarch_client(db: AsyncSession, user_id: int):
     # Fetch credentials
     creds = await db.get(Credentials, user_id)

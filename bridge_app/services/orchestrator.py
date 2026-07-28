@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from ..models import Transaction, MerchantMapping
 from .gemini import extract_transaction_data
-from .monarch import get_monarch_client, push_transaction
+from .monarch import get_monarch_client, get_latest_credentials, push_transaction
 from starlette.concurrency import run_in_threadpool
 
 async def process_manual_transaction(manual_data: dict, db: AsyncSession, progress_callback=None, force_override: bool = False):
@@ -193,25 +193,12 @@ async def _convert_currency(data: dict, report_func, user_currency_override: str
 
 async def _push_to_monarch(data: dict, db: AsyncSession, report_func):
     await report_func("Connecting to Monarch Money...", 70)
-    from ..models import Credentials
-    import os
-    mm_email = os.getenv("MM_EMAIL")
-    print(f"DEBUG ORCHESTRATOR: MM_EMAIL from env is: {repr(mm_email)}")
-    
-    if mm_email:
-        mm_email = mm_email.strip()
-        print(f"DEBUG ORCHESTRATOR: Searching for credentials with email: {mm_email}")
-        creds_result = await db.execute(select(Credentials).where(Credentials.email == mm_email))
-    else:
-        print(f"DEBUG ORCHESTRATOR: No MM_EMAIL set, searching for any credential with a session")
-        creds_result = await db.execute(select(Credentials).where(Credentials.monarch_session.isnot(None)))
-        
-    creds = creds_result.scalars().first()
+    creds = await get_latest_credentials(db)
     print(f"DEBUG ORCHESTRATOR: Found credentials: {creds}")
-    
+
     if not creds:
         raise HTTPException(status_code=400, detail="No Monarch credentials configured")
-        
+
     try:
         await report_func("Creating transaction in Monarch...", 85)
         mm = await get_monarch_client(db, creds.id)
