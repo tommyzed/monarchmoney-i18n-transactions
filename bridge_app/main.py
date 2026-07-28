@@ -427,10 +427,11 @@ LOADING_HTML = """
             }
 
             .menu-divider {
-                height: 1px;
-                background-color: #e2e8f0;
-                margin: 4px 0;
+                height: 1.5px;
+                background-color: rgba(102, 126, 234, 0.35);
+                margin: 6px 12px;
                 border: none;
+                border-radius: 1px;
             }
 
             .deep-link-item:hover {
@@ -806,7 +807,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260728.1636 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260728.1638 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
