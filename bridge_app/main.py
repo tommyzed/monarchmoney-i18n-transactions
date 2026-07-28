@@ -1534,7 +1534,7 @@ LOADING_HTML = """
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('updated') === '1') {
                 if (typeof showToast === 'function') {
-                    showToast("App updated to the latest version! 🚀", "success");
+                    showToast("✨ Updated to the latest version!", "success");
                 }
                 urlParams.delete('updated');
                 urlParams.delete('v');
