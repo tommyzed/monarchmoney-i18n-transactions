@@ -221,6 +221,33 @@ class TestMonarchMoney(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(result["categoryGroups"]), 2, "Expected 2 category groups")
         self.assertEqual(len(result["goalsV2"]), 1, "Expected 1 goal")
 
+    @patch.object(Client, "execute_async")
+    async def test_get_transaction_tags(self, mock_execute_async):
+        """
+        Test the get_transaction_tags method.
+        """
+        mock_execute_async.return_value = TestMonarchMoney.loadTestData(
+            filename="get_transaction_tags.json",
+        )
+        result = await self.monarch_money.get_transaction_tags()
+        mock_execute_async.assert_called_once()
+        self.assertIsNotNone(result, "Expected result to not be None")
+        self.assertEqual(
+            len(result["householdTransactionTags"]),
+            2,
+            "Expected 2 household transaction tags",
+        )
+        self.assertEqual(
+            result["householdTransactionTags"][0]["id"],
+            "tag-1",
+            "Expected first tag ID to be 'tag-1'",
+        )
+        self.assertEqual(
+            result["householdTransactionTags"][1]["name"],
+            "Reimbursable",
+            "Expected second tag name to be 'Reimbursable'",
+        )
+
     async def test_login(self):
         """
         Test the login method with empty values for email and password.

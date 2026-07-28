@@ -21,7 +21,6 @@ async def test_manual_mapping():
             print(f"Found existing mapping: '{existing.receipt_merchant_name}' -> '{existing.monarch_merchant_name}'")
             receipt_name = existing.receipt_merchant_name
             target_name = existing.monarch_merchant_name
-            target_cat = existing.category_name
         else:
             print("No existing mappings found. Attempting to insert one...")
             try:
@@ -39,7 +38,6 @@ async def test_manual_mapping():
                 await session.commit()
                 receipt_name = cart_name
                 target_name = "Starbucks Test"
-                target_cat = "99999"
             except Exception as e:
                 print(f"Insert failed: {e}")
                 print("Cannot proceed with test without data.")

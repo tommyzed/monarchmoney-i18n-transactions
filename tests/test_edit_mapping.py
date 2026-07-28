@@ -1,9 +1,12 @@
 import asyncio
 from httpx import AsyncClient, ASGITransport
-from bridge_app.main import app
+from bridge_app.main import app, save_mapping, MappingRequest
 from bridge_app.database import AsyncSessionLocal
 from bridge_app.models import MerchantMapping, Category
 from sqlalchemy.future import select
+from fastapi import Request, HTTPException
+from unittest.mock import MagicMock
+import pytest
 
 import hashlib
 
@@ -74,6 +77,26 @@ async def test_edit_mapping_endpoints():
                     print(f"❌ DB Verification Failed: Check values locally. Got {mapping.monarch_merchant_name}, {mapping.category_name}")
             else:
                 print("❌ DB Verification Failed: Mapping not found")
+
+async def test_save_mapping_unauthenticated():
+    print("Testing save_mapping endpoint direct call when unauthenticated...")
+    # Mock Request
+    request = MagicMock(spec=Request)
+    request.state = MagicMock()
+    request.state.is_authenticated = False
+
+    mapping = MappingRequest(
+        receipt_merchant_name="Test Cafe",
+        monarch_merchant_name="Official Test Cafe",
+        category_name="Test Food"
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await save_mapping(request=request, mapping=mapping, db=MagicMock())
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Unauthorized"
+    print("✅ save_mapping unauthenticated direct call correctly raised 401 Unauthorized")
 
 if __name__ == "__main__":
     asyncio.run(test_edit_mapping_endpoints())

@@ -62,16 +62,12 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         # Default state
         request.state.is_authenticated = False
 
-        # If no secret is configured, bypass security (or you could choose to block)
-        if not UNLOCK_SECRET:
-            request.state.is_authenticated = True
-            return await call_next(request)
-
-        # Check for cookie
-        token = request.cookies.get(DEVICE_TOKEN_COOKIE)
-        if token == COOKIE_VALUE:
-            request.state.is_authenticated = True
-            return await call_next(request)
+        # Check for cookie if secret is configured
+        if UNLOCK_SECRET:
+            token = request.cookies.get(DEVICE_TOKEN_COOKIE)
+            if token == COOKIE_VALUE:
+                request.state.is_authenticated = True
+                return await call_next(request)
 
         # --- Unauthenticated access rules ---
 
@@ -98,6 +94,10 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/fire" or request.url.path.startswith("/api/fire/"):
             return await call_next(request)
         
+        # If no secret is configured, block protected routes
+        if not UNLOCK_SECRET:
+            return Response(status_code=401, content="Unauthorized - Security not configured on server")
+
         # GHOST MODE: Return 404 Not Found if unauthorized
         return Response(status_code=404, content="Not Found")
 
@@ -1917,10 +1917,12 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/mapping")
-async def save_mapping(mapping: MappingRequest, db: AsyncSession = Depends(get_db)):
+async def save_mapping(request: Request, mapping: MappingRequest, db: AsyncSession = Depends(get_db)):
     """
     Create or update a merchant mapping.
     """
+    if not request.state.is_authenticated:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     try:
         # Enforce lowercase for the key
         lower_receipt_name = mapping.receipt_merchant_name.lower()
@@ -2152,22 +2154,20 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
         )
 
         # Update local Transaction table's parsed_data JSON if it exists
-        tx_stmt = select(Transaction)
+        tx_stmt = select(Transaction).where(Transaction.parsed_data["monarch_tx_id"].as_string() == req.monarch_tx_id)
         tx_result = await db.execute(tx_stmt)
-        transactions = tx_result.scalars().all()
-        for tx in transactions:
-            if tx.parsed_data and tx.parsed_data.get("monarch_tx_id") == req.monarch_tx_id:
-                parsed = dict(tx.parsed_data)
-                parsed["category_name"] = req.category_name
-                if category.category_emoji:
-                    parsed["category_emoji"] = category.category_emoji
-                else:
-                    parsed.pop("category_emoji", None)
-                tx.parsed_data = parsed
-                from sqlalchemy.orm.attributes import flag_modified
-                flag_modified(tx, "parsed_data")
-                await db.commit()
-                break
+        tx = tx_result.scalar_one_or_none()
+        if tx:
+            parsed = dict(tx.parsed_data) if tx.parsed_data else {}
+            parsed["category_name"] = req.category_name
+            if category.category_emoji:
+                parsed["category_emoji"] = category.category_emoji
+            else:
+                parsed.pop("category_emoji", None)
+            tx.parsed_data = parsed
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(tx, "parsed_data")
+            await db.commit()
 
         return {"status": "success", "category_emoji": category.category_emoji}
     except HTTPException:
@@ -2236,14 +2236,12 @@ async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
 
         # Delete local Transaction cache if it matches the same monarch_tx_id
         if log_entry.monarch_tx_id:
-            tx_stmt = select(Transaction)
+            tx_stmt = select(Transaction).where(Transaction.parsed_data["monarch_tx_id"].as_string() == log_entry.monarch_tx_id)
             tx_result = await db.execute(tx_stmt)
             transactions = tx_result.scalars().all()
             for tx in transactions:
-                if tx.parsed_data and tx.parsed_data.get("monarch_tx_id") == log_entry.monarch_tx_id:
-                    await db.delete(tx)
-                    print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
-                    break
+                await db.delete(tx)
+                print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
 
         # Delete Log entry
         await db.delete(log_entry)
