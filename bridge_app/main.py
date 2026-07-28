@@ -1871,10 +1871,12 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/mapping")
-async def save_mapping(mapping: MappingRequest, db: AsyncSession = Depends(get_db)):
+async def save_mapping(request: Request, mapping: MappingRequest, db: AsyncSession = Depends(get_db)):
     """
     Create or update a merchant mapping.
     """
+    if not request.state.is_authenticated:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     try:
         # Enforce lowercase for the key
         lower_receipt_name = mapping.receipt_merchant_name.lower()
