@@ -174,10 +174,76 @@ async def test_update_date_endpoint_updates_log():
         
         print("✅ SUCCESS: update-date endpoint updated the log table entry")
 
+async def test_delete_log_entry_endpoint():
+    print("Testing delete_log_entry endpoint...")
+    from bridge_app.main import delete_log_entry
+    from bridge_app.models import Transaction, Log
+
+    mock_db = AsyncMock()
+    mock_log = Log(
+        id=1,
+        merchant="Starbucks",
+        amount=-5.50,
+        currency="USD",
+        date="2026-11-02",
+        original_amount=None,
+        original_currency=None,
+        is_cash=False,
+        monarch_tx_id="tx_starbucks"
+    )
+    mock_tx = Transaction(
+        id=10,
+        image_hash="hash_starbucks",
+        parsed_data={"monarch_tx_id": "tx_starbucks"}
+    )
+
+    # Mock credentials
+    mock_creds = MagicMock()
+    mock_creds.id = 1
+
+    # We need to mock db.execute to return the log entry and transaction
+    def mock_execute(stmt):
+        stmt_str = str(stmt)
+        res = MagicMock()
+        if "logs" in stmt_str:
+            res.scalar_one_or_none.return_value = mock_log
+        elif "transactions" in stmt_str:
+            res.scalars.return_value.all.return_value = [mock_tx]
+        elif "credentials" in stmt_str:
+            res.scalars.return_value.first.return_value = mock_creds
+        else:
+            res.scalars.return_value.first.return_value = None
+            res.scalar_one_or_none.return_value = None
+        return res
+
+    mock_db.execute = AsyncMock(side_effect=mock_execute)
+
+    # Patch monarch client so it doesn't try to call real Monarch API
+    with patch('bridge_app.main.get_monarch_client', new_callable=AsyncMock) as mock_get_client:
+        mock_mm = MagicMock()
+        mock_get_client.return_value = mock_mm
+        mock_mm.delete_transaction = AsyncMock()
+
+        res = await delete_log_entry(log_id=1, db=mock_db)
+
+        # Assert Monarch delete was called
+        mock_mm.delete_transaction.assert_called_once_with("tx_starbucks")
+
+        # Assert db.delete was called on both the log entry and transaction
+        delete_calls = [call[0][0] for call in mock_db.delete.call_args_list]
+        assert mock_log in delete_calls
+        assert mock_tx in delete_calls
+        mock_db.commit.assert_called_once()
+
+        assert res["status"] == "success"
+        print("✅ SUCCESS: delete_log_entry endpoint works correctly and deletes both log and cached transaction")
+
+
 async def run_all_tests():
     await test_orchestrator_saves_log()
     await test_get_logs_endpoint()
     await test_update_date_endpoint_updates_log()
+    await test_delete_log_entry_endpoint()
 
 if __name__ == "__main__":
     asyncio.run(run_all_tests())

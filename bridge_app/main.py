@@ -2190,14 +2190,12 @@ async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
 
         # Delete local Transaction cache if it matches the same monarch_tx_id
         if log_entry.monarch_tx_id:
-            tx_stmt = select(Transaction)
+            tx_stmt = select(Transaction).where(Transaction.parsed_data["monarch_tx_id"].as_string() == log_entry.monarch_tx_id)
             tx_result = await db.execute(tx_stmt)
             transactions = tx_result.scalars().all()
             for tx in transactions:
-                if tx.parsed_data and tx.parsed_data.get("monarch_tx_id") == log_entry.monarch_tx_id:
-                    await db.delete(tx)
-                    print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
-                    break
+                await db.delete(tx)
+                print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
 
         # Delete Log entry
         await db.delete(log_entry)
