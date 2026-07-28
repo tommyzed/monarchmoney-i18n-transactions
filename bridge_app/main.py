@@ -81,7 +81,15 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
             
         # Allow static assets (manifest, Service Worker, icons) to support PWA installation.
         if request.url.path in ["/manifest.json", "/sw.js", "/favicon.ico"]:
-            return await call_next(request)
+            response = await call_next(request)
+            if request.url.path == "/sw.js":
+                response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            return response
+
+        if request.url.path in ["/", "/index.html"]:
+            response = await call_next(request)
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            return response
             
         if request.url.path.endswith((".png", ".jpg", ".css", ".js", ".gif")):
              return await call_next(request)
@@ -743,6 +751,16 @@ LOADING_HTML = """
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⏳</span>
                         <span>Pending Txns</span>
                     </a>
+                    <a href="intent://transactions?tags=239319736443617746&transactionVisibility=all_transactions#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%3Ftags%3D239319736443617746%26transactionVisibility%3Dall_transactions;end"
+                        target="_blank" class="deep-link-item">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">💵</span>
+                        <span>Cash Txns</span>
+                    </a>
+                    <div class="menu-divider"></div>
+                    <a href="#" id="updateAppLink" class="deep-link-item">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔄</span>
+                        <span>Update App</span>
+                    </a>
                 </div>
             </div>
             <div id="cardIcon" style="font-size: 3rem; margin-bottom: 0.2rem;">🎉</div>
@@ -786,7 +804,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260728.1405 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260728.1631 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1479,6 +1497,34 @@ LOADING_HTML = """
                     dlTrigger.classList.remove('open');
                 });
             });
+
+            // Update App Logic
+            const updateAppBtn = document.getElementById('updateAppLink');
+            if (updateAppBtn) {
+                updateAppBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (typeof showToast === 'function') {
+                        showToast("Updating app...", "success");
+                    }
+                    try {
+                        if ('serviceWorker' in navigator) {
+                            const registrations = await navigator.serviceWorker.getRegistrations();
+                            for (let registration of registrations) {
+                                await registration.unregister();
+                            }
+                        }
+                        if ('caches' in window) {
+                            const cacheNames = await caches.keys();
+                            await Promise.all(cacheNames.map(name => caches.delete(name)));
+                        }
+                    } catch (err) {
+                        console.error("Failed to clear app cache:", err);
+                    }
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('v', Date.now());
+                    window.location.href = url.toString();
+                });
+            }
 
             // Touch handlers for swipe-to-delete on mobile
             let touchStartX = 0;

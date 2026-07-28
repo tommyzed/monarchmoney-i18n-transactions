@@ -455,6 +455,11 @@
                     <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">💵</span>
                     <span>Cash Txns</span>
                 </a>
+                <div class="menu-divider"></div>
+                <a href="#" id="updateAppLink" class="deep-link-item">
+                    <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔄</span>
+                    <span>Update App</span>
+                </a>
             </div>
         </div>
         <br>
@@ -627,7 +632,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260707.1715 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260728.1631 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -1173,6 +1178,32 @@
                 dlTrigger.classList.remove('open');
             });
         });
+
+        // Update App Logic
+        const updateAppBtn = document.getElementById('updateAppLink');
+        if (updateAppBtn) {
+            updateAppBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                showToast("Updating app...", "success");
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        for (let registration of registrations) {
+                            await registration.unregister();
+                        }
+                    }
+                    if ('caches' in window) {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    }
+                } catch (err) {
+                    console.error("Failed to clear app cache:", err);
+                }
+                const url = new URL(window.location.href);
+                url.searchParams.set('v', Date.now());
+                window.location.href = url.toString();
+            });
+        }
     </script>
 
 </body>
