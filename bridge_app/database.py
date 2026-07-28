@@ -39,12 +39,9 @@ if DATABASE_URL.startswith("postgres"):
 
         if sslmode == "disable":
             ssl_ctx = False
-        elif sslmode in ["require", "allow", "prefer"]:
-            ssl_ctx = ssl.create_default_context()
-            ssl_ctx.check_hostname = False
-            ssl_ctx.verify_mode = ssl.CERT_NONE
         else:
-            # For 'verify-ca', 'verify-full', or no explicit sslmode handled above
+            # For 'require', 'allow', 'prefer', 'verify-ca', 'verify-full', or no explicit sslmode handled above
+            # Require standard SSL verification
             ssl_ctx = ssl.create_default_context()
         
         # Increase connection timeout to 300s (5m) to handle Neon cold starts/latency
