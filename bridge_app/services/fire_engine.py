@@ -171,13 +171,16 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     rng = np.random.default_rng(seed=42)
     returns = rng.normal(mean_r, std_r, size=(n_iter, n_years))
 
+    # Precompute inflation factors
+    inflation_factors = (1 + inp.inflation_rate) ** np.arange(n_years)
+
     # Portfolio simulation — vectorized across all iterations
     portfolios = np.zeros((n_iter, n_years + 1))
     portfolios[:, 0] = inp.current_portfolio
 
     for yr in range(n_years):
         # Inflation-adjusted amounts (grow each year)
-        inflation_factor = (1 + inp.inflation_rate) ** yr
+        inflation_factor = inflation_factors[yr]
         spending = inp.annual_retirement_spending * inflation_factor  # always
 
         if yr < years_to_retire:
@@ -284,11 +287,14 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
             size=(inp.iterations, total_years)
         )
 
+        # Precompute inflation factors
+        inflation_factors = (1 + inp.inflation_rate) ** np.arange(total_years)
+
         portfolios = np.zeros((inp.iterations, total_years + 1))
         portfolios[:, 0] = inp.current_portfolio
 
         for yr in range(total_years):
-            inflation_factor = (1 + inp.inflation_rate) ** yr
+            inflation_factor = inflation_factors[yr]
             spending = inp.annual_retirement_spending * inflation_factor  # always
             if yr < years_to_retire:
                 income = inp.annual_contribution * inflation_factor
@@ -344,12 +350,15 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
         size=(inp.iterations, total_years)
     )
 
+    # Precompute inflation factors
+    inflation_factors = (1 + inp.inflation_rate) ** np.arange(total_years)
+
     # Accumulation phase portfolio value
     portfolios_accum = np.zeros((inp.iterations, years_to_retire + 1))
     portfolios_accum[:, 0] = inp.current_portfolio
 
     for yr in range(years_to_retire):
-        inflation_factor = (1 + inp.inflation_rate) ** yr
+        inflation_factor = inflation_factors[yr]
         income = inp.annual_contribution * inflation_factor
         spending = inp.annual_retirement_spending * inflation_factor
         
@@ -389,9 +398,9 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
             post_yr = years_to_retire + yr
             if post_yr >= total_years:
                 break
-            inflation_factor = (1 + inp.inflation_rate) ** post_yr
+            inflation_factor = inflation_factors[post_yr]
             annual_withdrawal = portfolio_at_retire * withdrawal_rate * (
-                (1 + inp.inflation_rate) ** yr
+                inflation_factors[yr]
             )
 
             # Social Security offsets portfolio withdrawals
@@ -447,6 +456,9 @@ def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
     low, high = 0.0, 10_000_000.0  # Search up to $10M/yr spend
     best_spend = 0.0
 
+    # Precompute inflation factors
+    inflation_factors = (1 + inp.inflation_rate) ** np.arange(total_years)
+
     for _ in range(50):  # 50 iterations provides ~$0.01 precision on $10M
         test_spend = (low + high) / 2
         
@@ -455,7 +467,7 @@ def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
         portfolios[:, 0] = inp.current_portfolio
         
         for yr in range(total_years):
-            inflation_factor = (1 + inp.inflation_rate) ** yr
+            inflation_factor = inflation_factors[yr]
             spending = test_spend * inflation_factor
             
             # Income only applies before retirement target
