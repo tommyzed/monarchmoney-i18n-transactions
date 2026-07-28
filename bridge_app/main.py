@@ -62,16 +62,12 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         # Default state
         request.state.is_authenticated = False
 
-        # If no secret is configured, bypass security (or you could choose to block)
-        if not UNLOCK_SECRET:
-            request.state.is_authenticated = True
-            return await call_next(request)
-
-        # Check for cookie
-        token = request.cookies.get(DEVICE_TOKEN_COOKIE)
-        if token == COOKIE_VALUE:
-            request.state.is_authenticated = True
-            return await call_next(request)
+        # Check for cookie if secret is configured
+        if UNLOCK_SECRET:
+            token = request.cookies.get(DEVICE_TOKEN_COOKIE)
+            if token == COOKIE_VALUE:
+                request.state.is_authenticated = True
+                return await call_next(request)
 
         # --- Unauthenticated access rules ---
 
@@ -90,6 +86,10 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/fire" or request.url.path.startswith("/api/fire/"):
             return await call_next(request)
         
+        # If no secret is configured, block protected routes
+        if not UNLOCK_SECRET:
+            return Response(status_code=401, content="Unauthorized - Security not configured on server")
+
         # GHOST MODE: Return 404 Not Found if unauthorized
         return Response(status_code=404, content="Not Found")
 
