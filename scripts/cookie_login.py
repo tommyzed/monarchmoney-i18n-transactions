@@ -38,24 +38,117 @@ def parse_cookie_string(cookie_str: str) -> dict:
     return cookies
 
 
+def get_clipboard_text() -> str:
+    """Attempt to retrieve text from system clipboard using native OS commands."""
+    try:
+        import subprocess
+        if sys.platform == "darwin":
+            res = subprocess.run(["pbpaste"], capture_output=True, text=True, check=False)
+            return res.stdout.strip()
+        elif sys.platform.startswith("linux"):
+            for cmd in [["xclip", "-selection", "clipboard", "-o"], ["wl-paste"]]:
+                try:
+                    res = subprocess.run(cmd, capture_output=True, text=True, check=False)
+                    if res.returncode == 0 and res.stdout.strip():
+                        return res.stdout.strip()
+                except FileNotFoundError:
+                    continue
+    except Exception:
+        pass
+    return ""
+
+
+def get_cookie_string() -> str:
+    """Obtain cookie string from CLI arg, file, stdin pipe, clipboard, or interactive input."""
+    # 1. Check CLI arguments
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if os.path.isfile(arg):
+            print(f"📄 Reading cookie string from file: {arg}")
+            with open(arg, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        elif arg.lower() in ("--clipboard", "-c"):
+            clip = get_clipboard_text()
+            if clip:
+                print("📋 Loaded cookie string from clipboard.")
+                return clip
+            else:
+                print("⚠️ Clipboard is empty or unreadable.")
+        elif "=" in arg or ";" in arg:
+            return arg.strip()
+
+    # 2. Check if piped/redirected stdin
+    if not sys.stdin.isatty():
+        print("📥 Reading cookie string from piped stdin...")
+        return sys.stdin.read().strip()
+
+    # 3. Interactive TTY mode
+    clipboard_text = get_clipboard_text()
+    has_cookie_in_clip = "session_id" in clipboard_text or "csrftoken" in clipboard_text or ";" in clipboard_text
+
+    print("Choose input method:")
+    if clipboard_text and has_cookie_in_clip:
+        print(f"  [1] Use clipboard content (Detected ~{len(clipboard_text)} chars) (DEFAULT)")
+        print("  [2] Read from a file path")
+        print("  [3] Paste manually into terminal")
+        choice = input("\nSelect option [1/2/3] (default 1): ").strip()
+        if choice in ("", "1"):
+            print("📋 Using clipboard content.")
+            return clipboard_text
+        elif choice == "2":
+            filepath = input("Enter file path containing cookie string: ").strip()
+            if os.path.isfile(filepath):
+                with open(filepath, "r", encoding="utf-8") as f:
+                    return f.read().strip()
+            else:
+                print(f"❌ File not found: {filepath}")
+                return ""
+    else:
+        print("  [1] Read from a file path (recommended for very long strings)")
+        print("  [2] Read from system clipboard")
+        print("  [3] Paste manually into terminal")
+        choice = input("\nSelect option [1/2/3]: ").strip()
+        if choice == "2":
+            clip = get_clipboard_text()
+            if clip:
+                print("📋 Using clipboard content.")
+                return clip
+            else:
+                print("⚠️ Clipboard is empty or unreadable.")
+        elif choice == "1":
+            filepath = input("Enter file path containing cookie string: ").strip()
+            if os.path.isfile(filepath):
+                with open(filepath, "r", encoding="utf-8") as f:
+                    return f.read().strip()
+            else:
+                print(f"❌ File not found: {filepath}")
+                return ""
+
+    # Fallback to manual terminal paste
+    print("\nPaste your browser cookie string below, then press ENTER on a blank line (or Ctrl+D when finished):")
+    lines = []
+    try:
+        while True:
+            line = sys.stdin.readline()
+            if not line:  # EOF
+                break
+            stripped = line.rstrip("\r\n")
+            if stripped == "" and lines:
+                break
+            if stripped:
+                lines.append(stripped)
+    except KeyboardInterrupt:
+        pass
+    return "".join(lines).strip()
+
+
 async def manual_session_save():
     print("=" * 60)
     print("  Monarch Money — Cookie Login")
     print("=" * 60)
     print()
-    print("Paste your browser cookie string below, then press ENTER on a blank line.")
-    print("(DevTools → Network → any api.monarch.com request → Request Headers → cookie:)\n")
 
-    lines = []
-    while True:
-        line = sys.stdin.readline()
-        # readline() returns '\n' for blank lines and '' for EOF
-        stripped = line.rstrip("\n")
-        if stripped == "" and lines:
-            break
-        if stripped:
-            lines.append(stripped)
-    cookie_string = "".join(lines).strip()
+    cookie_string = get_cookie_string()
 
     if not cookie_string:
         print("❌ No cookie string provided. Aborting.")
