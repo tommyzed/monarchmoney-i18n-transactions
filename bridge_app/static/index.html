@@ -635,7 +635,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260728.1638 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260728.1639 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -1204,8 +1204,20 @@
                 }
                 const url = new URL(window.location.href);
                 url.searchParams.set('v', Date.now());
+                url.searchParams.set('updated', '1');
                 window.location.href = url.toString();
             });
+        }
+
+        // Check if app was just updated to announce via toast
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('updated') === '1') {
+            showToast("App updated to the latest version! 🚀", "success");
+            urlParams.delete('updated');
+            urlParams.delete('v');
+            const newSearch = urlParams.toString() ? ('?' + urlParams.toString()) : '';
+            const cleanUrl = window.location.pathname + newSearch + window.location.hash;
+            window.history.replaceState({}, document.title, cleanUrl);
         }
     </script>
 

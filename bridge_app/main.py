@@ -807,7 +807,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260728.1638 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260728.1639 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1525,8 +1525,22 @@ LOADING_HTML = """
                     }
                     const url = new URL(window.location.href);
                     url.searchParams.set('v', Date.now());
+                    url.searchParams.set('updated', '1');
                     window.location.href = url.toString();
                 });
+            }
+
+            // Check if app was just updated to announce via toast
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('updated') === '1') {
+                if (typeof showToast === 'function') {
+                    showToast("App updated to the latest version! 🚀", "success");
+                }
+                urlParams.delete('updated');
+                urlParams.delete('v');
+                const newSearch = urlParams.toString() ? ('?' + urlParams.toString()) : '';
+                const cleanUrl = window.location.pathname + newSearch + window.location.hash;
+                window.history.replaceState({}, document.title, cleanUrl);
             }
 
             // Touch handlers for swipe-to-delete on mobile
