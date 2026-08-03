@@ -13,6 +13,7 @@ from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client, get_latest_credentials
 from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction
 from sqlalchemy.future import select
+from sqlalchemy import delete
 from pydantic import BaseModel
 from typing import Optional, Any
 from datetime import datetime, timedelta
@@ -2253,12 +2254,9 @@ async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
 
         # Delete local Transaction cache if it matches the same monarch_tx_id
         if log_entry.monarch_tx_id:
-            tx_stmt = select(Transaction).where(Transaction.parsed_data["monarch_tx_id"].as_string() == log_entry.monarch_tx_id)
-            tx_result = await db.execute(tx_stmt)
-            transactions = tx_result.scalars().all()
-            for tx in transactions:
-                await db.delete(tx)
-                print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
+            tx_stmt = delete(Transaction).where(Transaction.parsed_data["monarch_tx_id"].as_string() == log_entry.monarch_tx_id)
+            await db.execute(tx_stmt)
+            print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
 
         # Delete Log entry
         await db.delete(log_entry)
