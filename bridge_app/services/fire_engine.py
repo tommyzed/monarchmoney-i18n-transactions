@@ -15,17 +15,17 @@ from typing import List, Dict, Optional
 # Historical return parameters by risk tolerance
 # Based on S&P 500 historical data + bond blending
 RISK_PROFILES = {
-    "lean": {     # 60/40 stocks/bonds
+    "lean": {  # 60/40 stocks/bonds
         "mean_return": 0.06,
         "std_return": 0.10,
         "label": "Conservative (60/40)",
     },
-    "moderate": { # 80/20 stocks/bonds
+    "moderate": {  # 80/20 stocks/bonds
         "mean_return": 0.07,
         "std_return": 0.14,
         "label": "Balanced (80/20)",
     },
-    "fat": {      # 100% equity
+    "fat": {  # 100% equity
         "mean_return": 0.08,
         "std_return": 0.18,
         "label": "Aggressive (100% Equity)",
@@ -41,7 +41,7 @@ def calculate_social_security_mba(
     birth_year: Optional[int],
     birth_month: Optional[int],
     withdrawal_year: Optional[int],
-    withdrawal_month: Optional[int]
+    withdrawal_month: Optional[int],
 ) -> float:
     """
     Calculate Monthly Benefit Amount (MBA) based on Social Security rules.
@@ -55,13 +55,13 @@ def calculate_social_security_mba(
 
     if pia_val <= 0:
         return 0.0
-        
+
     birth_months = birth_y * 12 + birth_m
     withdrawal_months = withdraw_y * 12 + withdraw_m
     fra_months = birth_months + (fra_val * 12)
-    
+
     diff_months = withdrawal_months - fra_months
-    
+
     if diff_months < 0:
         # Early Retirement
         m_e = -diff_months
@@ -69,7 +69,7 @@ def calculate_social_security_mba(
             reduction_factor = m_e * (5.0 / 900.0)
         else:
             reduction_factor = (36.0 * (5.0 / 900.0)) + ((m_e - 36) * (5.0 / 1200.0))
-        
+
         reduction_factor = min(reduction_factor, 1.0)
         mba = pia_val * (1.0 - reduction_factor)
     elif diff_months > 0:
@@ -78,18 +78,19 @@ def calculate_social_security_mba(
         age_70_months = birth_months + (70 * 12)
         effective_withdrawal_months = min(withdrawal_months, age_70_months)
         m_l = max(0, effective_withdrawal_months - fra_months)
-        
+
         credit_factor = m_l * (2.0 / 300.0)
         mba = pia_val * (1.0 + credit_factor)
     else:
         mba = pia_val
-        
+
     return float(round(mba))
 
 
 @dataclass
 class SimulationInput:
     """Input parameters for the FIRE simulation."""
+
     current_portfolio: float
     current_age: int
     retirement_age: int
@@ -113,15 +114,35 @@ class SimulationInput:
         if self.simulation_years == 0:
             # Simulate until final age
             self.simulation_years = max(self.final_age - self.current_age, 0)
-        
+
         # Coerce None values to defaults (e.g. from legacy database rows)
         self.social_security_enabled = bool(self.social_security_enabled)
-        self.social_security_pia = self.social_security_pia if self.social_security_pia is not None else 0.0
-        self.social_security_fra = self.social_security_fra if self.social_security_fra is not None else 67
-        self.social_security_birth_month = self.social_security_birth_month if self.social_security_birth_month is not None else 1
-        self.social_security_birth_year = self.social_security_birth_year if self.social_security_birth_year is not None else 1980
-        self.social_security_withdrawal_month = self.social_security_withdrawal_month if self.social_security_withdrawal_month is not None else 1
-        self.social_security_withdrawal_year = self.social_security_withdrawal_year if self.social_security_withdrawal_year is not None else 2047
+        self.social_security_pia = (
+            self.social_security_pia if self.social_security_pia is not None else 0.0
+        )
+        self.social_security_fra = (
+            self.social_security_fra if self.social_security_fra is not None else 67
+        )
+        self.social_security_birth_month = (
+            self.social_security_birth_month
+            if self.social_security_birth_month is not None
+            else 1
+        )
+        self.social_security_birth_year = (
+            self.social_security_birth_year
+            if self.social_security_birth_year is not None
+            else 1980
+        )
+        self.social_security_withdrawal_month = (
+            self.social_security_withdrawal_month
+            if self.social_security_withdrawal_month is not None
+            else 1
+        )
+        self.social_security_withdrawal_year = (
+            self.social_security_withdrawal_year
+            if self.social_security_withdrawal_year is not None
+            else 2047
+        )
 
         self.social_security_mba = calculate_social_security_mba(
             pia=self.social_security_pia,
@@ -129,26 +150,29 @@ class SimulationInput:
             birth_year=self.social_security_birth_year,
             birth_month=self.social_security_birth_month,
             withdrawal_year=self.social_security_withdrawal_year,
-            withdrawal_month=self.social_security_withdrawal_month
+            withdrawal_month=self.social_security_withdrawal_month,
         )
 
 
 @dataclass
 class SimulationResult:
     """Output of the FIRE simulation."""
-    years: List[int]                    # age for each year
-    percentile_5: List[float]           # 5th percentile portfolio values
-    percentile_25: List[float]          # 25th percentile
-    percentile_50: List[float]          # median
-    percentile_75: List[float]          # 75th percentile
-    percentile_95: List[float]          # 95th percentile
-    retirement_probability: float       # % of sims surviving to final age
-    fire_date_age: Optional[int]        # earliest age with ≥95% survival
-    fire_date_year: Optional[int]       # calendar year of FIRE date
-    swr: float                          # safe withdrawal rate (%)
-    required_spend_for_target: Optional[float] # max allowable spending to hit Target age
-    current_portfolio: float            # input portfolio value
-    risk_profile_label: str             # human-readable risk label
+
+    years: List[int]  # age for each year
+    percentile_5: List[float]  # 5th percentile portfolio values
+    percentile_25: List[float]  # 25th percentile
+    percentile_50: List[float]  # median
+    percentile_75: List[float]  # 75th percentile
+    percentile_95: List[float]  # 95th percentile
+    retirement_probability: float  # % of sims surviving to final age
+    fire_date_age: Optional[int]  # earliest age with ≥95% survival
+    fire_date_year: Optional[int]  # calendar year of FIRE date
+    swr: float  # safe withdrawal rate (%)
+    required_spend_for_target: Optional[
+        float
+    ]  # max allowable spending to hit Target age
+    current_portfolio: float  # input portfolio value
+    risk_profile_label: str  # human-readable risk label
     account_breakdown: List[Dict] = field(default_factory=list)
 
 
@@ -178,6 +202,10 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     portfolios = np.zeros((n_iter, n_years + 1))
     portfolios[:, 0] = inp.current_portfolio
 
+    from datetime import datetime
+
+    current_year = datetime.now().year
+
     for yr in range(n_years):
         # Inflation-adjusted amounts (grow each year)
         inflation_factor = inflation_factors[yr]
@@ -191,23 +219,20 @@ def simulate(inp: SimulationInput) -> SimulationResult:
             income = 0.0
 
         if inp.social_security_enabled and inp.social_security_mba > 0:
-            from datetime import datetime
-            current_year = datetime.now().year
             sim_year = current_year + yr
             if sim_year > inp.social_security_withdrawal_year:
                 income += (inp.social_security_mba * 12) * inflation_factor
             elif sim_year == inp.social_security_withdrawal_year:
                 months_collected = 13 - inp.social_security_withdrawal_month
                 if 1 <= months_collected <= 12:
-                    income += (inp.social_security_mba * months_collected) * inflation_factor
+                    income += (
+                        inp.social_security_mba * months_collected
+                    ) * inflation_factor
 
         net_cashflow = income - spending
 
         # Apply market return, then net cash flow
-        portfolios[:, yr + 1] = (
-            portfolios[:, yr] * (1 + returns[:, yr])
-            + net_cashflow
-        )
+        portfolios[:, yr + 1] = portfolios[:, yr] * (1 + returns[:, yr]) + net_cashflow
         # Floor at zero (can't go negative in real life)
         portfolios[:, yr + 1] = np.maximum(portfolios[:, yr + 1], 0)
 
@@ -228,6 +253,7 @@ def simulate(inp: SimulationInput) -> SimulationResult:
 
     # Calendar year for FIRE date
     from datetime import datetime
+
     current_year = datetime.now().year
     fire_year = None
     if fire_age is not None:
@@ -250,10 +276,7 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     )
 
 
-def _calc_retirement_probability(
-    portfolios: np.ndarray,
-    inp: SimulationInput
-) -> float:
+def _calc_retirement_probability(portfolios: np.ndarray, inp: SimulationInput) -> float:
     """
     % of simulations where portfolio is > 0 at final age
     (or end of simulation if shorter).
@@ -283,8 +306,9 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
 
         rng = np.random.default_rng(seed=42)
         returns = rng.normal(
-            profile["mean_return"], profile["std_return"],
-            size=(inp.iterations, total_years)
+            profile["mean_return"],
+            profile["std_return"],
+            size=(inp.iterations, total_years),
         )
 
         # Precompute inflation factors
@@ -303,6 +327,7 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
 
             if inp.social_security_enabled and inp.social_security_mba > 0:
                 from datetime import datetime
+
                 current_year = datetime.now().year
                 sim_year = current_year + yr
                 if sim_year > inp.social_security_withdrawal_year:
@@ -310,13 +335,14 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
                 elif sim_year == inp.social_security_withdrawal_year:
                     months_collected = 13 - inp.social_security_withdrawal_month
                     if 1 <= months_collected <= 12:
-                        income += (inp.social_security_mba * months_collected) * inflation_factor
+                        income += (
+                            inp.social_security_mba * months_collected
+                        ) * inflation_factor
 
             net_cashflow = income - spending
 
             portfolios[:, yr + 1] = (
-                portfolios[:, yr] * (1 + returns[:, yr])
-                + net_cashflow
+                portfolios[:, yr] * (1 + returns[:, yr]) + net_cashflow
             )
             portfolios[:, yr + 1] = np.maximum(portfolios[:, yr + 1], 0)
 
@@ -346,8 +372,9 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
     # First, simulate to get portfolio value at retirement
     rng = np.random.default_rng(seed=42)
     returns = rng.normal(
-        profile["mean_return"], profile["std_return"],
-        size=(inp.iterations, total_years)
+        profile["mean_return"],
+        profile["std_return"],
+        size=(inp.iterations, total_years),
     )
 
     # Precompute inflation factors
@@ -357,22 +384,26 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
     portfolios_accum = np.zeros((inp.iterations, years_to_retire + 1))
     portfolios_accum[:, 0] = inp.current_portfolio
 
+    from datetime import datetime
+
+    current_year = datetime.now().year
+
     for yr in range(years_to_retire):
         inflation_factor = inflation_factors[yr]
         income = inp.annual_contribution * inflation_factor
         spending = inp.annual_retirement_spending * inflation_factor
-        
+
         # Add Social Security if claimed pre-retirement
         if inp.social_security_enabled and inp.social_security_mba > 0:
-            from datetime import datetime
-            current_year = datetime.now().year
             sim_year = current_year + yr
             if sim_year > inp.social_security_withdrawal_year:
                 income += (inp.social_security_mba * 12) * inflation_factor
             elif sim_year == inp.social_security_withdrawal_year:
                 months_collected = 13 - inp.social_security_withdrawal_month
                 if 1 <= months_collected <= 12:
-                    income += (inp.social_security_mba * months_collected) * inflation_factor
+                    income += (
+                        inp.social_security_mba * months_collected
+                    ) * inflation_factor
 
         net_cashflow = income - spending
         portfolios_accum[:, yr + 1] = (
@@ -381,6 +412,33 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
         portfolios_accum[:, yr + 1] = np.maximum(portfolios_accum[:, yr + 1], 0)
 
     portfolio_at_retire = portfolios_accum[:, -1]
+
+    # Precompute post-retirement invariant values
+    actual_years_post = min(years_post, total_years - years_to_retire)
+    ss_incomes = np.zeros(actual_years_post)
+    returns_post = np.zeros((inp.iterations, actual_years_post))
+    inflation_yr = np.zeros(actual_years_post)
+
+    if actual_years_post > 0:
+        from datetime import datetime
+
+        current_year = datetime.now().year
+        for yr in range(actual_years_post):
+            post_yr = years_to_retire + yr
+            returns_post[:, yr] = 1 + returns[:, post_yr]
+            inflation_yr[yr] = inflation_factors[yr]
+
+            inflation_factor = inflation_factors[post_yr]
+            if inp.social_security_enabled and inp.social_security_mba > 0:
+                sim_year = current_year + post_yr
+                if sim_year > inp.social_security_withdrawal_year:
+                    ss_incomes[yr] = (inp.social_security_mba * 12) * inflation_factor
+                elif sim_year == inp.social_security_withdrawal_year:
+                    months_collected = 13 - inp.social_security_withdrawal_month
+                    if 1 <= months_collected <= 12:
+                        ss_incomes[yr] = (
+                            inp.social_security_mba * months_collected
+                        ) * inflation_factor
 
     # Binary search for SWR
     low, high = 0.0, 15.0
@@ -392,32 +450,17 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
 
         # Simulate withdrawals to final age
         port = portfolio_at_retire.copy()
-        survived = True
 
-        for yr in range(years_post):
-            post_yr = years_to_retire + yr
-            if post_yr >= total_years:
-                break
-            inflation_factor = inflation_factors[post_yr]
-            annual_withdrawal = portfolio_at_retire * withdrawal_rate * (
-                inflation_factors[yr]
+        if actual_years_post > 0:
+            annual_withdrawals = np.outer(
+                portfolio_at_retire * withdrawal_rate, inflation_yr
             )
 
-            # Social Security offsets portfolio withdrawals
-            ss_income = 0.0
-            if inp.social_security_enabled and inp.social_security_mba > 0:
-                from datetime import datetime
-                current_year = datetime.now().year
-                sim_year = current_year + post_yr
-                if sim_year > inp.social_security_withdrawal_year:
-                    ss_income = (inp.social_security_mba * 12) * inflation_factor
-                elif sim_year == inp.social_security_withdrawal_year:
-                    months_collected = 13 - inp.social_security_withdrawal_month
-                    if 1 <= months_collected <= 12:
-                        ss_income = (inp.social_security_mba * months_collected) * inflation_factor
-
-            port = port * (1 + returns[:, post_yr]) - (annual_withdrawal - ss_income)
-            port = np.maximum(port, 0)
+            for yr in range(actual_years_post):
+                port = port * returns_post[:, yr] - (
+                    annual_withdrawals[:, yr] - ss_incomes[yr]
+                )
+                port = np.maximum(port, 0)
 
         survival_rate = np.sum(port > 0) / inp.iterations
         if round(survival_rate, 3) >= 0.950:
@@ -448,8 +491,9 @@ def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
     # Generate market returns identical to actual simulation
     rng = np.random.default_rng(seed=42)
     returns = rng.normal(
-        profile["mean_return"], profile["std_return"],
-        size=(inp.iterations, total_years)
+        profile["mean_return"],
+        profile["std_return"],
+        size=(inp.iterations, total_years),
     )
 
     # Binary search for optimal fixed spending
@@ -459,41 +503,46 @@ def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
     # Precompute inflation factors
     inflation_factors = (1 + inp.inflation_rate) ** np.arange(total_years)
 
+    # Precompute income values
+    base_incomes = np.zeros(total_years)
+    from datetime import datetime
+
+    current_year = datetime.now().year
+
+    for yr in range(total_years):
+        inflation_factor = inflation_factors[yr]
+        if yr < years_to_retire:
+            base_incomes[yr] = inp.annual_contribution * inflation_factor
+
+        if inp.social_security_enabled and inp.social_security_mba > 0:
+            sim_year = current_year + yr
+            if sim_year > inp.social_security_withdrawal_year:
+                base_incomes[yr] += (inp.social_security_mba * 12) * inflation_factor
+            elif sim_year == inp.social_security_withdrawal_year:
+                months_collected = 13 - inp.social_security_withdrawal_month
+                if 1 <= months_collected <= 12:
+                    base_incomes[yr] += (
+                        inp.social_security_mba * months_collected
+                    ) * inflation_factor
+
+    returns_plus_one = 1 + returns
+
     for _ in range(50):  # 50 iterations provides ~$0.01 precision on $10M
         test_spend = (low + high) / 2
-        
+
         # Simulate trajectory using this test spend
         portfolios = np.zeros((inp.iterations, total_years + 1))
         portfolios[:, 0] = inp.current_portfolio
-        
-        for yr in range(total_years):
-            inflation_factor = inflation_factors[yr]
-            spending = test_spend * inflation_factor
-            
-            # Income only applies before retirement target
-            if yr < years_to_retire:
-                income = inp.annual_contribution * inflation_factor
-            else:
-                income = 0.0
-                
-            if inp.social_security_enabled and inp.social_security_mba > 0:
-                from datetime import datetime
-                current_year = datetime.now().year
-                sim_year = current_year + yr
-                if sim_year > inp.social_security_withdrawal_year:
-                    income += (inp.social_security_mba * 12) * inflation_factor
-                elif sim_year == inp.social_security_withdrawal_year:
-                    months_collected = 13 - inp.social_security_withdrawal_month
-                    if 1 <= months_collected <= 12:
-                        income += (inp.social_security_mba * months_collected) * inflation_factor
 
-            net_cashflow = income - spending
-            
+        test_spend_inflation = test_spend * inflation_factors
+        net_cashflows = base_incomes - test_spend_inflation
+
+        for yr in range(total_years):
             portfolios[:, yr + 1] = (
-                portfolios[:, yr] * (1 + returns[:, yr]) + net_cashflow
+                portfolios[:, yr] * returns_plus_one[:, yr] + net_cashflows[yr]
             )
             portfolios[:, yr + 1] = np.maximum(portfolios[:, yr + 1], 0)
-            
+
         survival_rate = np.sum(portfolios[:, -1] > 0) / inp.iterations
         if round(survival_rate, 3) >= 0.950:
             # We survived! Try to spend MORE money to find the maximum possible.
@@ -524,13 +573,15 @@ def filter_accounts(accounts_data: dict) -> tuple:
         # Some accounts (like manual holdings) use displayBalance for the true value
         balance = acc.get("displayBalance") or acc.get("currentBalance", 0) or 0
         total += balance
-        breakdown.append({
-            "name": acc.get("displayName", "Unknown"),
-            "balance": round(balance, 2),
-            "type": acc.get("type", {}).get("display", "Other"),
-            "subtype": acc.get("subtype", {}).get("display", ""),
-            "isAsset": acc.get("isAsset", True),
-        })
+        breakdown.append(
+            {
+                "name": acc.get("displayName", "Unknown"),
+                "balance": round(balance, 2),
+                "type": acc.get("type", {}).get("display", "Other"),
+                "subtype": acc.get("subtype", {}).get("display", ""),
+                "isAsset": acc.get("isAsset", True),
+            }
+        )
 
     # Sort: assets first (descending), then liabilities
     breakdown.sort(key=lambda x: (-int(x["isAsset"]), -abs(x["balance"])))
