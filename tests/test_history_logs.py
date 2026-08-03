@@ -229,10 +229,14 @@ async def test_delete_log_entry_endpoint():
         # Assert Monarch delete was called
         mock_mm.delete_transaction.assert_called_once_with("tx_starbucks")
 
-        # Assert db.delete was called on both the log entry and transaction
+        # Assert db.delete was called on the log entry
         delete_calls = [call[0][0] for call in mock_db.delete.call_args_list]
         assert mock_log in delete_calls
-        assert mock_tx in delete_calls
+
+        # Assert that db.execute was called with a delete statement for transactions
+        execute_calls = [str(call[0][0]) for call in mock_db.execute.call_args_list]
+        assert any("DELETE FROM transactions" in call for call in execute_calls)
+
         mock_db.commit.assert_called_once()
 
         assert res["status"] == "success"
