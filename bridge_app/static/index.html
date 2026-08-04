@@ -218,31 +218,6 @@
             box-sizing: border-box;
         }
 
-        .history-row-delete-icon-btn {
-            background: none;
-            border: none;
-            color: #ef4444;
-            font-size: 1.4rem;
-            cursor: pointer;
-            padding: 0 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            opacity: 0.5;
-            width: 30px;
-            height: 30px;
-            flex-shrink: 0;
-            border-radius: 50%;
-        }
-
-        .history-row-delete-icon-btn:hover {
-            background-color: rgba(239, 68, 68, 0.1);
-            color: #dc2626;
-            opacity: 1;
-            transform: scale(1.1);
-        }
-
         .history-row-content {
             width: 100%;
             display: flex;
@@ -635,7 +610,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260728.1639 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260804.1041 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -655,7 +630,6 @@
                     <div class="history-header-merchant">Merchant</div>
                     <div class="history-header-amount">Amount</div>
                     <div class="history-header-date">Date</div>
-                    <div style="width: 30px; flex-shrink: 0;"></div>
                 </div>
                 <div id="historyTableBody">
                     <!-- Loaded dynamically -->
@@ -1052,19 +1026,6 @@
                     dateCol.style.maxWidth = "90px";
                     dateCol.textContent = log.date;
                     contentRow.appendChild(dateCol);
-
-                    // Dedicated inline delete button (X icon)
-                    const inlineDeleteBtn = document.createElement("button");
-                    inlineDeleteBtn.className = "history-row-delete-icon-btn";
-                    inlineDeleteBtn.innerHTML = "&times;";
-                    inlineDeleteBtn.title = "Delete transaction";
-                    inlineDeleteBtn.onclick = (e) => {
-                        e.stopPropagation();
-                        showConfirmToast(`Delete "${log.merchant}"?`, async () => {
-                            await deleteLogEntry(log.id, rowWrapper);
-                        });
-                    };
-                    contentRow.appendChild(inlineDeleteBtn);
 
                     rowWrapper.appendChild(contentRow);
 
