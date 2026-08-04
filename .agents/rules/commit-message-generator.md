@@ -1,8 +1,5 @@
 ---
-name: Commit Message Generator
-description: Rules for generating precise Git/CL commit descriptions from staged changes.
-triggers:
-  - antigravity.generateCommitMessage
+trigger: always_on
 ---
 
 # Instructions for Commit Descriptions
@@ -27,5 +24,7 @@ triggers:
 ## 4. Forbidden Output
 - Never generate generic fallback titles like "update file", "minor fixes", or "fix bug".
 - Do not output markdown backticks (```) around the final text payload. Only return raw text.
-- Never mention that the BUILD ID or versioning was incremented.
+- NEVER mention that the BUILD ID, versioning, or application build timestamp was updated/incremented.
+- Strictly OMIT any references such as "update build timestamp", "update application build timestamp", "update BUILD_ID", or similar timestamp text from both the commit subject and body.
+
 

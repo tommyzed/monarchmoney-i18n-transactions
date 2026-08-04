@@ -784,7 +784,7 @@ LOADING_HTML = """
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260804.1041 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260804.1055 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1499,7 +1499,7 @@ LOADING_HTML = """
                     } catch (err) {
                         console.error("Failed to clear app cache:", err);
                     }
-                    const url = new URL(window.location.href);
+                    const url = new URL('/', window.location.origin);
                     url.searchParams.set('v', Date.now());
                     url.searchParams.set('updated', '1');
                     window.location.href = url.toString();

@@ -610,7 +610,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260804.1041 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260804.1055 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -1163,7 +1163,7 @@
                 } catch (err) {
                     console.error("Failed to clear app cache:", err);
                 }
-                const url = new URL(window.location.href);
+                const url = new URL('/', window.location.origin);
                 url.searchParams.set('v', Date.now());
                 url.searchParams.set('updated', '1');
                 window.location.href = url.toString();

@@ -44,4 +44,3 @@ npm_output.log
 *.db
 bridge.db
 venv/
-.agents/commit-message-generator.md
