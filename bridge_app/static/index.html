@@ -383,12 +383,109 @@
             background-color: #be185d;
         }
 
-        /* Dark Pink */
         .toast.error {
             background-color: #9f1239;
         }
 
-        /* Darker Pink/Red for error */
+        /* Failed Transactions Styles */
+        .failed-badge {
+            background: #ef4444;
+            color: white;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            padding: 2px 7px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .failed-item-card {
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+        .failed-item-card:hover {
+            background: #ffffff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+        .failed-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .failed-item-merchant {
+            font-weight: bold;
+            color: #1f2937;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .failed-item-amount {
+            font-weight: bold;
+            color: #b91c1c;
+            font-size: 0.95rem;
+        }
+        .failed-error-banner {
+            background: #fee2e2;
+            color: #991b1b;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            margin: 6px 0;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+        .failed-item-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+        .failed-meta {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        .failed-btn-group {
+            display: flex;
+            gap: 6px;
+        }
+        .btn-failed-retry {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.15s;
+        }
+        .btn-failed-retry:hover { background: #4338ca; }
+        .btn-failed-edit {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .btn-failed-edit:hover { background: #e5e7eb; }
+        .btn-failed-del {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .btn-failed-del:hover { background: #fca5a5; }
     </style>
 </head>
 
@@ -406,6 +503,11 @@
                 <a href="#" id="historyLogLink" class="deep-link-item">
                     <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">📜</span>
                     <span>History Log</span>
+                </a>
+                <a href="#" id="failedTxnsLink" class="deep-link-item" onclick="openFailedModal(event)">
+                    <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⚠️</span>
+                    <span style="flex: 1;">Failed Txns</span>
+                    <span id="failedBadge" style="display:none; background:#ef4444; color:white; border-radius:999px; font-size:0.75rem; padding:2px 7px; font-weight:bold; margin-left:5px;">0</span>
                 </a>
                 <div class="menu-divider"></div>
                 <a href="/fire" class="deep-link-item">
@@ -610,7 +712,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260804.1055 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260818.1724 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -640,6 +742,99 @@
                 <div id="historyNoData" style="display: none; text-align: center; padding: 2rem 0; color: #666;">
                     No transactions processed yet. 📂
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Failed Transactions Modal -->
+    <div id="failedModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:950; justify-content:center; align-items:center;">
+        <div class="container"
+            style="position:relative; margin: 1rem; max-width: 650px; width: 95%; background: linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%); border-radius: 20px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+            <span id="closeFailedModal"
+                style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #aaa;">&times;</span>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1rem; flex-wrap:wrap; gap:10px;">
+                <h2 style="color: #4a4a4a; margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1.6rem; font-family: 'Sriracha', cursive;">
+                    ⚠️ Failed Transactions <span id="failedModalCount" style="font-size: 0.9rem; background: #e53e3e; color: white; border-radius: 999px; padding: 2px 8px; font-family: sans-serif;">0</span>
+                </h2>
+                <div style="display: flex; gap: 8px; margin-right: 28px;">
+                    <button id="retryAllFailedBtn" onclick="retryAllFailedTxns()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-family: inherit; display: flex; align-items: center; gap: 4px;">
+                        <span>🔄 Retry All</span>
+                    </button>
+                    <button id="clearAllFailedBtn" onclick="clearAllFailedTxns()" style="background: rgba(239, 68, 68, 0.15); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-family: inherit;">
+                        <span>🗑️ Clear All</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="failedTableContainer"
+                style="overflow-x: hidden; margin-top: 0.5rem; max-height: 420px; overflow-y: auto;">
+                <div id="failedTableBody">
+                    <!-- Loaded dynamically -->
+                </div>
+                <div id="failedLoading" style="text-align: center; padding: 2rem 0; color: #666;">
+                    Loading failed transactions... ⏳
+                </div>
+                <div id="failedNoData" style="display: none; text-align: center; padding: 2rem 0; color: #666;">
+                    No failed transactions! All clear 🎉
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Failed Transaction Modal -->
+    <div id="editFailedModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="card" style="display: flex; width: 90%; max-width: 400px; padding: 1.5rem; background: #fff; border-radius: 16px; box-sizing: border-box;">
+            <h3 style="margin-top: 0; color: #374151; font-family: 'Sriracha', cursive;">✏️ Edit Failed Transaction</h3>
+            <input type="hidden" id="editFailedId">
+            
+            <div style="width: 100%; text-align: left; margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Merchant Name</label>
+                <input type="text" id="editFailedMerchant" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+            </div>
+
+            <div style="width: 100%; display: flex; gap: 10px; margin-bottom: 0.8rem;">
+                <div style="flex: 1; text-align: left;">
+                    <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Amount</label>
+                    <input type="number" step="0.01" id="editFailedAmount" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                </div>
+                <div style="width: 100px; text-align: left;">
+                    <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Currency</label>
+                    <select id="editFailedCurrency" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; box-sizing: border-box;">
+                        <option value="EUR">EUR</option>
+                        <option value="USD">USD</option>
+                        <option value="GBP">GBP</option>
+                        <option value="JPY">JPY</option>
+                        <option value="CZK">CZK</option>
+                        <option value="HUF">HUF</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="width: 100%; text-align: left; margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Date</label>
+                <input type="date" id="editFailedDate" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+            </div>
+
+            <div style="width: 100%; text-align: left; margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Category</label>
+                <select id="editFailedCategory" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; box-sizing: border-box;">
+                    <option value="">Select Category (Optional)</option>
+                </select>
+            </div>
+
+            <div style="width: 100%; display: flex; gap: 1rem; margin-bottom: 1.2rem; align-items: center;">
+                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: #4b5563; cursor: pointer;">
+                    <input type="checkbox" id="editFailedIsCredit"> Is Credit?
+                </label>
+                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: #4b5563; cursor: pointer;">
+                    <input type="checkbox" id="editFailedIsCash"> Is Cash?
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;">
+                <button onclick="closeEditFailedModal()" style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; color: #374151;">Cancel</button>
+                <button onclick="saveAndRetryFailedTx()" style="padding: 8px 16px; border: none; background: #4f46e5; color: white; border-radius: 6px; cursor: pointer;">Save & Retry 🚀</button>
             </div>
         </div>
     </div>
@@ -1051,6 +1246,369 @@
                 historyTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #dc2626; padding: 2rem 0;">Error loading history logs.</td></tr>`;
             }
         }
+
+        // =========================================================
+        // ⚠️ Failed Transactions Logic
+        // =========================================================
+        const failedModal = document.getElementById('failedModal');
+        const closeFailedBtn = document.getElementById('closeFailedModal');
+        const failedTableBody = document.getElementById('failedTableBody');
+        const failedLoading = document.getElementById('failedLoading');
+        const failedNoData = document.getElementById('failedNoData');
+        const editFailedModal = document.getElementById('editFailedModal');
+
+        let failedTransactionsCache = [];
+        let cachedCategories = null;
+
+        async function fetchCategories() {
+            if (cachedCategories) return;
+            try {
+                const res = await fetch('/api/categories');
+                if (res.ok) {
+                    const data = await res.json();
+                    cachedCategories = data.categories || [];
+                    populateCategoryDropdown();
+                }
+            } catch (e) {
+                console.error("Failed to fetch categories:", e);
+            }
+        }
+
+        function populateCategoryDropdown() {
+            const editSelect = document.getElementById('editFailedCategory');
+            if (editSelect && cachedCategories) {
+                editSelect.innerHTML = '<option value="">Select Category (Optional)</option>';
+                cachedCategories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.name;
+                    opt.textContent = (cat.emoji ? cat.emoji + " " : "") + cat.name;
+                    editSelect.appendChild(opt);
+                });
+            }
+        }
+
+        async function updateFailedBadgeCount() {
+            try {
+                const res = await fetch('/api/failed-transactions/count');
+                if (res.ok) {
+                    const data = await res.json();
+                    const count = data.count || 0;
+                    const badge = document.getElementById('failedBadge');
+                    const modalCount = document.getElementById('failedModalCount');
+                    if (badge) {
+                        badge.textContent = count;
+                        badge.style.display = count > 0 ? 'inline-block' : 'none';
+                    }
+                    if (modalCount) {
+                        modalCount.textContent = count;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to update badge count:", e);
+            }
+        }
+
+        function openFailedModal(e) {
+            if (e) e.preventDefault();
+            failedModal.style.display = "flex";
+            fetchFailedTransactions();
+        }
+
+        if (closeFailedBtn) {
+            closeFailedBtn.onclick = function () {
+                failedModal.style.display = "none";
+            };
+        }
+
+        window.addEventListener('click', (event) => {
+            if (event.target === historyModal) {
+                historyModal.style.display = "none";
+                dismissDeleteConfirmation();
+            }
+            if (event.target === failedModal) {
+                failedModal.style.display = "none";
+            }
+            if (event.target === editFailedModal) {
+                closeEditFailedModal();
+            }
+        });
+
+        async function fetchFailedTransactions() {
+            try {
+                failedLoading.style.display = "block";
+                failedNoData.style.display = "none";
+                failedTableBody.innerHTML = "";
+
+                const res = await fetch("/api/failed-transactions");
+                if (!res.ok) throw new Error("Failed to fetch failed transactions");
+                failedTransactionsCache = await res.json();
+
+                failedLoading.style.display = "none";
+
+                if (failedTransactionsCache.length === 0) {
+                    failedNoData.style.display = "block";
+                    updateFailedBadgeCount();
+                    return;
+                }
+
+                renderFailedTransactions(failedTransactionsCache);
+                updateFailedBadgeCount();
+            } catch (err) {
+                console.error(err);
+                failedLoading.style.display = "none";
+                failedTableBody.innerHTML = `<div style="text-align: center; color: #dc2626; padding: 2rem 0;">Error loading failed transactions: ${err.message}</div>`;
+            }
+        }
+
+        function renderFailedTransactions(items) {
+            failedTableBody.innerHTML = "";
+            if (items.length === 0) {
+                failedNoData.style.display = "block";
+                return;
+            }
+            failedNoData.style.display = "none";
+
+            items.forEach(tx => {
+                const card = document.createElement("div");
+                card.className = "failed-item-card";
+                card.id = `failed-card-${tx.id}`;
+
+                const sourceIcon = tx.source_type === "manual" ? "✍️ Manual" : "🧾 Receipt";
+                const amountDisplay = tx.amount !== null && tx.amount !== undefined 
+                    ? `${parseFloat(tx.amount).toFixed(2)} ${tx.currency}` 
+                    : (tx.source_type === "receipt" ? "Amount Pending" : "0.00");
+                
+                const dateDisplay = tx.date || (tx.created_at ? tx.created_at.split("T")[0] : "");
+                const imageBtn = tx.has_image 
+                    ? `<a href="/api/failed-transactions/${tx.id}/image" target="_blank" style="text-decoration:none; font-size:1rem;" title="View Receipt Image">🖼️</a>` 
+                    : "";
+
+                const retryCountBadge = tx.retry_count > 0 
+                    ? `<span style="font-size:0.75rem; color:#b91c1c; margin-left:6px;">(Retried ${tx.retry_count}x)</span>` 
+                    : "";
+
+                card.innerHTML = `
+                    <div class="failed-item-header">
+                        <div class="failed-item-merchant">
+                            <span style="font-size: 0.8rem; background: rgba(102,126,234,0.15); color: #4f46e5; padding: 2px 6px; border-radius: 4px;">${sourceIcon}</span>
+                            <span>${tx.merchant}</span>
+                            ${imageBtn}
+                            ${retryCountBadge}
+                        </div>
+                        <div class="failed-item-amount">${amountDisplay}</div>
+                    </div>
+                    <div class="failed-error-banner">
+                        ⚠️ ${tx.error_message}
+                    </div>
+                    <div class="failed-item-actions">
+                        <div class="failed-meta">
+                            📅 ${dateDisplay} ${tx.category_name ? `• 🏷️ ${tx.category_name}` : ''}
+                        </div>
+                        <div class="failed-btn-group">
+                            <button class="btn-failed-retry" onclick="retrySingleFailedTx(${tx.id}, this)">🔄 Retry</button>
+                            <button class="btn-failed-edit" onclick="openEditFailedModal(${tx.id})">✏️ Edit</button>
+                            <button class="btn-failed-del" onclick="deleteSingleFailedTx(${tx.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+
+                failedTableBody.appendChild(card);
+            });
+        }
+
+        async function retrySingleFailedTx(id, btn) {
+            const origText = btn ? btn.textContent : "Retry";
+            if (btn) {
+                btn.textContent = "Retrying... ⏳";
+                btn.disabled = true;
+            }
+
+            try {
+                const res = await fetch(`/api/failed-transactions/${id}/retry`, {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    showToast("✅ Transaction imported successfully!", "success");
+                    const card = document.getElementById(`failed-card-${id}`);
+                    if (card) {
+                        card.style.transition = "all 0.3s ease";
+                        card.style.opacity = "0";
+                        card.style.transform = "scale(0.95)";
+                        setTimeout(() => {
+                            card.remove();
+                            failedTransactionsCache = failedTransactionsCache.filter(t => t.id !== id);
+                            if (failedTransactionsCache.length === 0) {
+                                failedNoData.style.display = "block";
+                            }
+                            updateFailedBadgeCount();
+                        }, 300);
+                    }
+                } else {
+                    const err = await res.json();
+                    showToast("❌ " + (err.detail || "Retry failed"), "error");
+                    await fetchFailedTransactions();
+                }
+            } catch (e) {
+                showToast("❌ Network error: " + e.message, "error");
+            } finally {
+                if (btn) {
+                    btn.textContent = origText;
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function retryAllFailedTxns() {
+            const btn = document.getElementById('retryAllFailedBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = "<span>Retrying All... ⏳</span>";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/failed-transactions/retry-all', {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    showToast(`Processed ${result.total}: ${result.succeeded} succeeded, ${result.failed} failed.`, result.failed === 0 ? "success" : "error");
+                    await fetchFailedTransactions();
+                } else {
+                    const err = await res.json();
+                    showToast("Error: " + (err.detail || "Bulk retry failed"), "error");
+                }
+            } catch (e) {
+                showToast("Network error: " + e.message, "error");
+            } finally {
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        }
+
+        async function clearAllFailedTxns() {
+            showConfirmToast("Clear ALL failed transactions?", async () => {
+                try {
+                    const res = await fetch('/api/failed-transactions', {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) {
+                        showToast("All failed transactions cleared", "success");
+                        await fetchFailedTransactions();
+                    } else {
+                        const err = await res.json();
+                        showToast("Error: " + err.detail, "error");
+                    }
+                } catch (e) {
+                    showToast("Network error: " + e.message, "error");
+                }
+            });
+        }
+
+        async function deleteSingleFailedTx(id) {
+            showConfirmToast("Delete this failed transaction?", async () => {
+                try {
+                    const res = await fetch(`/api/failed-transactions/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) {
+                        showToast("Failed transaction deleted", "success");
+                        const card = document.getElementById(`failed-card-${id}`);
+                        if (card) {
+                            card.remove();
+                            failedTransactionsCache = failedTransactionsCache.filter(t => t.id !== id);
+                            if (failedTransactionsCache.length === 0) {
+                                failedNoData.style.display = "block";
+                            }
+                            updateFailedBadgeCount();
+                        }
+                    } else {
+                        const err = await res.json();
+                        showToast("Error: " + err.detail, "error");
+                    }
+                } catch (e) {
+                    showToast("Network error: " + e.message, "error");
+                }
+            });
+        }
+
+        async function openEditFailedModal(id) {
+            const tx = failedTransactionsCache.find(t => t.id === id);
+            if (!tx) return;
+
+            await fetchCategories();
+
+            document.getElementById('editFailedId').value = tx.id;
+            document.getElementById('editFailedMerchant').value = tx.merchant !== "Receipt (OCR Pending)" ? tx.merchant : "";
+            document.getElementById('editFailedAmount').value = tx.amount !== null && tx.amount !== undefined ? tx.amount : "";
+            document.getElementById('editFailedCurrency').value = tx.currency || "EUR";
+            document.getElementById('editFailedDate').value = tx.date || new Date().toISOString().split('T')[0];
+            document.getElementById('editFailedIsCredit').checked = !!tx.is_credit;
+            document.getElementById('editFailedIsCash').checked = !!tx.is_cash;
+
+            const catSelect = document.getElementById('editFailedCategory');
+            if (catSelect && tx.category_name) {
+                for (let i = 0; i < catSelect.options.length; i++) {
+                    if (catSelect.options[i].value === tx.category_name) {
+                        catSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            editFailedModal.style.display = "flex";
+        }
+
+        function closeEditFailedModal() {
+            editFailedModal.style.display = "none";
+        }
+
+        async function saveAndRetryFailedTx() {
+            const id = document.getElementById('editFailedId').value;
+            const merchant = document.getElementById('editFailedMerchant').value.trim();
+            const amountVal = document.getElementById('editFailedAmount').value;
+            const amount = amountVal ? parseFloat(amountVal) : 0.0;
+            const currency = document.getElementById('editFailedCurrency').value;
+            const date = document.getElementById('editFailedDate').value;
+            const category_name = document.getElementById('editFailedCategory').value;
+            const is_credit = document.getElementById('editFailedIsCredit').checked;
+            const is_cash = document.getElementById('editFailedIsCash').checked;
+
+            if (!merchant) {
+                showToast("Merchant name is required", "error");
+                return;
+            }
+
+            try {
+                const updateRes = await fetch(`/api/failed-transactions/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        merchant,
+                        amount,
+                        currency,
+                        date,
+                        category_name,
+                        is_credit,
+                        is_cash
+                    })
+                });
+
+                if (!updateRes.ok) {
+                    const err = await updateRes.json();
+                    throw new Error(err.detail || "Failed to update transaction");
+                }
+
+                closeEditFailedModal();
+                showToast("Changes saved. Retrying transaction...", "success");
+                await retrySingleFailedTx(id, null);
+            } catch (e) {
+                showToast("Error: " + e.message, "error");
+            }
+        }
+
+        // Initialize badge count on load
+        updateFailedBadgeCount();
 
         // Manual Currency Dropdown Logic
         const mTrigger = document.getElementById('manualCurrencyTrigger');

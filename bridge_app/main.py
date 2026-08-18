@@ -1,6 +1,7 @@
 import uuid
 import asyncio
 import os
+import json
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -11,7 +12,7 @@ from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client, get_latest_credentials
-from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction
+from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction
 from sqlalchemy.future import select
 from sqlalchemy import delete
 from pydantic import BaseModel
@@ -43,6 +44,9 @@ async def lifespan(app: FastAPI):
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
         print("✅ LIFESPAN: Database connected.")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("✅ LIFESPAN: Database tables verified/created.")
     except Exception as e:
         print(f"❌ LIFESPAN: Database connection failed: {e}")
         # We might want to re-raise or continue depending on severity, but for diagnosis, printing is key.
@@ -154,7 +158,7 @@ async def activate(request: Request, s: str):
     return response
 
 # Simple in-memory job store
-# Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str, "inputs": dict } }
+# Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str, "inputs": dict, "failed_tx_id": int } }
 jobs = {}
 
 
@@ -230,10 +234,53 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
             display_error = "Server configuration error: Gemini API Key missing."
         elif "Monarch" in err_msg:
             display_error = f"Monarch Error: {err_msg}"
+        elif "Currency" in err_msg:
+            display_error = f"Currency Error: {err_msg}"
         else:
             display_error = f"I hit a snag: {err_msg}"
 
-        jobs[job_id] = {"status": "failed", "error": display_error, "progress": 0}
+        # Save to FailedTransaction in DB
+        failed_tx_id = None
+        try:
+            img_hash = None
+            if content:
+                img_hash = hashlib.sha256(content).hexdigest()
+            elif manual_data:
+                data_string = json.dumps(manual_data, sort_keys=True)
+                img_hash = "manual_" + hashlib.sha256(data_string.encode()).hexdigest()
+
+            parsed_data = getattr(e, "parsed_data", None)
+            async with AsyncSessionLocal() as db:
+                failed_tx = FailedTransaction(
+                    source_type="manual" if manual_data else "receipt",
+                    image_hash=img_hash,
+                    raw_content=content if content else None,
+                    user_currency=user_currency,
+                    parsed_data=parsed_data,
+                    manual_data=manual_data,
+                    error_message=display_error,
+                    retry_count=0
+                )
+                db.add(failed_tx)
+                await db.commit()
+                await db.refresh(failed_tx)
+                failed_tx_id = failed_tx.id
+                print(f"💾 Saved failed transaction ID {failed_tx_id} to database.")
+        except Exception as save_err:
+            print(f"⚠️ Error saving failed transaction to database: {save_err}")
+
+        jobs[job_id] = {
+            "status": "failed", 
+            "error": display_error, 
+            "failed_tx_id": failed_tx_id,
+            "progress": 0,
+            "inputs": {
+                "content": content,
+                "user_currency": user_currency,
+                "manual_data": manual_data,
+                "failed_tx_id": failed_tx_id
+            }
+        }
 
 @app.get("/health")
 async def health():
@@ -245,14 +292,31 @@ async def upload_receipt(
     currency: str = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
+    content = await file.read()
     try:
-        content = await file.read()
         result = await process_transaction(content, db, user_currency=currency)
         return {"status": "success", "data": result}
-    except HTTPException as e:
-        raise e
     except Exception as e:
-        print(f"Error processing transaction: {e}") # Log internal error
+        print(f"Error processing transaction in /upload: {e}")
+        try:
+            img_hash = hashlib.sha256(content).hexdigest()
+            parsed_data = getattr(e, "parsed_data", None)
+            failed_tx = FailedTransaction(
+                source_type="receipt",
+                image_hash=img_hash,
+                raw_content=content,
+                user_currency=currency,
+                parsed_data=parsed_data,
+                error_message=str(e),
+                retry_count=0
+            )
+            db.add(failed_tx)
+            await db.commit()
+        except Exception as save_err:
+            print(f"⚠️ Error saving failed transaction in /upload: {save_err}")
+
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get("/job/{job_id}")
@@ -275,6 +339,19 @@ async def retry_job(job_id: str, force: bool = False, background_tasks: Backgrou
         raise HTTPException(status_code=400, detail="Cannot retry this job (inputs not saved)")
         
     print(f"Retrying job {job_id} with force={force}")
+
+    # Clean up previous failed_tx if one was created
+    failed_tx_id = inputs.get("failed_tx_id")
+    if failed_tx_id:
+        try:
+            async with AsyncSessionLocal() as db:
+                failed_tx = await db.get(FailedTransaction, failed_tx_id)
+                if failed_tx:
+                    await db.delete(failed_tx)
+                    await db.commit()
+                    print(f"Cleaned up previous failed_tx {failed_tx_id} for retry.")
+        except Exception as cleanup_err:
+            print(f"Error cleaning up failed_tx before retry: {cleanup_err}")
     
     # Reset job status
     jobs[job_id]["status"] = "processing"
@@ -292,6 +369,7 @@ async def retry_job(job_id: str, force: bool = False, background_tasks: Backgrou
     )
     
     return {"status": "ok"}
+
 
 # Reuse the loading page HTML for both routes
 LOADING_HTML = """
@@ -638,7 +716,7 @@ LOADING_HTML = """
             .spinning-emoji {
                 display: inline-block;
                 animation: spin 2s linear infinite;
-                font-size: 30px; /* Size of emoji */
+                font-size: 30px;
                 margin-left: 10px;
                 vertical-align: middle;
             }
@@ -653,6 +731,7 @@ LOADING_HTML = """
                 border: 1px solid rgba(0, 0, 0, 0.05);
                 box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             }
+
             /* Toast Notification */
             .toast {
                 visibility: hidden;
@@ -663,7 +742,7 @@ LOADING_HTML = """
                 border-radius: 8px;
                 padding: 12px;
                 position: fixed;
-                z-index: 3000;
+                z-index: 3500;
                 left: 50%;
                 bottom: 30px;
                 transform: translateX(-50%);
@@ -679,8 +758,108 @@ LOADING_HTML = """
                 bottom: 50px;
             }
             
-            .toast.success { background-color: #be185d; } /* Dark Pink */
-            .toast.error { background-color: #9f1239; } /* Darker Pink/Red for error */
+            .toast.success { background-color: #be185d; }
+            .toast.error { background-color: #9f1239; }
+
+            /* Failed Transactions Styles */
+            .failed-badge {
+                background: #ef4444;
+                color: white;
+                border-radius: 999px;
+                font-size: 0.75rem;
+                padding: 2px 7px;
+                font-weight: bold;
+                margin-left: 5px;
+            }
+            .failed-item-card {
+                background: rgba(255, 255, 255, 0.92);
+                border: 1px solid rgba(239, 68, 68, 0.25);
+                border-radius: 12px;
+                padding: 12px 14px;
+                margin-bottom: 10px;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+                transition: all 0.2s ease;
+                text-align: left;
+            }
+            .failed-item-card:hover {
+                background: #ffffff;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            }
+            .failed-item-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 4px;
+            }
+            .failed-item-merchant {
+                font-weight: bold;
+                color: #1f2937;
+                font-size: 0.95rem;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .failed-item-amount {
+                font-weight: bold;
+                color: #b91c1c;
+                font-size: 0.95rem;
+            }
+            .failed-error-banner {
+                background: #fee2e2;
+                color: #991b1b;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 0.78rem;
+                margin: 6px 0;
+                line-height: 1.3;
+                word-break: break-word;
+            }
+            .failed-item-actions {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 8px;
+            }
+            .failed-meta {
+                font-size: 0.75rem;
+                color: #6b7280;
+            }
+            .failed-btn-group {
+                display: flex;
+                gap: 6px;
+            }
+            .btn-failed-retry {
+                background: #4f46e5;
+                color: white;
+                border: none;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 0.8rem;
+                cursor: pointer;
+                font-weight: bold;
+                transition: background 0.15s;
+            }
+            .btn-failed-retry:hover { background: #4338ca; }
+            .btn-failed-edit {
+                background: #f3f4f6;
+                color: #374151;
+                border: 1px solid #d1d5db;
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-size: 0.8rem;
+                cursor: pointer;
+            }
+            .btn-failed-edit:hover { background: #e5e7eb; }
+            .btn-failed-del {
+                background: #fee2e2;
+                color: #991b1b;
+                border: 1px solid #fecaca;
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-size: 0.8rem;
+                cursor: pointer;
+            }
+            .btn-failed-del:hover { background: #fca5a5; }
         </style>
     </head>
     <body>
@@ -709,6 +888,11 @@ LOADING_HTML = """
                     <a href="#" id="historyLogLink" class="deep-link-item">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">📜</span>
                         <span>History Log</span>
+                    </a>
+                    <a href="#" id="failedTxnsLink" class="deep-link-item" onclick="openFailedModal(event)">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⚠️</span>
+                        <span style="flex: 1;">Failed Txns</span>
+                        <span id="failedBadge" style="display:none; background:#ef4444; color:white; border-radius:999px; font-size:0.75rem; padding:2px 7px; font-weight:bold; margin-left:5px;">0</span>
                     </a>
                     <div class="menu-divider"></div>
                     <a href="/fire" class="deep-link-item">
@@ -776,15 +960,25 @@ LOADING_HTML = """
             <div id="historicalLegend" style="display:none; font-size:0.75rem; color:#677ae3; font-style:italic; margin-top:0.75rem; text-align:center;">💜 matched from history</div>
             
             <div id="errorContainer" style="display:none; text-align: center;">
-                <p id="errorMessage" style="color: #666; margin: 1rem 0;"></p>
+                <p id="errorMessage" style="color: #b91c1c; font-weight: bold; margin: 1rem 0; font-size: 1.05rem;"></p>
+                <div style="margin-top: 0.8rem; padding: 0.75rem; background: #fff3cd; color: #856404; border-radius: 10px; font-size: 0.88rem; border: 1px solid #ffeeba; line-height: 1.4;">
+                    💾 <strong>Saved to Failed Transactions!</strong><br>
+                    You can retry it now or at a later time from the menu.
+                </div>
             </div>
             
-            <div style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem;">
+            <div id="successActions" style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
                 <button id="editMappingBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #fcad03, #f76b1c);" onclick="openMappingModal()">Edit Mapping</button>
                 <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260804.1055 ©2025-26 ego/DEV/null</span>
+
+            <div id="errorActions" style="display: none; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
+                <button id="retryErrorBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #4f46e5, #7c3aed);" onclick="forceSubmit()">🔄 Retry Now</button>
+                <button id="viewFailedBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c);" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
+                <a href="/" class="btn" style="margin-top: 0; background: #6b7280;">Process Another</a>
+            </div>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260818.1724 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -866,6 +1060,98 @@ LOADING_HTML = """
             </div>
         </div>
 
+        <!-- Failed Transactions Modal -->
+        <div id="failedModal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2500; justify-content:center; align-items:center;">
+            <div style="position:relative; margin: 1rem; max-width: 650px; width: 95%; background: linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%); border-radius: 20px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+                <span id="closeFailedModal"
+                    style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #aaa;">&times;</span>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1rem; flex-wrap:wrap; gap:10px;">
+                    <h2 style="color: #4a4a4a; margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1.6rem; font-family: 'Sriracha', cursive;">
+                        ⚠️ Failed Transactions <span id="failedModalCount" style="font-size: 0.9rem; background: #e53e3e; color: white; border-radius: 999px; padding: 2px 8px; font-family: sans-serif;">0</span>
+                    </h2>
+                    <div style="display: flex; gap: 8px; margin-right: 28px;">
+                        <button id="retryAllFailedBtn" onclick="retryAllFailedTxns()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-family: inherit; display: flex; align-items: center; gap: 4px;">
+                            <span>🔄 Retry All</span>
+                        </button>
+                        <button id="clearAllFailedBtn" onclick="clearAllFailedTxns()" style="background: rgba(239, 68, 68, 0.15); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-family: inherit;">
+                            <span>🗑️ Clear All</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="failedTableContainer"
+                    style="overflow-x: hidden; margin-top: 0.5rem; max-height: 420px; overflow-y: auto;">
+                    <div id="failedTableBody">
+                        <!-- Loaded dynamically -->
+                    </div>
+                    <div id="failedLoading" style="text-align: center; padding: 2rem 0; color: #666;">
+                        Loading failed transactions... ⏳
+                    </div>
+                    <div id="failedNoData" style="display: none; text-align: center; padding: 2rem 0; color: #666;">
+                        No failed transactions! All clear 🎉
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Failed Transaction Modal -->
+        <div id="editFailedModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center;">
+            <div class="card" style="display: flex; width: 90%; max-width: 400px; padding: 1.5rem; background: #fff; border-radius: 16px;">
+                <h3 style="margin-top: 0; color: #374151; font-family: 'Sriracha', cursive;">✏️ Edit Failed Transaction</h3>
+                <input type="hidden" id="editFailedId">
+                
+                <div style="width: 100%; text-align: left; margin-bottom: 0.8rem;">
+                    <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Merchant Name</label>
+                    <input type="text" id="editFailedMerchant" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div style="width: 100%; display: flex; gap: 10px; margin-bottom: 0.8rem;">
+                    <div style="flex: 1; text-align: left;">
+                        <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Amount</label>
+                        <input type="number" step="0.01" id="editFailedAmount" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div style="width: 100px; text-align: left;">
+                        <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Currency</label>
+                        <select id="editFailedCurrency" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; box-sizing: border-box;">
+                            <option value="EUR">EUR</option>
+                            <option value="USD">USD</option>
+                            <option value="GBP">GBP</option>
+                            <option value="JPY">JPY</option>
+                            <option value="CZK">CZK</option>
+                            <option value="HUF">HUF</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="width: 100%; text-align: left; margin-bottom: 0.8rem;">
+                    <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Date</label>
+                    <input type="date" id="editFailedDate" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div style="width: 100%; text-align: left; margin-bottom: 0.8rem;">
+                    <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Category</label>
+                    <select id="editFailedCategory" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; box-sizing: border-box;">
+                        <option value="">Select Category (Optional)</option>
+                    </select>
+                </div>
+
+                <div style="width: 100%; display: flex; gap: 1rem; margin-bottom: 1.2rem; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: #4b5563; cursor: pointer;">
+                        <input type="checkbox" id="editFailedIsCredit"> Is Credit?
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: #4b5563; cursor: pointer;">
+                        <input type="checkbox" id="editFailedIsCash"> Is Cash?
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;">
+                    <button onclick="closeEditFailedModal()" style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; color: #374151;">Cancel</button>
+                    <button onclick="saveAndRetryFailedTx()" style="padding: 8px 16px; border: none; background: #4f46e5; color: white; border-radius: 6px; cursor: pointer;">Save & Retry 🚀</button>
+                </div>
+            </div>
+        </div>
+
         <script>
             const jobId = "__JOB_ID__";
             const pollInterval = 500; // 0.5 seconds
@@ -877,7 +1163,7 @@ LOADING_HTML = """
                 if (toastTimeout) clearTimeout(toastTimeout);
                 
                 toast.textContent = message;
-                toast.className = "toast show " + type; // Reset class
+                toast.className = "toast show " + type;
                 
                 toastTimeout = setTimeout(function(){ 
                     toast.className = toast.className.replace("show", ""); 
@@ -893,7 +1179,7 @@ LOADING_HTML = """
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
                         <span>${message}</span>
                         <div style="display: flex; gap: 8px;">
-                            <button id="toastConfirmBtn" style="background: white; color: #be185d; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; font-family: inherit;">Delete</button>
+                            <button id="toastConfirmBtn" style="background: white; color: #be185d; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; font-family: inherit;">Confirm</button>
                             <button id="toastCancelBtn" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-family: inherit;">Cancel</button>
                         </div>
                     </div>
@@ -933,17 +1219,13 @@ LOADING_HTML = """
                         } else if (data.status === 'failed') {
                             showError(data.error);
                         } else {
-                            // Update progress text
                             if (data.step) {
                                 document.getElementById('loadingSubtitle').textContent = data.step;
                             }
-                            // Update progress bar
                             if (data.progress !== undefined) {
                                 const bar = document.getElementById('progressBar');
                                 if (bar) bar.style.width = data.progress + '%';
                             }
-                            
-                            // Still processing
                             setTimeout(checkStatus, pollInterval);
                         }
                     })
@@ -956,25 +1238,27 @@ LOADING_HTML = """
             function showSuccess(result) {
                 document.getElementById('loadingOverlay').style.display = 'none';
                 document.getElementById('resultCard').style.display = 'flex';
+                document.getElementById('successActions').style.display = 'flex';
+                document.getElementById('errorActions').style.display = 'none';
+                document.getElementById('errorContainer').style.display = 'none';
+                document.getElementById('detailsContainer').style.display = 'block';
                 
                 const data = result.status === 'duplicate' ? result.data : result;
                 const isDuplicate = result.status === 'duplicate';
                 
                 if (isDuplicate) {
-                        document.getElementById('cardIcon').textContent = '⚠️';
-                        document.getElementById('cardTitle').textContent = 'Already Processed';
-                        document.getElementById('cardTitle').style.color = '#856404';
-                        document.getElementById('forceSubmitBtn').style.display = 'inline-block';
-                        document.getElementById('editMappingBtn').style.display = 'none';
+                    document.getElementById('cardIcon').textContent = '⚠️';
+                    document.getElementById('cardTitle').textContent = 'Already Processed';
+                    document.getElementById('cardTitle').style.color = '#856404';
+                    document.getElementById('forceSubmitBtn').style.display = 'inline-block';
+                    document.getElementById('editMappingBtn').style.display = 'none';
                 } else {
-                    // Reset to Success State
                     document.getElementById('cardIcon').textContent = '🎉';
                     document.getElementById('cardTitle').textContent = 'Transaction Processed';
                     document.getElementById('cardTitle').style.color = 'green';
                     document.getElementById('forceSubmitBtn').style.display = 'none';
                     document.getElementById('editMappingBtn').style.display = 'inline-block';
 
-                    // Confetti!
                     confetti({
                         particleCount: 150,
                         spread: 70,
@@ -984,10 +1268,9 @@ LOADING_HTML = """
                 
                 let amountHtml = `${parseFloat(data.amount).toFixed(2)} ${data.currency}`;
                 
-                // Add Deep Link if ID exists
                 if (data.monarch_tx_id) {
                     const deepLink = `intent://transactions/${data.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${data.monarch_tx_id};end`;
-                    const linkColor = data.is_credit ? "#16a34a" : "#2563eb"; // Green for credits, blue for debits
+                    const linkColor = data.is_credit ? "#16a34a" : "#2563eb";
                     amountHtml = `<a href="${deepLink}" style="text-decoration:none; color:${linkColor};">${amountHtml}</a>`;
                 }
                 
@@ -1011,14 +1294,12 @@ LOADING_HTML = """
 
                 const isHistorical = !!data.used_historical_name;
 
-                // Merchant name — prefix with 💜 when matched from history
                 document.getElementById('merchantValue').textContent =
                     (isHistorical ? '💜 ' : '') + data.merchant;
 
                 document.getElementById('dateValue').innerHTML = data.date;
                 document.getElementById('datePicker').value = data.date;
 
-                // Emoji + Category Name — prefix with 💜 when matched from history
                 let catDisplay = data.category_name || "--";
                 if (data.category_emoji) {
                     catDisplay = data.category_emoji + " " + catDisplay;
@@ -1026,25 +1307,20 @@ LOADING_HTML = """
                 document.getElementById('categoryValue').textContent =
                     (isHistorical ? '💜 ' : '') + catDisplay;
 
-                // Show/hide legend
                 document.getElementById('historicalLegend').style.display = isHistorical ? 'block' : 'none';
 
-                // Update "Added to" account value based on cash status
                 const accountValueEl = document.getElementById('accountValue');
                 if (accountValueEl) {
                     accountValueEl.textContent = data.is_cash ? "Cash On Hand" : "__MM_ACCOUNT__";
                 }
                 
                 window.currentTransactionData = data;
-                // Prefetch categories
                 fetchCategories();
+                updateFailedBadgeCount();
             }
 
-
-
             async function confirmDeleteMapping() {
-                closeDeleteConfirm(); // Close confirmation
-                
+                closeDeleteConfirm();
                 const receiptName = document.getElementById('mapReceiptMerchant').value;
                 const btn = document.getElementById('deleteMappingBtn');
                 const origText = btn.textContent;
@@ -1060,8 +1336,7 @@ LOADING_HTML = """
                     
                     if (res.ok) {
                          showToast("Mapping deleted.", "success");
-                         closeMappingModal(); // Close main modal
-                         
+                         closeMappingModal();
                          document.getElementById('editMappingBtn').textContent = "Add Mapping";
                          if (window.currentTransactionData) {
                              delete window.currentTransactionData.original_merchant_name;
@@ -1079,7 +1354,6 @@ LOADING_HTML = """
             }
             
             async function saveMapping() {
-
                 const payload = {
                     receipt_merchant_name: document.getElementById('mapReceiptMerchant').value,
                     monarch_merchant_name: document.getElementById('mapMonarchMerchant').value,
@@ -1108,20 +1382,15 @@ LOADING_HTML = """
                         showToast("Mapping saved! Transaction updated in Monarch.", "success");
                         closeMappingModal();
                         
-                        // Update UI Data State
                         if (!window.currentTransactionData.original_merchant_name) {
                             window.currentTransactionData.original_merchant_name = payload.receipt_merchant_name;
                         }
                         window.currentTransactionData.merchant = payload.monarch_merchant_name;
                         window.currentTransactionData.category_name = payload.category_name;
                         
-                        // Update Edit/Add button text immediately
                         document.getElementById('editMappingBtn').textContent = "Edit Mapping";
-
-                        // Update current UI text
                         document.getElementById('merchantValue').textContent = payload.monarch_merchant_name;
                         
-                        // Safe category lookup
                         let emoji = "";
                         if (cachedCategories) {
                              const catObj = cachedCategories.find(c => c.name === payload.category_name);
@@ -1157,42 +1426,45 @@ LOADING_HTML = """
 
             function populateCategoryDropdown() {
                 const select = document.getElementById('mapCategory');
-                select.innerHTML = '<option value="">Select Category</option>';
-                if (!cachedCategories) return;
-
-                cachedCategories.forEach(cat => {
-                    const opt = document.createElement('option');
-                    opt.value = cat.name;
-                    opt.textContent = (cat.emoji ? cat.emoji + " " : "") + cat.name;
-                    select.appendChild(opt);
-                });
+                if (select) {
+                    select.innerHTML = '<option value="">Select Category</option>';
+                    if (cachedCategories) {
+                        cachedCategories.forEach(cat => {
+                            const opt = document.createElement('option');
+                            opt.value = cat.name;
+                            opt.textContent = (cat.emoji ? cat.emoji + " " : "") + cat.name;
+                            select.appendChild(opt);
+                        });
+                    }
+                }
+                const editSelect = document.getElementById('editFailedCategory');
+                if (editSelect && cachedCategories) {
+                    editSelect.innerHTML = '<option value="">Select Category (Optional)</option>';
+                    cachedCategories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.name;
+                        opt.textContent = (cat.emoji ? cat.emoji + " " : "") + cat.name;
+                        editSelect.appendChild(opt);
+                    });
+                }
             }
 
             function openMappingModal() {
                 const data = window.currentTransactionData;
                 if (!data) return;
 
-                // Use the original merchant name if it exists (meaning it was auto-mapped), 
-                // otherwise use the current merchant name (OCR/Manual)
                 const receiptName = data.original_merchant_name || data.merchant;
-
                 document.getElementById('mapReceiptMerchant').value = String(receiptName).toLowerCase();
-                document.getElementById('mapMonarchMerchant').value = data.merchant; // Default to current display name
+                document.getElementById('mapMonarchMerchant').value = data.merchant;
                 
-                // Show Delete button mostly if we think a mapping exists (e.g. original name is present)
-                // Or we could check if mapping endpoint returns existence?
-                // Simpler: If original_merchant_name is present, it means it WAS mapped, so we can delete it.
-                // If it wasn't mapped, there's nothing to delete.
                 if (data.original_merchant_name) {
                     document.getElementById('deleteMappingBtn').style.display = 'block';
                 } else {
                     document.getElementById('deleteMappingBtn').style.display = 'none';
                 }
                 
-                // Select current category
                 if (data.category_name) {
                      const select = document.getElementById('mapCategory');
-                     // Try to match exact
                      for(let i=0; i<select.options.length; i++) {
                          if (select.options[i].value === data.category_name) {
                              select.selectedIndex = i;
@@ -1205,7 +1477,6 @@ LOADING_HTML = """
             }
 
             function deleteMapping() {
-                // Open Custom Confirmation Modal
                 document.getElementById('deleteConfirmModal').style.display = 'flex';
             }
             
@@ -1222,20 +1493,23 @@ LOADING_HTML = """
                 document.getElementById('loadingOverlay').style.display = 'none';
                 document.getElementById('resultCard').style.display = 'flex';
                 
-                document.getElementById('cardIcon').textContent = '🐳';
-                document.getElementById('cardTitle').textContent = 'Oops! Failed';
+                document.getElementById('cardIcon').textContent = '⚠️';
+                document.getElementById('cardTitle').textContent = 'Oops! Import Failed';
                 document.getElementById('cardTitle').style.color = '#e53e3e';
                 
                 document.getElementById('detailsContainer').style.display = 'none';
+                document.getElementById('historicalLegend').style.display = 'none';
                 document.getElementById('errorContainer').style.display = 'block';
                 document.getElementById('errorMessage').textContent = msg;
+                document.getElementById('successActions').style.display = 'none';
+                document.getElementById('errorActions').style.display = 'flex';
+                
+                updateFailedBadgeCount();
             }
 
             // ── Editable Date ──────────────────────────────────────────────
             function openDatePicker() {
                 const picker = document.getElementById('datePicker');
-                // Ensure value reflects the current displayed date
-                // Strip any emoji from the pill text to get the raw date
                 const currentText = document.getElementById('dateValue').textContent.replace(/[^\\d\\-]/g, '').trim();
                 if (currentText) picker.value = currentText;
                 picker.showPicker ? picker.showPicker() : picker.click();
@@ -1253,7 +1527,6 @@ LOADING_HTML = """
                     return;
                 }
 
-                // No-op if the user picked the same date that's already stored
                 if (newDate === data.date) return;
 
                 const pill = document.getElementById('dateValue');
@@ -1282,18 +1555,15 @@ LOADING_HTML = """
 
                     const result = await res.json();
 
-                    // Update stored data
                     data.date = result.new_date;
                     data.amount = result.new_amount;
                     if (result.exchange_rate !== null && result.exchange_rate !== undefined) {
                         data.exchange_rate = result.exchange_rate;
                     }
 
-                    // Update date pill
                     pill.innerHTML = result.new_date;
                     document.getElementById('datePicker').value = result.new_date;
 
-                    // Rebuild amount display
                     let amountHtml = `${parseFloat(result.new_amount).toFixed(2)} ${data.currency}`;
                     if (data.monarch_tx_id) {
                         const deepLink = `intent://transactions/${data.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${data.monarch_tx_id};end`;
@@ -1312,7 +1582,6 @@ LOADING_HTML = """
                     showToast('✅ Date & rate updated!', 'success');
 
                 } catch(e) {
-                    // Revert pill
                     const revDate = document.getElementById('datePicker').value || (data.date || '--');
                     pill.innerHTML = revDate;
                     showToast('Error: ' + e.message, 'error');
@@ -1320,17 +1589,14 @@ LOADING_HTML = """
                     pill.classList.remove('updating');
                 }
             }
-            // ── End Editable Date ──────────────────────────────────────────
 
             // ── Editable Category ──────────────────────────────────────────
             async function openCategorySelector() {
                 const select = document.getElementById('inlineCategorySelect');
                 const pill = document.getElementById('categoryValue');
                 
-                // Fetch categories if we haven't yet
                 await fetchCategories();
                 
-                // Populate inline dropdown from cachedCategories
                 select.innerHTML = '<option value="">Select Category</option>';
                 if (cachedCategories) {
                     cachedCategories.forEach(cat => {
@@ -1341,7 +1607,6 @@ LOADING_HTML = """
                     });
                 }
                 
-                // Pre-select current category
                 const data = window.currentTransactionData;
                 if (data && data.category_name) {
                     for(let i=0; i<select.options.length; i++) {
@@ -1352,7 +1617,6 @@ LOADING_HTML = """
                     }
                 }
                 
-                // Toggle display
                 pill.style.display = 'none';
                 select.style.display = 'inline-block';
                 select.focus();
@@ -1413,7 +1677,6 @@ LOADING_HTML = """
 
                     const result = await res.json();
 
-                    // Update stored data
                     data.category_name = newCategory;
                     if (result.category_emoji !== undefined) {
                         data.category_emoji = result.category_emoji;
@@ -1421,7 +1684,6 @@ LOADING_HTML = """
                         delete data.category_emoji;
                     }
 
-                    // Update UI text (preserving historical prefix 💜 if it existed)
                     const isHistorical = !!data.used_historical_name;
                     let catDisplay = newCategory;
                     if (data.category_emoji) {
@@ -1443,7 +1705,6 @@ LOADING_HTML = """
                     pill.classList.remove('updating');
                 }
             }
-            // ── End Editable Category ──────────────────────────────────────
 
             // --- Hamburger Menu and History Modal Logic ---
             const dlTrigger = document.getElementById('deepLinkTrigger');
@@ -1468,7 +1729,6 @@ LOADING_HTML = """
                 }
             });
 
-            // Close dropdown when a link is clicked
             const dlLinks = document.querySelectorAll('.deep-link-item');
             dlLinks.forEach(link => {
                 link.addEventListener('click', () => {
@@ -1482,9 +1742,7 @@ LOADING_HTML = """
             if (updateAppBtn) {
                 updateAppBtn.addEventListener('click', async (e) => {
                     e.preventDefault();
-                    if (typeof showToast === 'function') {
-                        showToast("Updating app...", "success");
-                    }
+                    showToast("Updating app...", "success");
                     try {
                         if ('serviceWorker' in navigator) {
                             const registrations = await navigator.serviceWorker.getRegistrations();
@@ -1506,12 +1764,9 @@ LOADING_HTML = """
                 });
             }
 
-            // Check if app was just updated to announce via toast
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('updated') === '1') {
-                if (typeof showToast === 'function') {
-                    showToast("✨ Updated to the latest version!", "success");
-                }
+                showToast("✨ Updated to the latest version!", "success");
                 urlParams.delete('updated');
                 urlParams.delete('v');
                 const newSearch = urlParams.toString() ? ('?' + urlParams.toString()) : '';
@@ -1542,25 +1797,17 @@ LOADING_HTML = """
                     dx = touchStartX - currentX;
                     const dy = Math.abs(touchStartY - currentY);
                     
-                    if (dy > Math.abs(dx)) {
-                        return;
-                    }
+                    if (dy > Math.abs(dx)) return;
 
-                    if (Math.abs(dx) > 10) {
-                        isSwiping = true;
-                    }
+                    if (Math.abs(dx) > 10) isSwiping = true;
 
                     if (isSwiping) {
                         if (e.cancelable) e.preventDefault();
-
                         const baseTranslate = rowWrapper.classList.contains('swiped') ? -80 : 0;
                         let targetX = baseTranslate - dx;
 
-                        if (targetX > 0) {
-                            targetX = 0;
-                        } else if (targetX < -120) {
-                            targetX = -120;
-                        }
+                        if (targetX > 0) targetX = 0;
+                        else if (targetX < -120) targetX = -120;
 
                         rowWrapper.style.transform = `translateX(${targetX}px)`;
                     }
@@ -1654,13 +1901,6 @@ LOADING_HTML = """
                 dismissDeleteConfirmation();
             }
 
-            window.addEventListener('click', (event) => {
-                if (event.target === historyModal) {
-                    historyModal.style.display = "none";
-                    dismissDeleteConfirmation();
-                }
-            });
-
             async function fetchHistoryLogs() {
                 try {
                     historyLoading.style.display = "block";
@@ -1682,11 +1922,9 @@ LOADING_HTML = """
                         const rowWrapper = document.createElement("div");
                         rowWrapper.className = "history-row-wrapper";
 
-                        // Content row
                         const contentRow = document.createElement("div");
                         contentRow.className = "history-row-content";
 
-                        // Merchant column
                         const merchantCol = document.createElement("div");
                         merchantCol.style.flex = "2";
                         merchantCol.style.textAlign = "left";
@@ -1702,7 +1940,6 @@ LOADING_HTML = """
                         }
                         contentRow.appendChild(merchantCol);
 
-                        // Amount column
                         const amountCol = document.createElement("div");
                         amountCol.style.flex = "1";
                         amountCol.style.textAlign = "right";
@@ -1732,7 +1969,6 @@ LOADING_HTML = """
                         }
                         contentRow.appendChild(amountCol);
 
-                        // Date column
                         const dateCol = document.createElement("div");
                         dateCol.style.flex = "1";
                         dateCol.style.textAlign = "center";
@@ -1740,10 +1976,8 @@ LOADING_HTML = """
                         dateCol.textContent = log.date;
                         contentRow.appendChild(dateCol);
 
-
                         rowWrapper.appendChild(contentRow);
 
-                        // Delete button (on the right)
                         const deleteBtn = document.createElement("div");
                         deleteBtn.className = "history-row-delete-btn";
                         deleteBtn.textContent = "Delete";
@@ -1766,7 +2000,338 @@ LOADING_HTML = """
                 }
             }
 
-            // Start polling
+            // =========================================================
+            // ⚠️ Failed Transactions Logic
+            // =========================================================
+            const failedModal = document.getElementById('failedModal');
+            const closeFailedBtn = document.getElementById('closeFailedModal');
+            const failedTableBody = document.getElementById('failedTableBody');
+            const failedLoading = document.getElementById('failedLoading');
+            const failedNoData = document.getElementById('failedNoData');
+            const editFailedModal = document.getElementById('editFailedModal');
+
+            let failedTransactionsCache = [];
+
+            async function updateFailedBadgeCount() {
+                try {
+                    const res = await fetch('/api/failed-transactions/count');
+                    if (res.ok) {
+                        const data = await res.json();
+                        const count = data.count || 0;
+                        const badge = document.getElementById('failedBadge');
+                        const modalCount = document.getElementById('failedModalCount');
+                        if (badge) {
+                            badge.textContent = count;
+                            badge.style.display = count > 0 ? 'inline-block' : 'none';
+                        }
+                        if (modalCount) {
+                            modalCount.textContent = count;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to update badge count:", e);
+                }
+            }
+
+            function openFailedModal(e) {
+                if (e) e.preventDefault();
+                failedModal.style.display = "flex";
+                fetchFailedTransactions();
+            }
+
+            closeFailedBtn.onclick = function () {
+                failedModal.style.display = "none";
+            };
+
+            window.addEventListener('click', (event) => {
+                if (event.target === historyModal) {
+                    historyModal.style.display = "none";
+                    dismissDeleteConfirmation();
+                }
+                if (event.target === failedModal) {
+                    failedModal.style.display = "none";
+                }
+                if (event.target === editFailedModal) {
+                    closeEditFailedModal();
+                }
+            });
+
+            async function fetchFailedTransactions() {
+                try {
+                    failedLoading.style.display = "block";
+                    failedNoData.style.display = "none";
+                    failedTableBody.innerHTML = "";
+
+                    const res = await fetch("/api/failed-transactions");
+                    if (!res.ok) throw new Error("Failed to fetch failed transactions");
+                    failedTransactionsCache = await res.json();
+
+                    failedLoading.style.display = "none";
+
+                    if (failedTransactionsCache.length === 0) {
+                        failedNoData.style.display = "block";
+                        updateFailedBadgeCount();
+                        return;
+                    }
+
+                    renderFailedTransactions(failedTransactionsCache);
+                    updateFailedBadgeCount();
+                } catch (err) {
+                    console.error(err);
+                    failedLoading.style.display = "none";
+                    failedTableBody.innerHTML = `<div style="text-align: center; color: #dc2626; padding: 2rem 0;">Error loading failed transactions: ${err.message}</div>`;
+                }
+            }
+
+            function renderFailedTransactions(items) {
+                failedTableBody.innerHTML = "";
+                if (items.length === 0) {
+                    failedNoData.style.display = "block";
+                    return;
+                }
+                failedNoData.style.display = "none";
+
+                items.forEach(tx => {
+                    const card = document.createElement("div");
+                    card.className = "failed-item-card";
+                    card.id = `failed-card-${tx.id}`;
+
+                    const sourceIcon = tx.source_type === "manual" ? "✍️ Manual" : "🧾 Receipt";
+                    const amountDisplay = tx.amount !== null && tx.amount !== undefined 
+                        ? `${parseFloat(tx.amount).toFixed(2)} ${tx.currency}` 
+                        : (tx.source_type === "receipt" ? "Amount Pending" : "0.00");
+                    
+                    const dateDisplay = tx.date || (tx.created_at ? tx.created_at.split("T")[0] : "");
+                    const imageBtn = tx.has_image 
+                        ? `<a href="/api/failed-transactions/${tx.id}/image" target="_blank" style="text-decoration:none; font-size:1rem;" title="View Receipt Image">🖼️</a>` 
+                        : "";
+
+                    const retryCountBadge = tx.retry_count > 0 
+                        ? `<span style="font-size:0.75rem; color:#b91c1c; margin-left:6px;">(Retried ${tx.retry_count}x)</span>` 
+                        : "";
+
+                    card.innerHTML = `
+                        <div class="failed-item-header">
+                            <div class="failed-item-merchant">
+                                <span style="font-size: 0.8rem; background: rgba(102,126,234,0.15); color: #4f46e5; padding: 2px 6px; border-radius: 4px;">${sourceIcon}</span>
+                                <span>${tx.merchant}</span>
+                                ${imageBtn}
+                                ${retryCountBadge}
+                            </div>
+                            <div class="failed-item-amount">${amountDisplay}</div>
+                        </div>
+                        <div class="failed-error-banner">
+                            ⚠️ ${tx.error_message}
+                        </div>
+                        <div class="failed-item-actions">
+                            <div class="failed-meta">
+                                📅 ${dateDisplay} ${tx.category_name ? `• 🏷️ ${tx.category_name}` : ''}
+                            </div>
+                            <div class="failed-btn-group">
+                                <button class="btn-failed-retry" onclick="retrySingleFailedTx(${tx.id}, this)">🔄 Retry</button>
+                                <button class="btn-failed-edit" onclick="openEditFailedModal(${tx.id})">✏️ Edit</button>
+                                <button class="btn-failed-del" onclick="deleteSingleFailedTx(${tx.id})">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+
+                    failedTableBody.appendChild(card);
+                });
+            }
+
+            async function retrySingleFailedTx(id, btn) {
+                const origText = btn ? btn.textContent : "Retry";
+                if (btn) {
+                    btn.textContent = "Retrying... ⏳";
+                    btn.disabled = true;
+                }
+
+                try {
+                    const res = await fetch(`/api/failed-transactions/${id}/retry`, {
+                        method: 'POST'
+                    });
+
+                    if (res.ok) {
+                        showToast("✅ Transaction imported successfully!", "success");
+                        const card = document.getElementById(`failed-card-${id}`);
+                        if (card) {
+                            card.style.transition = "all 0.3s ease";
+                            card.style.opacity = "0";
+                            card.style.transform = "scale(0.95)";
+                            setTimeout(() => {
+                                card.remove();
+                                failedTransactionsCache = failedTransactionsCache.filter(t => t.id !== id);
+                                if (failedTransactionsCache.length === 0) {
+                                    failedNoData.style.display = "block";
+                                }
+                                updateFailedBadgeCount();
+                            }, 300);
+                        }
+                    } else {
+                        const err = await res.json();
+                        showToast("❌ " + (err.detail || "Retry failed"), "error");
+                        await fetchFailedTransactions();
+                    }
+                } catch (e) {
+                    showToast("❌ Network error: " + e.message, "error");
+                } finally {
+                    if (btn) {
+                        btn.textContent = origText;
+                        btn.disabled = false;
+                    }
+                }
+            }
+
+            async function retryAllFailedTxns() {
+                const btn = document.getElementById('retryAllFailedBtn');
+                const origText = btn.innerHTML;
+                btn.innerHTML = "<span>Retrying All... ⏳</span>";
+                btn.disabled = true;
+
+                try {
+                    const res = await fetch('/api/failed-transactions/retry-all', {
+                        method: 'POST'
+                    });
+
+                    if (res.ok) {
+                        const result = await res.json();
+                        showToast(`Processed ${result.total}: ${result.succeeded} succeeded, ${result.failed} failed.`, result.failed === 0 ? "success" : "error");
+                        await fetchFailedTransactions();
+                    } else {
+                        const err = await res.json();
+                        showToast("Error: " + (err.detail || "Bulk retry failed"), "error");
+                    }
+                } catch (e) {
+                    showToast("Network error: " + e.message, "error");
+                } finally {
+                    btn.innerHTML = origText;
+                    btn.disabled = false;
+                }
+            }
+
+            async function clearAllFailedTxns() {
+                showConfirmToast("Clear ALL failed transactions?", async () => {
+                    try {
+                        const res = await fetch('/api/failed-transactions', {
+                            method: 'DELETE'
+                        });
+                        if (res.ok) {
+                            showToast("All failed transactions cleared", "success");
+                            await fetchFailedTransactions();
+                        } else {
+                            const err = await res.json();
+                            showToast("Error: " + err.detail, "error");
+                        }
+                    } catch (e) {
+                        showToast("Network error: " + e.message, "error");
+                    }
+                });
+            }
+
+            async function deleteSingleFailedTx(id) {
+                showConfirmToast("Delete this failed transaction?", async () => {
+                    try {
+                        const res = await fetch(`/api/failed-transactions/${id}`, {
+                            method: 'DELETE'
+                        });
+                        if (res.ok) {
+                            showToast("Failed transaction deleted", "success");
+                            const card = document.getElementById(`failed-card-${id}`);
+                            if (card) {
+                                card.remove();
+                                failedTransactionsCache = failedTransactionsCache.filter(t => t.id !== id);
+                                if (failedTransactionsCache.length === 0) {
+                                    failedNoData.style.display = "block";
+                                }
+                                updateFailedBadgeCount();
+                            }
+                        } else {
+                            const err = await res.json();
+                            showToast("Error: " + err.detail, "error");
+                        }
+                    } catch (e) {
+                        showToast("Network error: " + e.message, "error");
+                    }
+                });
+            }
+
+            async function openEditFailedModal(id) {
+                const tx = failedTransactionsCache.find(t => t.id === id);
+                if (!tx) return;
+
+                await fetchCategories();
+
+                document.getElementById('editFailedId').value = tx.id;
+                document.getElementById('editFailedMerchant').value = tx.merchant !== "Receipt (OCR Pending)" ? tx.merchant : "";
+                document.getElementById('editFailedAmount').value = tx.amount !== null && tx.amount !== undefined ? tx.amount : "";
+                document.getElementById('editFailedCurrency').value = tx.currency || "EUR";
+                document.getElementById('editFailedDate').value = tx.date || new Date().toISOString().split('T')[0];
+                document.getElementById('editFailedIsCredit').checked = !!tx.is_credit;
+                document.getElementById('editFailedIsCash').checked = !!tx.is_cash;
+
+                const catSelect = document.getElementById('editFailedCategory');
+                if (catSelect && tx.category_name) {
+                    for (let i = 0; i < catSelect.options.length; i++) {
+                        if (catSelect.options[i].value === tx.category_name) {
+                            catSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                editFailedModal.style.display = "flex";
+            }
+
+            function closeEditFailedModal() {
+                editFailedModal.style.display = "none";
+            }
+
+            async function saveAndRetryFailedTx() {
+                const id = document.getElementById('editFailedId').value;
+                const merchant = document.getElementById('editFailedMerchant').value.trim();
+                const amountVal = document.getElementById('editFailedAmount').value;
+                const amount = amountVal ? parseFloat(amountVal) : 0.0;
+                const currency = document.getElementById('editFailedCurrency').value;
+                const date = document.getElementById('editFailedDate').value;
+                const category_name = document.getElementById('editFailedCategory').value;
+                const is_credit = document.getElementById('editFailedIsCredit').checked;
+                const is_cash = document.getElementById('editFailedIsCash').checked;
+
+                if (!merchant) {
+                    showToast("Merchant name is required", "error");
+                    return;
+                }
+
+                try {
+                    const updateRes = await fetch(`/api/failed-transactions/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            merchant,
+                            amount,
+                            currency,
+                            date,
+                            category_name,
+                            is_credit,
+                            is_cash
+                        })
+                    });
+
+                    if (!updateRes.ok) {
+                        const err = await updateRes.json();
+                        throw new Error(err.detail || "Failed to update transaction");
+                    }
+
+                    closeEditFailedModal();
+                    showToast("Changes saved. Retrying transaction...", "success");
+                    await retrySingleFailedTx(id, null);
+                } catch (e) {
+                    showToast("Error: " + e.message, "error");
+                }
+            }
+
+            // Start polling and load initial badge count
+            updateFailedBadgeCount();
             setTimeout(checkStatus, 100);
         </script>
 
@@ -2233,6 +2798,269 @@ async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# ⚠️ Failed Transactions Routes
+# =============================================================================
+
+class FailedTransactionUpdateRequest(BaseModel):
+    merchant: Optional[str] = None
+    amount: Optional[float] = None
+    currency: Optional[str] = None
+    date: Optional[str] = None
+    category_name: Optional[str] = None
+    is_cash: Optional[bool] = None
+    is_credit: Optional[bool] = None
+    notes: Optional[str] = None
+
+@app.get("/api/failed-transactions")
+async def get_failed_transactions(db: AsyncSession = Depends(get_db)):
+    """
+    Get all failed transactions ordered by creation date descending.
+    Excludes large raw_content binary bytes for performance.
+    """
+    try:
+        stmt = select(FailedTransaction).order_by(FailedTransaction.created_at.desc())
+        result = await db.execute(stmt)
+        failed_list = result.scalars().all()
+        
+        items = []
+        for tx in failed_list:
+            display_data = tx.parsed_data or tx.manual_data or {}
+            items.append({
+                "id": tx.id,
+                "source_type": tx.source_type,
+                "error_message": tx.error_message,
+                "retry_count": tx.retry_count or 0,
+                "created_at": tx.created_at.isoformat() if tx.created_at else None,
+                "updated_at": tx.updated_at.isoformat() if tx.updated_at else None,
+                "has_image": tx.raw_content is not None,
+                "user_currency": tx.user_currency,
+                "merchant": display_data.get("merchant") or "Receipt (OCR Pending)",
+                "amount": display_data.get("amount"),
+                "currency": display_data.get("currency") or tx.user_currency or "EUR",
+                "date": display_data.get("date") or "",
+                "is_cash": bool(display_data.get("is_cash", False)),
+                "is_credit": bool(display_data.get("is_credit", False)),
+                "notes": display_data.get("notes") or "",
+                "category_name": display_data.get("category_name") or "",
+                "category_emoji": display_data.get("category_emoji") or "",
+                "original_amount": display_data.get("original_amount"),
+                "original_currency": display_data.get("original_currency"),
+                "parsed_data": tx.parsed_data,
+                "manual_data": tx.manual_data
+            })
+        return items
+    except Exception as e:
+        print(f"Error fetching failed transactions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/failed-transactions/count")
+async def get_failed_transactions_count(db: AsyncSession = Depends(get_db)):
+    """
+    Get the total count of failed transactions for the UI badge.
+    """
+    try:
+        from sqlalchemy import func as sql_func
+        stmt = select(sql_func.count()).select_from(FailedTransaction)
+        result = await db.execute(stmt)
+        count = result.scalar_one() or 0
+        return {"count": count}
+    except Exception as e:
+        print(f"Error counting failed transactions: {e}")
+        return {"count": 0}
+
+@app.get("/api/failed-transactions/{failed_id}/image")
+async def get_failed_transaction_image(failed_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Serve the stored receipt image if available.
+    """
+    tx = await db.get(FailedTransaction, failed_id)
+    if not tx or not tx.raw_content:
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    media_type = "image/jpeg"
+    if tx.raw_content.startswith(b"\x89PNG\r\n\x1a\n"):
+        media_type = "image/png"
+    elif tx.raw_content.startswith(b"GIF87a") or tx.raw_content.startswith(b"GIF89a"):
+        media_type = "image/gif"
+    elif tx.raw_content.startswith(b"RIFF") and b"WEBP" in tx.raw_content[:12]:
+        media_type = "image/webp"
+        
+    return Response(content=tx.raw_content, media_type=media_type)
+
+@app.put("/api/failed-transactions/{failed_id}")
+async def update_failed_transaction(
+    failed_id: int, 
+    update_req: FailedTransactionUpdateRequest, 
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update editable fields of a failed transaction before retry.
+    """
+    tx = await db.get(FailedTransaction, failed_id)
+    if not tx:
+        raise HTTPException(status_code=404, detail="Failed transaction not found")
+        
+    data = dict(tx.parsed_data or tx.manual_data or {})
+    if update_req.merchant is not None: data["merchant"] = update_req.merchant
+    if update_req.amount is not None: data["amount"] = update_req.amount
+    if update_req.currency is not None: data["currency"] = update_req.currency
+    if update_req.date is not None: data["date"] = update_req.date
+    if update_req.category_name is not None: data["category_name"] = update_req.category_name
+    if update_req.is_cash is not None: data["is_cash"] = update_req.is_cash
+    if update_req.is_credit is not None: data["is_credit"] = update_req.is_credit
+    if update_req.notes is not None: data["notes"] = update_req.notes
+    
+    from sqlalchemy.orm.attributes import flag_modified
+    if tx.source_type == "manual":
+        tx.manual_data = data
+        flag_modified(tx, "manual_data")
+    else:
+        tx.parsed_data = data
+        flag_modified(tx, "parsed_data")
+        
+    await db.commit()
+    return {"status": "ok", "message": "Transaction updated successfully"}
+
+@app.post("/api/failed-transactions/{failed_id}/retry")
+async def retry_failed_transaction(
+    failed_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Retry a specific failed transaction.
+    On success: pushes to Monarch, adds to Transaction & Log tables, and deletes from FailedTransaction table.
+    """
+    tx = await db.get(FailedTransaction, failed_id)
+    if not tx:
+        raise HTTPException(status_code=404, detail="Failed transaction not found")
+        
+    try:
+        from .services.orchestrator import process_transaction, process_manual_transaction, process_parsed_transaction
+        
+        result = None
+        if tx.parsed_data:
+            # We already have parsed/edited fields, retry from parsed data
+            img_hash = tx.image_hash or f"retry_{tx.id}_{uuid.uuid4().hex[:6]}"
+            result = await process_parsed_transaction(
+                data=dict(tx.parsed_data),
+                image_hash=img_hash,
+                db=db,
+                user_currency_override=tx.user_currency,
+                force_override=True
+            )
+        elif tx.source_type == "manual" and tx.manual_data:
+            result = await process_manual_transaction(
+                manual_data=dict(tx.manual_data),
+                db=db,
+                force_override=True
+            )
+        elif tx.raw_content:
+            # Re-run full OCR extraction and processing
+            result = await process_transaction(
+                content=tx.raw_content,
+                db=db,
+                user_currency=tx.user_currency,
+                force_override=True
+            )
+        else:
+            raise ValueError("No transaction data or image content found to retry.")
+            
+        # If successful, delete from failed_transactions
+        await db.delete(tx)
+        await db.commit()
+        return {"status": "success", "result": result}
+        
+    except Exception as e:
+        tx.retry_count = (tx.retry_count or 0) + 1
+        tx.error_message = str(e)
+        await db.commit()
+        raise HTTPException(status_code=500, detail=f"Retry failed: {str(e)}")
+
+@app.post("/api/failed-transactions/retry-all")
+async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
+    """
+    Retry all failed transactions sequentially.
+    Returns summary of successes and failures.
+    """
+    stmt = select(FailedTransaction).order_by(FailedTransaction.created_at.asc())
+    result = await db.execute(stmt)
+    failed_list = result.scalars().all()
+    
+    if not failed_list:
+        return {"status": "ok", "total": 0, "succeeded": 0, "failed": 0, "results": []}
+        
+    from .services.orchestrator import process_transaction, process_manual_transaction, process_parsed_transaction
+    
+    succeeded = 0
+    failed = 0
+    results = []
+    
+    for tx in failed_list:
+        tx_id = tx.id
+        merchant = (tx.parsed_data or tx.manual_data or {}).get("merchant", f"Transaction #{tx_id}")
+        try:
+            if tx.parsed_data:
+                img_hash = tx.image_hash or f"retry_{tx.id}_{uuid.uuid4().hex[:6]}"
+                res = await process_parsed_transaction(
+                    data=dict(tx.parsed_data),
+                    image_hash=img_hash,
+                    db=db,
+                    user_currency_override=tx.user_currency,
+                    force_override=True
+                )
+            elif tx.source_type == "manual" and tx.manual_data:
+                res = await process_manual_transaction(
+                    manual_data=dict(tx.manual_data),
+                    db=db,
+                    force_override=True
+                )
+            elif tx.raw_content:
+                res = await process_transaction(
+                    content=tx.raw_content,
+                    db=db,
+                    user_currency=tx.user_currency,
+                    force_override=True
+                )
+            else:
+                raise ValueError("No data or content available to retry")
+                
+            await db.delete(tx)
+            await db.commit()
+            succeeded += 1
+            results.append({"id": tx_id, "merchant": merchant, "status": "success"})
+        except Exception as e:
+            tx.retry_count = (tx.retry_count or 0) + 1
+            tx.error_message = str(e)
+            await db.commit()
+            failed += 1
+            results.append({"id": tx_id, "merchant": merchant, "status": "failed", "error": str(e)})
+            
+    return {
+        "status": "ok",
+        "total": len(failed_list),
+        "succeeded": succeeded,
+        "failed": failed,
+        "results": results
+    }
+
+@app.delete("/api/failed-transactions/{failed_id}")
+async def delete_failed_transaction(failed_id: int, db: AsyncSession = Depends(get_db)):
+    tx = await db.get(FailedTransaction, failed_id)
+    if not tx:
+        raise HTTPException(status_code=404, detail="Failed transaction not found")
+    await db.delete(tx)
+    await db.commit()
+    return {"status": "ok", "message": "Failed transaction deleted"}
+
+@app.delete("/api/failed-transactions")
+async def clear_all_failed_transactions(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import delete as sql_delete
+    await db.execute(sql_delete(FailedTransaction))
+    await db.commit()
+    return {"status": "ok", "message": "All failed transactions cleared"}
 
 
 # =============================================================================

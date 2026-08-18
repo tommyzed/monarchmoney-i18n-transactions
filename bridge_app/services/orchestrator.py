@@ -185,8 +185,8 @@ async def _convert_currency(data: dict, report_func, user_currency_override: str
             data["currency"] = "USD"
             data["exchange_rate"] = rate
         except Exception as e:
-             print(f"Conversion failed, using original: {e}")
-             data["currency"] = target_original
+             print(f"Conversion failed: {e}")
+             raise HTTPException(status_code=502, detail=f"Currency conversion failed ({target_original} to USD): {str(e)}")
     else:
         print(f"Skipping conversion: '{target_original}' not in supported list.")
         data["currency"] = target_original
@@ -275,27 +275,44 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
     Shared logic for processing transaction data, converting currency, pushing to Monarch, and saving.
     """
 
-    # 1. Check Duplicates
-    existing = await _check_duplicates(image_hash, db, report_func, force_override)
-    if existing:
-        return {"status": "duplicate", "data": existing.parsed_data}
+    try:
+        # 1. Check Duplicates
+        existing = await _check_duplicates(image_hash, db, report_func, force_override)
+        if existing:
+            return {"status": "duplicate", "data": existing.parsed_data}
 
-    # 3a. Auto-Mapping Check
-    await _apply_auto_mapping(data, db, report_func)
+        # 3a. Auto-Mapping Check
+        await _apply_auto_mapping(data, db, report_func)
 
-    # 3a-ii. Historical-name category lookup
-    await _apply_historical_category_lookup(data, db, report_func)
+        # 3a-ii. Historical-name category lookup
+        await _apply_historical_category_lookup(data, db, report_func)
 
-    # 3b. Currency Conversion
-    await _convert_currency(data, report_func, user_currency_override)
+        # 3b. Currency Conversion
+        await _convert_currency(data, report_func, user_currency_override)
 
-    # 4. Monarch Push
-    await _push_to_monarch(data, db, report_func)
+        # 4. Monarch Push
+        await _push_to_monarch(data, db, report_func)
 
-    # 4b. Fetch Category Emoji
-    await _fetch_category_emoji(data, db)
+        # 4b. Fetch Category Emoji
+        await _fetch_category_emoji(data, db)
 
-    # 5. Save Record
-    await _save_transaction_and_log(data, image_hash, db, report_func, force_override)
-    
-    return data
+        # 5. Save Record
+        await _save_transaction_and_log(data, image_hash, db, report_func, force_override)
+        
+        return data
+    except Exception as e:
+        if not hasattr(e, "parsed_data"):
+            e.parsed_data = data
+        raise e
+
+async def process_parsed_transaction(data: dict, image_hash: str, db: AsyncSession, progress_callback=None, user_currency_override: str = None, force_override: bool = True):
+    """
+    Process already parsed/edited transaction data (used when retrying a failed transaction with parsed fields).
+    """
+    async def report(msg, percent=None):
+        print(f"Progress: {msg} ({percent}%)")
+        if progress_callback:
+            await progress_callback(msg, percent)
+            
+    await report("Retrying transaction processing...", 10)
+    return await _process_transaction_data(data, image_hash, db, report, user_currency_override=user_currency_override, force_override=force_override)

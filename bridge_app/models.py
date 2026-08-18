@@ -64,3 +64,18 @@ class Log(Base):
     monarch_tx_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+class FailedTransaction(Base):
+    __tablename__ = "failed_transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    source_type = Column(String, default="receipt")  # "receipt" or "manual"
+    image_hash = Column(String, nullable=True, index=True)
+    raw_content = Column(LargeBinary, nullable=True)  # Image bytes for OCR retries
+    user_currency = Column(String, nullable=True)
+    parsed_data = Column(JSON, nullable=True)        # Extracted or edited transaction fields
+    manual_data = Column(JSON, nullable=True)        # Manual form data
+    error_message = Column(String, nullable=False)
+    retry_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
