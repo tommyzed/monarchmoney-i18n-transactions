@@ -1002,7 +1002,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c);" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="margin-top: 0; background: #6b7280;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1548 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1601 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -2500,14 +2500,14 @@ LOADING_HTML = """
                 merchants.forEach(m => {
                     const item = document.createElement('div');
                     item.className = 'merchant-list-item';
-                    item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:9px 12px; margin-bottom:6px; background:#453875; border:1px solid rgba(196, 181, 253, 0.25); border-radius:8px; transition: background 0.15s ease;';
-                    item.onmouseover = () => { item.style.background = '#584894'; };
-                    item.onmouseout = () => { item.style.background = '#453875'; };
+                    item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:9px 12px; margin-bottom:6px; background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border:1px solid rgba(221, 214, 254, 0.3); border-radius:8px; transition: background 0.15s ease;';
+                    item.onmouseover = () => { item.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'; };
+                    item.onmouseout = () => { item.style.background = 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'; };
                     
                     const isStarred = !!m.is_starred;
                     const starIcon = isStarred ? '⭐' : '☆';
                     const starTitle = isStarred ? 'Starred (click to unstar)' : 'Unstarred (click to star)';
-                    const starColor = isStarred ? '#fbbf24' : '#c4b5fd';
+                    const starColor = isStarred ? '#fbbf24' : '#e0e7ff';
                     
                     item.innerHTML = `
                         <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
