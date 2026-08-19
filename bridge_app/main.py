@@ -2,7 +2,17 @@ import uuid
 import asyncio
 import os
 import json
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
+from fastapi import (
+    FastAPI,
+    UploadFile,
+    File,
+    Depends,
+    HTTPException,
+    Form,
+    BackgroundTasks,
+    Request,
+    Response,
+)
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -12,7 +22,16 @@ from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client, get_latest_credentials
-from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant
+from .models import (
+    Credentials,
+    MerchantMapping,
+    Category,
+    FireSettings,
+    Transaction,
+    Log,
+    FailedTransaction,
+    Merchant,
+)
 from sqlalchemy.future import select
 from sqlalchemy import delete, func
 from pydantic import BaseModel
@@ -36,11 +55,15 @@ DEMO_DEFAULTS = {
     "social_security_withdrawal_year": 2047,
 }
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("📦 LIFESPAN: Checking database connection (this might take a moment if connecting remotely)...")
+    print(
+        "📦 LIFESPAN: Checking database connection (this might take a moment if connecting remotely)..."
+    )
     try:
         from sqlalchemy import text
+
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
         print("✅ LIFESPAN: Database connected.")
@@ -54,13 +77,17 @@ async def lifespan(app: FastAPI):
     print("✨ LIFESPAN: Startup complete.")
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 
 # --- Security Configuration (Ghost Cookie) ---
 UNLOCK_SECRET = os.environ.get("UNLOCK_SECRET")
 DEVICE_TOKEN_COOKIE = "device_token"
 # Token value is a hash of the secret to avoid exposing it directly in the cookie if inspected
-COOKIE_VALUE = hashlib.sha256(UNLOCK_SECRET.encode()).hexdigest() if UNLOCK_SECRET else None
+COOKIE_VALUE = (
+    hashlib.sha256(UNLOCK_SECRET.encode()).hexdigest() if UNLOCK_SECRET else None
+)
+
 
 class GhostSecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -79,7 +106,7 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         # Allow activation endpoint
         if request.url.path == "/s":
             return await call_next(request)
-            
+
         # Allow static assets (manifest, Service Worker, icons) to support PWA installation.
         if request.url.path in ["/manifest.json", "/sw.js", "/favicon.ico"]:
             response = await call_next(request)
@@ -91,36 +118,41 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             response.headers["Cache-Control"] = "no-cache, must-revalidate"
             return response
-            
+
         if request.url.path.endswith((".png", ".jpg", ".css", ".js", ".gif")):
-             return await call_next(request)
+            return await call_next(request)
 
         # Allow FIRE demo mode access
         if request.url.path == "/fire" or request.url.path.startswith("/api/fire/"):
             return await call_next(request)
-        
+
         # If no secret is configured, block protected routes
         if not UNLOCK_SECRET:
-            return Response(status_code=401, content="Unauthorized - Security not configured on server")
+            return Response(
+                status_code=401,
+                content="Unauthorized - Security not configured on server",
+            )
 
         # GHOST MODE: Return 404 Not Found if unauthorized
         return Response(status_code=404, content="Not Found")
 
+
 app.add_middleware(GhostSecurityMiddleware)
 
-@app.get("/s")
-async def activate(request: Request, s: str):
+
+@app.post("/s")
+async def activate(request: Request, s: str = Form(...)):
     """
     Sets the Ghost Cookie to unlock the device.
-    Usage: /s?s=YOUR_SECRET
+    Usage: POST /s with form data s=YOUR_SECRET
     """
     if not UNLOCK_SECRET:
         return Response(status_code=500, content="Security not configured on server.")
-        
+
     if s != UNLOCK_SECRET:
         # Fake a 404 if secret is wrong to prevent guessing
         return Response(status_code=404, content="Not Found")
-    
+
     html_content = """
     <html>
         <head>
@@ -143,33 +175,40 @@ async def activate(request: Request, s: str):
         </body>
     </html>
     """
-    
+
     is_secure = request.url.scheme == "https"
 
     response = HTMLResponse(content=html_content)
     response.set_cookie(
         key=DEVICE_TOKEN_COOKIE,
         value=COOKIE_VALUE,
-        max_age=60*60*24*365*10, # 10 years
+        max_age=60 * 60 * 24 * 365 * 10,  # 10 years
         httponly=True,
         samesite="lax",
-        secure=is_secure
+        secure=is_secure,
     )
     return response
+
 
 # Simple in-memory job store
 # Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str, "inputs": dict, "failed_tx_id": int } }
 jobs = {}
 
 
-async def process_background_job(job_id: str, content: bytes, user_currency: str = None, manual_data: dict = None, force_override: bool = False):
+async def process_background_job(
+    job_id: str,
+    content: bytes,
+    user_currency: str = None,
+    manual_data: dict = None,
+    force_override: bool = False,
+):
     """
     Background task to process the transaction using a fresh DB session.
     """
     print(f"Starting background job {job_id}")
-    
+
     jobs[job_id] = {"status": "processing", "step": "Initializing...", "progress": 0}
-    
+
     async def progress_callback(step_msg, percent=None):
         jobs[job_id]["step"] = step_msg
         if percent is not None:
@@ -181,67 +220,93 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
             try:
                 if attempt > 0:
                     print(f"Job {job_id}: Attempt {attempt+1}...")
-                
+
                 async with AsyncSessionLocal() as db:
                     if manual_data:
-                         from .services.orchestrator import process_manual_transaction
-                         result = await process_manual_transaction(manual_data, db, progress_callback=progress_callback, force_override=force_override)
+                        from .services.orchestrator import process_manual_transaction
+
+                        result = await process_manual_transaction(
+                            manual_data,
+                            db,
+                            progress_callback=progress_callback,
+                            force_override=force_override,
+                        )
                     else:
-                         result = await process_transaction(content, db, progress_callback=progress_callback, user_currency=user_currency, force_override=force_override)
-                    
+                        result = await process_transaction(
+                            content,
+                            db,
+                            progress_callback=progress_callback,
+                            user_currency=user_currency,
+                            force_override=force_override,
+                        )
+
                     merchant_name = None
                     target_dict = None
                     if isinstance(result, dict):
                         if "merchant" in result:
                             merchant_name = result.get("merchant")
                             target_dict = result
-                        elif "data" in result and isinstance(result["data"], dict) and "merchant" in result["data"]:
+                        elif (
+                            "data" in result
+                            and isinstance(result["data"], dict)
+                            and "merchant" in result["data"]
+                        ):
                             merchant_name = result["data"].get("merchant")
                             target_dict = result["data"]
-                    
+
                     if merchant_name and target_dict is not None:
-                        m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == merchant_name.strip().lower())
+                        m_stmt = select(Merchant.is_starred).where(
+                            func.lower(Merchant.name) == merchant_name.strip().lower()
+                        )
                         m_res = await db.execute(m_stmt)
                         is_starred_val = m_res.scalar_one_or_none()
-                        target_dict["is_starred"] = bool(is_starred_val) if is_starred_val is not None else False
-                
+                        target_dict["is_starred"] = (
+                            bool(is_starred_val)
+                            if is_starred_val is not None
+                            else False
+                        )
+
                 # Success
                 jobs[job_id] = {
-                    "status": "completed", 
-                    "result": result, 
+                    "status": "completed",
+                    "result": result,
                     "progress": 100,
                     # Store inputs for potential retry/force submit
                     "inputs": {
                         "content": content,
                         "user_currency": user_currency,
-                        "manual_data": manual_data
-                    }
+                        "manual_data": manual_data,
+                    },
                 }
                 print(f"Job {job_id} completed successfully")
-                return # Exit function on success
-                
+                return  # Exit function on success
+
             except Exception as e:
                 # Check for DB connection errors
                 error_str = str(e)
-                is_db_error = "InterfaceError" in str(type(e).__name__) or "connection is closed" in error_str
-                
+                is_db_error = (
+                    "InterfaceError" in str(type(e).__name__)
+                    or "connection is closed" in error_str
+                )
+
                 if is_db_error and attempt < max_retries - 1:
                     print(f"⚠️ DB Connection Error (Attempt {attempt+1}): {e}")
                     print("Turning the database snooze button... 💤⏰")
-                    
+
                     # Update UI to inform user
                     jobs[job_id]["step"] = "Waking up database... 🥱"
-                    await asyncio.sleep(2) # Wait for DB to wake up
+                    await asyncio.sleep(2)  # Wait for DB to wake up
                     continue
                 else:
                     # Not a DB error or out of retries, raise to outer handler
                     raise e
-                    
+
     except Exception as e:
         import traceback
+
         error_details = traceback.format_exc()
         print(f"❌ Job {job_id} FAILED:\n{error_details}")
-        
+
         # User-friendly error mapping
         err_msg = str(e)
         if "Connection" in err_msg or "timeout" in err_msg.lower():
@@ -275,7 +340,7 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
                     parsed_data=parsed_data,
                     manual_data=manual_data,
                     error_message=display_error,
-                    retry_count=0
+                    retry_count=0,
                 )
                 db.add(failed_tx)
                 await db.commit()
@@ -286,27 +351,29 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
             print(f"⚠️ Error saving failed transaction to database: {save_err}")
 
         jobs[job_id] = {
-            "status": "failed", 
-            "error": display_error, 
+            "status": "failed",
+            "error": display_error,
             "failed_tx_id": failed_tx_id,
             "progress": 0,
             "inputs": {
                 "content": content,
                 "user_currency": user_currency,
                 "manual_data": manual_data,
-                "failed_tx_id": failed_tx_id
-            }
+                "failed_tx_id": failed_tx_id,
+            },
         }
+
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
+
 @app.post("/upload")
 async def upload_receipt(
     file: UploadFile = File(...),
     currency: str = Form(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     content = await file.read()
     try:
@@ -324,7 +391,7 @@ async def upload_receipt(
                 user_currency=currency,
                 parsed_data=parsed_data,
                 error_message=str(e),
-                retry_count=0
+                retry_count=0,
             )
             db.add(failed_tx)
             await db.commit()
@@ -335,25 +402,31 @@ async def upload_receipt(
             raise e
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+
 @app.get("/job/{job_id}")
 async def get_job_status(job_id: str):
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     # Exclude inputs (bytes) to avoid JSON serialization errors
     return {k: v for k, v in job.items() if k != "inputs"}
 
+
 @app.post("/job/{job_id}/retry")
-async def retry_job(job_id: str, force: bool = False, background_tasks: BackgroundTasks = None):
+async def retry_job(
+    job_id: str, force: bool = False, background_tasks: BackgroundTasks = None
+):
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-        
+
     inputs = job.get("inputs")
     if not inputs:
-        raise HTTPException(status_code=400, detail="Cannot retry this job (inputs not saved)")
-        
+        raise HTTPException(
+            status_code=400, detail="Cannot retry this job (inputs not saved)"
+        )
+
     print(f"Retrying job {job_id} with force={force}")
 
     # Clean up previous failed_tx if one was created
@@ -368,22 +441,22 @@ async def retry_job(job_id: str, force: bool = False, background_tasks: Backgrou
                     print(f"Cleaned up previous failed_tx {failed_tx_id} for retry.")
         except Exception as cleanup_err:
             print(f"Error cleaning up failed_tx before retry: {cleanup_err}")
-    
+
     # Reset job status
     jobs[job_id]["status"] = "processing"
     jobs[job_id]["progress"] = 0
     jobs[job_id]["step"] = "Retrying..."
-    
+
     # Restart background task
     background_tasks.add_task(
-        process_background_job, 
-        job_id, 
-        inputs.get("content"), 
-        inputs.get("user_currency"), 
+        process_background_job,
+        job_id,
+        inputs.get("content"),
+        inputs.get("user_currency"),
         inputs.get("manual_data"),
-        force_override=force
+        force_override=force,
     )
-    
+
     return {"status": "ok"}
 
 
@@ -2606,6 +2679,7 @@ LOADING_HTML = """
 </html>
 """
 
+
 @app.post("/manual")
 async def handle_manual_entry(
     background_tasks: BackgroundTasks,
@@ -2615,7 +2689,7 @@ async def handle_manual_entry(
     merchant: str = Form(...),
     is_cash: Optional[bool] = Form(False),
     is_credit: Optional[bool] = Form(False),
-    notes: Optional[str] = Form(None)
+    notes: Optional[str] = Form(None),
 ):
     """
     Handle Manual Entry POST request.
@@ -2623,7 +2697,7 @@ async def handle_manual_entry(
     try:
         job_id = str(uuid.uuid4())
         mm_account = os.environ.get("MM_ACCOUNT", "Default Account")
-        
+
         manual_data = {
             "amount": amount,
             "currency": currency,
@@ -2631,27 +2705,34 @@ async def handle_manual_entry(
             "merchant": merchant,
             "is_cash": is_cash,
             "is_credit": is_credit,
-            "notes": notes
+            "notes": notes,
         }
-        
+
         # Start background task
-        background_tasks.add_task(process_background_job, job_id, None, None, manual_data)
-        
+        background_tasks.add_task(
+            process_background_job, job_id, None, None, manual_data
+        )
+
         # Return Loading HTML
-        return HTMLResponse(content=LOADING_HTML.replace("__JOB_ID__", job_id).replace("__MM_ACCOUNT__", mm_account))
+        return HTMLResponse(
+            content=LOADING_HTML.replace("__JOB_ID__", job_id).replace(
+                "__MM_ACCOUNT__", mm_account
+            )
+        )
 
     except Exception as e:
         print(f"Error starting job: {e}")
         return HTMLResponse(content="Error starting job", status_code=500)
 
+
 @app.post("/share")
 async def handle_share(
     background_tasks: BackgroundTasks,
     currency: str = Form(None),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
 ):
     """
-    Handle Share Target POST request. 
+    Handle Share Target POST request.
     Starts processing in background and returns a loading page that polls for status.
     """
     try:
@@ -2659,26 +2740,37 @@ async def handle_share(
         content = await file.read()
         job_id = str(uuid.uuid4())
         mm_account = os.environ.get("MM_ACCOUNT", "Default Account")
-        
+
         # Start background task
         background_tasks.add_task(process_background_job, job_id, content, currency)
-        
+
         # Return Loading HTML
-        return HTMLResponse(content=LOADING_HTML.replace("__JOB_ID__", job_id).replace("__MM_ACCOUNT__", mm_account))
+        return HTMLResponse(
+            content=LOADING_HTML.replace("__JOB_ID__", job_id).replace(
+                "__MM_ACCOUNT__", mm_account
+            )
+        )
 
     except Exception as e:
         print(f"Error starting job: {e}")
         return HTMLResponse(content="Error starting job", status_code=500)
 
+
 class MerchantCreate(BaseModel):
     name: str
     is_starred: bool = True
 
+
 class MerchantStarRequest(BaseModel):
     is_starred: Optional[bool] = True
 
+
 @app.get("/api/merchants")
-async def get_merchants(starred: Optional[bool] = None, q: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+async def get_merchants(
+    starred: Optional[bool] = None,
+    q: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
     """
     List merchants, optionally filtered by starred status and query string.
     """
@@ -2688,8 +2780,10 @@ async def get_merchants(starred: Optional[bool] = None, q: Optional[str] = None,
             stmt = stmt.where(Merchant.is_starred == starred)
         if q:
             stmt = stmt.where(Merchant.name.ilike(f"%{q.strip()}%"))
-        
-        stmt = stmt.order_by(Merchant.is_starred.desc(), func.lower(Merchant.name).asc())
+
+        stmt = stmt.order_by(
+            Merchant.is_starred.desc(), func.lower(Merchant.name).asc()
+        )
         result = await db.execute(stmt)
         merchants = result.scalars().all()
         return {
@@ -2708,13 +2802,18 @@ async def get_merchants(starred: Optional[bool] = None, q: Optional[str] = None,
         print(f"Error fetching merchants: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/merchants/starred")
 async def get_starred_merchants(db: AsyncSession = Depends(get_db)):
     """
     Get all starred merchants, along with their mapped category if configured.
     """
     try:
-        stmt = select(Merchant).where(Merchant.is_starred == True).order_by(func.lower(Merchant.name).asc())
+        stmt = (
+            select(Merchant)
+            .where(Merchant.is_starred == True)
+            .order_by(func.lower(Merchant.name).asc())
+        )
         result = await db.execute(stmt)
         starred = result.scalars().all()
 
@@ -2732,16 +2831,19 @@ async def get_starred_merchants(db: AsyncSession = Depends(get_db)):
         for s in starred:
             name_clean = s.name.strip()
             cat = mapping_map.get(name_clean.lower())
-            data.append({
-                "id": s.id,
-                "name": name_clean,
-                "is_starred": True,
-                "mapped_category": cat
-            })
+            data.append(
+                {
+                    "id": s.id,
+                    "name": name_clean,
+                    "is_starred": True,
+                    "mapped_category": cat,
+                }
+            )
         return {"merchants": data}
     except Exception as e:
         print(f"Error fetching starred merchants: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/merchants/{name}/status")
 async def get_merchant_status(name: str, db: AsyncSession = Depends(get_db)):
@@ -2753,13 +2855,16 @@ async def get_merchant_status(name: str, db: AsyncSession = Depends(get_db)):
         return {
             "name": clean_name,
             "exists": merchant is not None,
-            "is_starred": merchant.is_starred if merchant else False
+            "is_starred": merchant.is_starred if merchant else False,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/api/merchants")
-async def create_or_star_merchant(payload: MerchantCreate, db: AsyncSession = Depends(get_db)):
+async def create_or_star_merchant(
+    payload: MerchantCreate, db: AsyncSession = Depends(get_db)
+):
     clean_name = payload.name.strip()
     if not clean_name:
         raise HTTPException(status_code=400, detail="Merchant name cannot be empty")
@@ -2771,19 +2876,34 @@ async def create_or_star_merchant(payload: MerchantCreate, db: AsyncSession = De
             existing.is_starred = payload.is_starred
             await db.commit()
             await db.refresh(existing)
-            return {"id": existing.id, "name": existing.name, "is_starred": existing.is_starred, "created": False}
-        
+            return {
+                "id": existing.id,
+                "name": existing.name,
+                "is_starred": existing.is_starred,
+                "created": False,
+            }
+
         new_m = Merchant(name=clean_name, is_starred=payload.is_starred)
         db.add(new_m)
         await db.commit()
         await db.refresh(new_m)
-        return {"id": new_m.id, "name": new_m.name, "is_starred": new_m.is_starred, "created": True}
+        return {
+            "id": new_m.id,
+            "name": new_m.name,
+            "is_starred": new_m.is_starred,
+            "created": True,
+        }
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.put("/api/merchants/{name}/star")
-async def toggle_merchant_star(name: str, payload: Optional[MerchantStarRequest] = None, db: AsyncSession = Depends(get_db)):
+async def toggle_merchant_star(
+    name: str,
+    payload: Optional[MerchantStarRequest] = None,
+    db: AsyncSession = Depends(get_db),
+):
     clean_name = name.strip()
     if not clean_name:
         raise HTTPException(status_code=400, detail="Merchant name cannot be empty")
@@ -2791,7 +2911,7 @@ async def toggle_merchant_star(name: str, payload: Optional[MerchantStarRequest]
         stmt = select(Merchant).where(func.lower(Merchant.name) == clean_name.lower())
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
-        
+
         if existing:
             if payload and payload.is_starred is not None:
                 existing.is_starred = payload.is_starred
@@ -2799,9 +2919,17 @@ async def toggle_merchant_star(name: str, payload: Optional[MerchantStarRequest]
                 existing.is_starred = not existing.is_starred
             await db.commit()
             await db.refresh(existing)
-            return {"id": existing.id, "name": existing.name, "is_starred": existing.is_starred}
+            return {
+                "id": existing.id,
+                "name": existing.name,
+                "is_starred": existing.is_starred,
+            }
         else:
-            is_starred = payload.is_starred if (payload and payload.is_starred is not None) else True
+            is_starred = (
+                payload.is_starred
+                if (payload and payload.is_starred is not None)
+                else True
+            )
             new_m = Merchant(name=clean_name, is_starred=is_starred)
             db.add(new_m)
             await db.commit()
@@ -2810,6 +2938,7 @@ async def toggle_merchant_star(name: str, payload: Optional[MerchantStarRequest]
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/api/merchants/{name}")
 async def delete_merchant(name: str, db: AsyncSession = Depends(get_db)):
@@ -2823,7 +2952,7 @@ async def delete_merchant(name: str, db: AsyncSession = Depends(get_db)):
                 stmt_id = select(Merchant).where(Merchant.id == int(clean_name))
                 res_id = await db.execute(stmt_id)
                 existing = res_id.scalar_one_or_none()
-        
+
         if existing:
             await db.delete(existing)
             await db.commit()
@@ -2833,11 +2962,13 @@ async def delete_merchant(name: str, db: AsyncSession = Depends(get_db)):
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
 class MappingRequest(BaseModel):
     receipt_merchant_name: str
     monarch_merchant_name: str
     category_name: str
     monarch_tx_id: Optional[str] = None
+
 
 @app.get("/api/merchant-names")
 async def get_merchant_names(db: AsyncSession = Depends(get_db)):
@@ -2856,6 +2987,7 @@ async def get_merchant_names(db: AsyncSession = Depends(get_db)):
         print(f"Error fetching merchant names: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/categories")
 async def get_categories(db: AsyncSession = Depends(get_db)):
     """
@@ -2863,37 +2995,49 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
     """
     try:
         # 1. Try to get from local DB first (faster)
-        local_cats_result = await db.execute(select(Category).where(Category.is_hidden == False))
+        local_cats_result = await db.execute(
+            select(Category).where(Category.is_hidden == False)
+        )
         local_cats = local_cats_result.scalars().all()
-        
+
         if local_cats:
-             # Sort by name
-             local_cats.sort(key=lambda x: x.category_name.lower())
-             return {"categories": [{"name": c.category_name, "emoji": c.category_emoji} for c in local_cats]}
+            # Sort by name
+            local_cats.sort(key=lambda x: x.category_name.lower())
+            return {
+                "categories": [
+                    {"name": c.category_name, "emoji": c.category_emoji}
+                    for c in local_cats
+                ]
+            }
 
         # 2. Fallback to Monarch API (if local empty)
         creds = await get_latest_credentials(db)
         if not creds:
-             raise HTTPException(status_code=400, detail="No credentials found")
-             
+            raise HTTPException(status_code=400, detail="No credentials found")
+
         mm = await get_monarch_client(db, creds.id)
         cat_data = await mm.get_transaction_categories()
-        
+
         # Transform for frontend
         categories = []
-        for c in cat_data.get('categories', []):
-             categories.append({"name": c['name'], "emoji": ""}) # API doesn't give emoji easily here?
-        
+        for c in cat_data.get("categories", []):
+            categories.append(
+                {"name": c["name"], "emoji": ""}
+            )  # API doesn't give emoji easily here?
+
         # Sort by name
-        categories.sort(key=lambda x: x['name'].lower())
-             
+        categories.sort(key=lambda x: x["name"].lower())
+
         return {"categories": categories}
     except Exception as e:
         print(f"Error fetching categories: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/api/mapping")
-async def save_mapping(request: Request, mapping: MappingRequest, db: AsyncSession = Depends(get_db)):
+async def save_mapping(
+    request: Request, mapping: MappingRequest, db: AsyncSession = Depends(get_db)
+):
     """
     Create or update a merchant mapping.
     """
@@ -2902,12 +3046,14 @@ async def save_mapping(request: Request, mapping: MappingRequest, db: AsyncSessi
     try:
         # Enforce lowercase for the key
         lower_receipt_name = mapping.receipt_merchant_name.lower()
-        
+
         # Check if exists
-        stmt = select(MerchantMapping).where(MerchantMapping.receipt_merchant_name == lower_receipt_name)
+        stmt = select(MerchantMapping).where(
+            MerchantMapping.receipt_merchant_name == lower_receipt_name
+        )
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
-        
+
         if existing:
             existing.monarch_merchant_name = mapping.monarch_merchant_name
             existing.category_name = mapping.category_name
@@ -2915,18 +3061,20 @@ async def save_mapping(request: Request, mapping: MappingRequest, db: AsyncSessi
             new_mapping = MerchantMapping(
                 receipt_merchant_name=lower_receipt_name,
                 monarch_merchant_name=mapping.monarch_merchant_name,
-                category_name=mapping.category_name
+                category_name=mapping.category_name,
             )
             db.add(new_mapping)
-            
+
         await db.commit()
 
         if mapping.monarch_tx_id:
             # Try to get the monarch_category_id from local DB
-            cat_stmt = select(Category).where(Category.category_name == mapping.category_name)
+            cat_stmt = select(Category).where(
+                Category.category_name == mapping.category_name
+            )
             cat_result = await db.execute(cat_stmt)
             category = cat_result.scalar_one_or_none()
-            
+
             category_id = category.monarch_category_id if category else None
 
             creds = await get_latest_credentials(db)
@@ -2935,7 +3083,7 @@ async def save_mapping(request: Request, mapping: MappingRequest, db: AsyncSessi
                 await mm.update_transaction(
                     transaction_id=mapping.monarch_tx_id,
                     merchant_name=mapping.monarch_merchant_name,
-                    category_id=category_id
+                    category_id=category_id,
                 )
 
         return {"status": "success"}
@@ -2944,8 +3092,10 @@ async def save_mapping(request: Request, mapping: MappingRequest, db: AsyncSessi
         print(f"Error saving mapping: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 class DeleteMappingRequest(BaseModel):
     receipt_merchant_name: str
+
 
 @app.delete("/api/mapping")
 async def delete_mapping(req: DeleteMappingRequest, db: AsyncSession = Depends(get_db)):
@@ -2955,28 +3105,38 @@ async def delete_mapping(req: DeleteMappingRequest, db: AsyncSession = Depends(g
     try:
         # Enforce lowercase for the key
         lower_receipt_name = req.receipt_merchant_name.lower()
-        
-        stmt = select(MerchantMapping).where(MerchantMapping.receipt_merchant_name == lower_receipt_name)
+
+        stmt = select(MerchantMapping).where(
+            MerchantMapping.receipt_merchant_name == lower_receipt_name
+        )
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
-        
+
         if existing:
             await db.delete(existing)
             await db.commit()
             return {"status": "success", "message": "Mapping deleted"}
         else:
-             raise HTTPException(status_code=404, detail="Mapping not found")
-             
+            raise HTTPException(status_code=404, detail="Mapping not found")
+
     except Exception as e:
         await db.rollback()
         print(f"Error deleting mapping: {e}")
-        if isinstance(e, HTTPException): raise e
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=str(e))
 
-async def _update_history_log(db: AsyncSession, monarch_tx_id: str, new_date: str, new_amount: Optional[float] = None):
+
+async def _update_history_log(
+    db: AsyncSession,
+    monarch_tx_id: str,
+    new_date: str,
+    new_amount: Optional[float] = None,
+):
     """Helper to update the date and optionally the amount in the history log."""
     try:
         from .models import Log
+
         log_stmt = select(Log).where(Log.monarch_tx_id == monarch_tx_id)
         log_res = await db.execute(log_stmt)
         log_entry = log_res.scalar_one_or_none()
@@ -2984,22 +3144,30 @@ async def _update_history_log(db: AsyncSession, monarch_tx_id: str, new_date: st
             log_entry.date = new_date
             if new_amount is not None:
                 log_entry.amount = new_amount
-                print(f"Updated history log entry for transaction {monarch_tx_id}: new date={new_date}, amount={new_amount}")
+                print(
+                    f"Updated history log entry for transaction {monarch_tx_id}: new date={new_date}, amount={new_amount}"
+                )
             else:
-                print(f"Updated history log entry for transaction {monarch_tx_id}: new date={new_date} (USD)")
+                print(
+                    f"Updated history log entry for transaction {monarch_tx_id}: new date={new_date} (USD)"
+                )
             await db.commit()
     except Exception as e:
         print(f"Failed to update history log entry: {e}")
 
+
 class UpdateDateRequest(BaseModel):
     monarch_tx_id: str
-    new_date: str            # YYYY-MM-DD
-    original_currency: str   # e.g. "EUR" — the foreign currency before conversion
-    original_amount: float   # The original foreign-currency amount
+    new_date: str  # YYYY-MM-DD
+    original_currency: str  # e.g. "EUR" — the foreign currency before conversion
+    original_amount: float  # The original foreign-currency amount
     is_credit: Optional[bool] = False
 
+
 @app.post("/api/transaction/update-date")
-async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Depends(get_db)):
+async def update_transaction_date(
+    req: UpdateDateRequest, db: AsyncSession = Depends(get_db)
+):
     """
     Update a transaction's date in Monarch, recalculating the USD amount and notes
     using the exchange rate for the new date.
@@ -3011,7 +3179,9 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
 
         creds = await get_latest_credentials(db)
         if not creds:
-            raise HTTPException(status_code=400, detail="No Monarch credentials configured")
+            raise HTTPException(
+                status_code=400, detail="No Monarch credentials configured"
+            )
 
         mm = await get_monarch_client(db, creds.id)
         from .services.monarch import update_transaction_fields
@@ -3032,7 +3202,9 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
             # Update logs table record if it exists
             await _update_history_log(db, req.monarch_tx_id, new_date)
 
-            print(f"Updated transaction {req.monarch_tx_id}: new date={new_date} (USD, no conversion)")
+            print(
+                f"Updated transaction {req.monarch_tx_id}: new date={new_date} (USD, no conversion)"
+            )
             return {
                 "status": "success",
                 "new_date": new_date,
@@ -3082,15 +3254,20 @@ async def update_transaction_date(req: UpdateDateRequest, db: AsyncSession = Dep
         raise
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 class UpdateCategoryRequest(BaseModel):
     monarch_tx_id: str
     category_name: str
 
+
 @app.post("/api/transaction/update-category")
-async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSession = Depends(get_db)):
+async def update_transaction_category(
+    req: UpdateCategoryRequest, db: AsyncSession = Depends(get_db)
+):
     """
     Update a transaction's category in Monarch Money and locally.
     Does not edit mapping rules.
@@ -3098,7 +3275,9 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
     try:
         creds = await get_latest_credentials(db)
         if not creds:
-            raise HTTPException(status_code=400, detail="No Monarch credentials configured")
+            raise HTTPException(
+                status_code=400, detail="No Monarch credentials configured"
+            )
 
         mm = await get_monarch_client(db, creds.id)
 
@@ -3106,7 +3285,7 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
         cat_stmt = select(Category).where(Category.category_name == req.category_name)
         cat_result = await db.execute(cat_stmt)
         category = cat_result.scalar_one_or_none()
-        
+
         category_id = category.monarch_category_id if category else None
 
         # Fallback: if category_id not in local DB, fetch from Monarch API directly
@@ -3121,16 +3300,20 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
                 print(f"Failed to fetch categories from Monarch API: {e}")
 
         if not category_id:
-            raise HTTPException(status_code=400, detail=f"Category '{req.category_name}' not configured or missing monarch ID")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Category '{req.category_name}' not configured or missing monarch ID",
+            )
 
         # Update in Monarch Money
         await mm.update_transaction(
-            transaction_id=req.monarch_tx_id,
-            category_id=category_id
+            transaction_id=req.monarch_tx_id, category_id=category_id
         )
 
         # Update local Transaction table's parsed_data JSON if it exists
-        tx_stmt = select(Transaction).where(Transaction.parsed_data["monarch_tx_id"].as_string() == req.monarch_tx_id)
+        tx_stmt = select(Transaction).where(
+            Transaction.parsed_data["monarch_tx_id"].as_string() == req.monarch_tx_id
+        )
         tx_result = await db.execute(tx_stmt)
         tx = tx_result.scalar_one_or_none()
         if tx:
@@ -3142,6 +3325,7 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
                 parsed.pop("category_emoji", None)
             tx.parsed_data = parsed
             from sqlalchemy.orm.attributes import flag_modified
+
             flag_modified(tx, "parsed_data")
             await db.commit()
 
@@ -3151,8 +3335,10 @@ async def update_transaction_category(req: UpdateCategoryRequest, db: AsyncSessi
     except Exception as e:
         await db.rollback()
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/logs")
 async def get_logs(db: AsyncSession = Depends(get_db)):
@@ -3161,10 +3347,11 @@ async def get_logs(db: AsyncSession = Depends(get_db)):
     """
     try:
         from .models import Log
+
         stmt = select(Log).order_by(Log.created_at.desc()).limit(20)
         result = await db.execute(stmt)
         logs = result.scalars().all()
-        
+
         return [
             {
                 "id": log.id,
@@ -3176,13 +3363,14 @@ async def get_logs(db: AsyncSession = Depends(get_db)):
                 "original_currency": log.original_currency,
                 "is_cash": log.is_cash,
                 "monarch_tx_id": log.monarch_tx_id,
-                "created_at": log.created_at.isoformat() if log.created_at else None
+                "created_at": log.created_at.isoformat() if log.created_at else None,
             }
             for log in logs
         ]
     except Exception as e:
         print(f"Error fetching logs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/api/logs/{log_id}")
 async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
@@ -3192,13 +3380,14 @@ async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
     """
     try:
         from .models import Log, Transaction
+
         log_stmt = select(Log).where(Log.id == log_id)
         log_result = await db.execute(log_stmt)
         log_entry = log_result.scalar_one_or_none()
-        
+
         if not log_entry:
             raise HTTPException(status_code=404, detail="Log entry not found")
-            
+
         # Try to delete from Monarch Money if monarch_tx_id exists
         if log_entry.monarch_tx_id:
             try:
@@ -3206,26 +3395,34 @@ async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
                 if creds:
                     mm = await get_monarch_client(db, creds.id)
                     await mm.delete_transaction(log_entry.monarch_tx_id)
-                    print(f"Deleted transaction {log_entry.monarch_tx_id} in Monarch Money.")
+                    print(
+                        f"Deleted transaction {log_entry.monarch_tx_id} in Monarch Money."
+                    )
             except Exception as mm_err:
-                print(f"⚠️ Failed to delete transaction {log_entry.monarch_tx_id} in Monarch Money: {mm_err}")
+                print(
+                    f"⚠️ Failed to delete transaction {log_entry.monarch_tx_id} in Monarch Money: {mm_err}"
+                )
 
         # Delete local Transaction cache if it matches the same monarch_tx_id
         if log_entry.monarch_tx_id:
-            tx_stmt = delete(Transaction).where(Transaction.parsed_data["monarch_tx_id"].as_string() == log_entry.monarch_tx_id)
+            tx_stmt = delete(Transaction).where(
+                Transaction.parsed_data["monarch_tx_id"].as_string()
+                == log_entry.monarch_tx_id
+            )
             await db.execute(tx_stmt)
             print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
 
         # Delete Log entry
         await db.delete(log_entry)
         await db.commit()
-        
+
         return {"status": "success", "message": "Log entry and transaction deleted"}
     except HTTPException:
         raise
     except Exception as e:
         await db.rollback()
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -3233,6 +3430,7 @@ async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
 # =============================================================================
 # ⚠️ Failed Transactions Routes
 # =============================================================================
+
 
 class FailedTransactionUpdateRequest(BaseModel):
     merchant: Optional[str] = None
@@ -3244,6 +3442,7 @@ class FailedTransactionUpdateRequest(BaseModel):
     is_credit: Optional[bool] = None
     notes: Optional[str] = None
 
+
 @app.get("/api/failed-transactions")
 async def get_failed_transactions(db: AsyncSession = Depends(get_db)):
     """
@@ -3254,37 +3453,42 @@ async def get_failed_transactions(db: AsyncSession = Depends(get_db)):
         stmt = select(FailedTransaction).order_by(FailedTransaction.created_at.desc())
         result = await db.execute(stmt)
         failed_list = result.scalars().all()
-        
+
         items = []
         for tx in failed_list:
             display_data = tx.parsed_data or tx.manual_data or {}
-            items.append({
-                "id": tx.id,
-                "source_type": tx.source_type,
-                "error_message": tx.error_message,
-                "retry_count": tx.retry_count or 0,
-                "created_at": tx.created_at.isoformat() if tx.created_at else None,
-                "updated_at": tx.updated_at.isoformat() if tx.updated_at else None,
-                "has_image": tx.raw_content is not None,
-                "user_currency": tx.user_currency,
-                "merchant": display_data.get("merchant") or "Receipt (OCR Pending)",
-                "amount": display_data.get("amount"),
-                "currency": display_data.get("currency") or tx.user_currency or "EUR",
-                "date": display_data.get("date") or "",
-                "is_cash": bool(display_data.get("is_cash", False)),
-                "is_credit": bool(display_data.get("is_credit", False)),
-                "notes": display_data.get("notes") or "",
-                "category_name": display_data.get("category_name") or "",
-                "category_emoji": display_data.get("category_emoji") or "",
-                "original_amount": display_data.get("original_amount"),
-                "original_currency": display_data.get("original_currency"),
-                "parsed_data": tx.parsed_data,
-                "manual_data": tx.manual_data
-            })
+            items.append(
+                {
+                    "id": tx.id,
+                    "source_type": tx.source_type,
+                    "error_message": tx.error_message,
+                    "retry_count": tx.retry_count or 0,
+                    "created_at": tx.created_at.isoformat() if tx.created_at else None,
+                    "updated_at": tx.updated_at.isoformat() if tx.updated_at else None,
+                    "has_image": tx.raw_content is not None,
+                    "user_currency": tx.user_currency,
+                    "merchant": display_data.get("merchant") or "Receipt (OCR Pending)",
+                    "amount": display_data.get("amount"),
+                    "currency": display_data.get("currency")
+                    or tx.user_currency
+                    or "EUR",
+                    "date": display_data.get("date") or "",
+                    "is_cash": bool(display_data.get("is_cash", False)),
+                    "is_credit": bool(display_data.get("is_credit", False)),
+                    "notes": display_data.get("notes") or "",
+                    "category_name": display_data.get("category_name") or "",
+                    "category_emoji": display_data.get("category_emoji") or "",
+                    "original_amount": display_data.get("original_amount"),
+                    "original_currency": display_data.get("original_currency"),
+                    "parsed_data": tx.parsed_data,
+                    "manual_data": tx.manual_data,
+                }
+            )
         return items
     except Exception as e:
         print(f"Error fetching failed transactions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/failed-transactions/count")
 async def get_failed_transactions_count(db: AsyncSession = Depends(get_db)):
@@ -3293,6 +3497,7 @@ async def get_failed_transactions_count(db: AsyncSession = Depends(get_db)):
     """
     try:
         from sqlalchemy import func as sql_func
+
         stmt = select(sql_func.count()).select_from(FailedTransaction)
         result = await db.execute(stmt)
         count = result.scalar_one() or 0
@@ -3301,15 +3506,18 @@ async def get_failed_transactions_count(db: AsyncSession = Depends(get_db)):
         print(f"Error counting failed transactions: {e}")
         return {"count": 0}
 
+
 @app.get("/api/failed-transactions/{failed_id}/image")
-async def get_failed_transaction_image(failed_id: int, db: AsyncSession = Depends(get_db)):
+async def get_failed_transaction_image(
+    failed_id: int, db: AsyncSession = Depends(get_db)
+):
     """
     Serve the stored receipt image if available.
     """
     tx = await db.get(FailedTransaction, failed_id)
     if not tx or not tx.raw_content:
         raise HTTPException(status_code=404, detail="Image not found")
-    
+
     media_type = "image/jpeg"
     if tx.raw_content.startswith(b"\x89PNG\r\n\x1a\n"):
         media_type = "image/png"
@@ -3317,14 +3525,15 @@ async def get_failed_transaction_image(failed_id: int, db: AsyncSession = Depend
         media_type = "image/gif"
     elif tx.raw_content.startswith(b"RIFF") and b"WEBP" in tx.raw_content[:12]:
         media_type = "image/webp"
-        
+
     return Response(content=tx.raw_content, media_type=media_type)
+
 
 @app.put("/api/failed-transactions/{failed_id}")
 async def update_failed_transaction(
-    failed_id: int, 
-    update_req: FailedTransactionUpdateRequest, 
-    db: AsyncSession = Depends(get_db)
+    failed_id: int,
+    update_req: FailedTransactionUpdateRequest,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update editable fields of a failed transaction before retry.
@@ -3332,33 +3541,40 @@ async def update_failed_transaction(
     tx = await db.get(FailedTransaction, failed_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Failed transaction not found")
-        
+
     data = dict(tx.parsed_data or tx.manual_data or {})
-    if update_req.merchant is not None: data["merchant"] = update_req.merchant
-    if update_req.amount is not None: data["amount"] = update_req.amount
-    if update_req.currency is not None: data["currency"] = update_req.currency
-    if update_req.date is not None: data["date"] = update_req.date
-    if update_req.category_name is not None: data["category_name"] = update_req.category_name
-    if update_req.is_cash is not None: data["is_cash"] = update_req.is_cash
-    if update_req.is_credit is not None: data["is_credit"] = update_req.is_credit
-    if update_req.notes is not None: data["notes"] = update_req.notes
-    
+    if update_req.merchant is not None:
+        data["merchant"] = update_req.merchant
+    if update_req.amount is not None:
+        data["amount"] = update_req.amount
+    if update_req.currency is not None:
+        data["currency"] = update_req.currency
+    if update_req.date is not None:
+        data["date"] = update_req.date
+    if update_req.category_name is not None:
+        data["category_name"] = update_req.category_name
+    if update_req.is_cash is not None:
+        data["is_cash"] = update_req.is_cash
+    if update_req.is_credit is not None:
+        data["is_credit"] = update_req.is_credit
+    if update_req.notes is not None:
+        data["notes"] = update_req.notes
+
     from sqlalchemy.orm.attributes import flag_modified
+
     if tx.source_type == "manual":
         tx.manual_data = data
         flag_modified(tx, "manual_data")
     else:
         tx.parsed_data = data
         flag_modified(tx, "parsed_data")
-        
+
     await db.commit()
     return {"status": "ok", "message": "Transaction updated successfully"}
 
+
 @app.post("/api/failed-transactions/{failed_id}/retry")
-async def retry_failed_transaction(
-    failed_id: int,
-    db: AsyncSession = Depends(get_db)
-):
+async def retry_failed_transaction(failed_id: int, db: AsyncSession = Depends(get_db)):
     """
     Retry a specific failed transaction.
     On success: pushes to Monarch, adds to Transaction & Log tables, and deletes from FailedTransaction table.
@@ -3366,10 +3582,14 @@ async def retry_failed_transaction(
     tx = await db.get(FailedTransaction, failed_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Failed transaction not found")
-        
+
     try:
-        from .services.orchestrator import process_transaction, process_manual_transaction, process_parsed_transaction
-        
+        from .services.orchestrator import (
+            process_transaction,
+            process_manual_transaction,
+            process_parsed_transaction,
+        )
+
         result = None
         if tx.parsed_data:
             # We already have parsed/edited fields, retry from parsed data
@@ -3379,13 +3599,11 @@ async def retry_failed_transaction(
                 image_hash=img_hash,
                 db=db,
                 user_currency_override=tx.user_currency,
-                force_override=True
+                force_override=True,
             )
         elif tx.source_type == "manual" and tx.manual_data:
             result = await process_manual_transaction(
-                manual_data=dict(tx.manual_data),
-                db=db,
-                force_override=True
+                manual_data=dict(tx.manual_data), db=db, force_override=True
             )
         elif tx.raw_content:
             # Re-run full OCR extraction and processing
@@ -3393,21 +3611,22 @@ async def retry_failed_transaction(
                 content=tx.raw_content,
                 db=db,
                 user_currency=tx.user_currency,
-                force_override=True
+                force_override=True,
             )
         else:
             raise ValueError("No transaction data or image content found to retry.")
-            
+
         # If successful, delete from failed_transactions
         await db.delete(tx)
         await db.commit()
         return {"status": "success", "result": result}
-        
+
     except Exception as e:
         tx.retry_count = (tx.retry_count or 0) + 1
         tx.error_message = str(e)
         await db.commit()
         raise HTTPException(status_code=500, detail=f"Retry failed: {str(e)}")
+
 
 @app.post("/api/failed-transactions/retry-all")
 async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
@@ -3418,19 +3637,25 @@ async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
     stmt = select(FailedTransaction).order_by(FailedTransaction.created_at.asc())
     result = await db.execute(stmt)
     failed_list = result.scalars().all()
-    
+
     if not failed_list:
         return {"status": "ok", "total": 0, "succeeded": 0, "failed": 0, "results": []}
-        
-    from .services.orchestrator import process_transaction, process_manual_transaction, process_parsed_transaction
-    
+
+    from .services.orchestrator import (
+        process_transaction,
+        process_manual_transaction,
+        process_parsed_transaction,
+    )
+
     succeeded = 0
     failed = 0
     results = []
-    
+
     for tx in failed_list:
         tx_id = tx.id
-        merchant = (tx.parsed_data or tx.manual_data or {}).get("merchant", f"Transaction #{tx_id}")
+        merchant = (tx.parsed_data or tx.manual_data or {}).get(
+            "merchant", f"Transaction #{tx_id}"
+        )
         try:
             if tx.parsed_data:
                 img_hash = tx.image_hash or f"retry_{tx.id}_{uuid.uuid4().hex[:6]}"
@@ -3439,24 +3664,22 @@ async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
                     image_hash=img_hash,
                     db=db,
                     user_currency_override=tx.user_currency,
-                    force_override=True
+                    force_override=True,
                 )
             elif tx.source_type == "manual" and tx.manual_data:
                 res = await process_manual_transaction(
-                    manual_data=dict(tx.manual_data),
-                    db=db,
-                    force_override=True
+                    manual_data=dict(tx.manual_data), db=db, force_override=True
                 )
             elif tx.raw_content:
                 res = await process_transaction(
                     content=tx.raw_content,
                     db=db,
                     user_currency=tx.user_currency,
-                    force_override=True
+                    force_override=True,
                 )
             else:
                 raise ValueError("No data or content available to retry")
-                
+
             await db.delete(tx)
             await db.commit()
             succeeded += 1
@@ -3466,15 +3689,18 @@ async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
             tx.error_message = str(e)
             await db.commit()
             failed += 1
-            results.append({"id": tx_id, "merchant": merchant, "status": "failed", "error": str(e)})
-            
+            results.append(
+                {"id": tx_id, "merchant": merchant, "status": "failed", "error": str(e)}
+            )
+
     return {
         "status": "ok",
         "total": len(failed_list),
         "succeeded": succeeded,
         "failed": failed,
-        "results": results
+        "results": results,
     }
+
 
 @app.delete("/api/failed-transactions/{failed_id}")
 async def delete_failed_transaction(failed_id: int, db: AsyncSession = Depends(get_db)):
@@ -3485,9 +3711,11 @@ async def delete_failed_transaction(failed_id: int, db: AsyncSession = Depends(g
     await db.commit()
     return {"status": "ok", "message": "Failed transaction deleted"}
 
+
 @app.delete("/api/failed-transactions")
 async def clear_all_failed_transactions(db: AsyncSession = Depends(get_db)):
     from sqlalchemy import delete as sql_delete
+
     await db.execute(sql_delete(FailedTransaction))
     await db.commit()
     return {"status": "ok", "message": "All failed transactions cleared"}
@@ -3497,19 +3725,21 @@ async def clear_all_failed_transactions(db: AsyncSession = Depends(get_db)):
 # 🔥 IGNITE — FIRE Simulation Routes
 # =============================================================================
 
+
 @app.get("/fire", response_class=HTMLResponse)
 async def fire_page(request: Request):
     """Serve the Ignite FIRE dashboard page."""
     import pathlib
+
     fire_html = pathlib.Path("bridge_app/static/fire.html").read_text()
-    
+
     # Inject authentication state
     is_auth_str = "true" if request.state.is_authenticated else "false"
     fire_html = fire_html.replace(
-        "/* INIT_AUTH_STATE */", 
-        f"</style><script>window.IS_AUTHENTICATED = {is_auth_str};</script><style>"
+        "/* INIT_AUTH_STATE */",
+        f"</style><script>window.IS_AUTHENTICATED = {is_auth_str};</script><style>",
     )
-    
+
     return HTMLResponse(content=fire_html)
 
 
@@ -3567,17 +3797,12 @@ async def get_fire_settings(request: Request, db: AsyncSession = Depends(get_db)
 
 @app.put("/api/fire/settings")
 async def update_fire_settings(
-    request: Request,
-    updates: FireSettingsUpdate,
-    db: AsyncSession = Depends(get_db)
+    request: Request, updates: FireSettingsUpdate, db: AsyncSession = Depends(get_db)
 ):
     """Update FIRE simulation settings."""
     if not request.state.is_authenticated:
         # Pretend it updated for unauthorized users
-        return {
-            "status": "success",
-            **updates.model_dump(exclude_none=True)
-        }
+        return {"status": "success", **updates.model_dump(exclude_none=True)}
 
     result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
     settings = result.scalar_one_or_none()
@@ -3619,7 +3844,13 @@ class SimulateRequest(BaseModel):
     is_demo: bool = False
 
 
-def _build_simulation_response(result, current_portfolio: float, account_breakdown: list, monthly_spend_avg: float, settings_obj) -> dict:
+def _build_simulation_response(
+    result,
+    current_portfolio: float,
+    account_breakdown: list,
+    monthly_spend_avg: float,
+    settings_obj,
+) -> dict:
     return {
         "years": result.years,
         "percentile_5": result.percentile_5,
@@ -3651,7 +3882,7 @@ def _build_simulation_response(result, current_portfolio: float, account_breakdo
             "social_security_birth_year": settings_obj.social_security_birth_year,
             "social_security_withdrawal_month": settings_obj.social_security_withdrawal_month,
             "social_security_withdrawal_year": settings_obj.social_security_withdrawal_year,
-        }
+        },
     }
 
 
@@ -3661,7 +3892,9 @@ def _get_demo_settings(req: Optional[SimulateRequest]) -> Any:
     return FireSettings(**DEMO_DEFAULTS)
 
 
-def _build_demo_sim_input(settings_obj: Any, demo_portfolio: float) -> "SimulationInput":
+def _build_demo_sim_input(
+    settings_obj: Any, demo_portfolio: float
+) -> "SimulationInput":
     from .services.fire_engine import SimulationInput
 
     def get_val(attr):
@@ -3709,13 +3942,20 @@ def _handle_demo_simulation(req: Optional[SimulateRequest]) -> dict:
 
 
 @app.post("/api/fire/simulate")
-async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] = None, db: AsyncSession = Depends(get_db)):
+async def run_fire_simulation(
+    request: Request,
+    req: Optional[SimulateRequest] = None,
+    db: AsyncSession = Depends(get_db),
+):
     """
     Run a full FIRE Monte Carlo simulation using live Monarch data.
     Set DEMO_MODE=1 in env to return static fictional data for recording/testing.
     """
     from .services.fire_engine import (
-        SimulationInput, simulate, filter_accounts, calc_monthly_spend
+        SimulationInput,
+        simulate,
+        filter_accounts,
+        calc_monthly_spend,
     )
 
     # ── Demo Mode Enforcement ──────────────────────────────────────────────
@@ -3728,7 +3968,9 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     # 1. Get Monarch client
     creds = await get_latest_credentials(db)
     if not creds:
-        raise HTTPException(status_code=503, detail="No Monarch credentials configured.")
+        raise HTTPException(
+            status_code=503, detail="No Monarch credentials configured."
+        )
 
     try:
         mm = await get_monarch_client(db, creds.id)
