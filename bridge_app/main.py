@@ -1002,7 +1002,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c);" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="margin-top: 0; background: #6b7280;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1526 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1532 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1178,39 +1178,39 @@ LOADING_HTML = """
 
         <!-- Manage Starred Merchants Modal -->
         <div id="manageStarredModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2500; justify-content: center; align-items: center;">
-            <div style="position:relative; margin: 1rem; max-width: 500px; width: 92%; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
-                <span id="closeManageStarredModal" onclick="closeManageStarredModal()" style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #78350f; font-weight: bold;">&times;</span>
-                <h2 style="color: #78350f; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-family: 'Sriracha', cursive; justify-content: center;">
+            <div style="position:relative; margin: 1rem; max-width: 500px; width: 92%; background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+                <span id="closeManageStarredModal" onclick="closeManageStarredModal()" style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #4c1d95; font-weight: bold;">&times;</span>
+                <h2 style="color: #4c1d95; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-family: 'Sriracha', cursive; justify-content: center;">
                     ⭐ Starred Merchants
                 </h2>
 
                 <!-- Add Merchant Input -->
                 <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
-                    <input type="text" id="newMerchantInput" placeholder="New merchant name..." style="flex: 1; height: 42px; padding: 0.5rem 0.8rem; border: 1px solid #d97706; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;" onkeydown="if(event.key==='Enter') addNewStarredMerchant()">
-                    <button onclick="addNewStarredMerchant()" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; border: none; padding: 0 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: bold; height: 42px; display: flex; align-items: center; gap: 4px;">
+                    <input type="text" id="newMerchantInput" placeholder="New merchant name..." style="flex: 1; height: 42px; padding: 0.5rem 0.8rem; border: 1px solid #8b5cf6; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;" onkeydown="if(event.key==='Enter') addNewStarredMerchant()">
+                    <button onclick="addNewStarredMerchant()" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; border: none; padding: 0 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: bold; height: 42px; display: flex; align-items: center; gap: 4px;">
                         <span>Add ⭐</span>
                     </button>
                 </div>
 
                 <!-- Search / Filter Input -->
                 <div style="margin-bottom: 0.8rem;">
-                    <input type="text" id="searchMerchantsInput" oninput="filterMerchantsList()" placeholder="🔍 Filter merchants..." style="width: 100%; height: 38px; padding: 0.4rem 0.8rem; border: 1px solid rgba(217, 119, 6, 0.4); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; background: rgba(255,255,255,0.95);">
+                    <input type="text" id="searchMerchantsInput" oninput="filterMerchantsList()" placeholder="🔍 Filter merchants..." style="width: 100%; height: 38px; padding: 0.4rem 0.8rem; border: 1px solid rgba(124, 58, 237, 0.4); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; background: rgba(255,255,255,0.95);">
                 </div>
 
                 <!-- Merchants List -->
-                <div id="merchantsListContainer" style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.92); border-radius: 12px; padding: 0.5rem; border: 1px solid rgba(217, 119, 6, 0.3);">
-                    <div id="merchantsListBody">
-                        <!-- Loaded dynamically -->
-                    </div>
-                    <div id="merchantsLoading" style="text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
-                        Loading merchants... ⏳
-                    </div>
-                    <div id="merchantsNoData" style="display: none; text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
-                        No merchants found. Add one above! ⭐
-                    </div>
+                <div id="merchantsListContainer" style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 0.5rem; border: 1px solid rgba(124, 58, 237, 0.25);">
+                <div id="merchantsListBody">
+                    <!-- Loaded dynamically -->
+                </div>
+                <div id="merchantsLoading" style="text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
+                    Loading merchants... ⏳
+                </div>
+                <div id="merchantsNoData" style="display: none; text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
+                    No merchants found. Add one above! ⭐
                 </div>
             </div>
         </div>
+    </div>
 
         <script>
             const jobId = "__JOB_ID__";
@@ -2500,7 +2500,7 @@ LOADING_HTML = """
                 merchants.forEach(m => {
                     const item = document.createElement('div');
                     item.className = 'merchant-list-item';
-                    item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-bottom:1px solid rgba(217, 119, 6, 0.15);';
+                    item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-bottom:1px solid rgba(124, 58, 237, 0.12);';
                     
                     const isStarred = !!m.is_starred;
                     const starIcon = isStarred ? '⭐' : '☆';
