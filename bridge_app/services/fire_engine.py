@@ -314,41 +314,42 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
         # Precompute inflation factors
         inflation_factors = (1 + inp.inflation_rate) ** np.arange(total_years)
 
-        portfolios = np.zeros((inp.iterations, total_years + 1))
-        portfolios[:, 0] = inp.current_portfolio
+        current_portfolios = np.full(inp.iterations, float(inp.current_portfolio))
+
+        # Precompute cashflows outside the inner loop to save repeated allocations/date computations
+        base_incomes = np.zeros(total_years)
+        spending_array = inp.annual_retirement_spending * inflation_factors
+
+        from datetime import datetime
+        current_year = datetime.now().year
 
         for yr in range(total_years):
             inflation_factor = inflation_factors[yr]
-            spending = inp.annual_retirement_spending * inflation_factor  # always
             if yr < years_to_retire:
-                income = inp.annual_contribution * inflation_factor
-            else:
-                income = 0.0
+                base_incomes[yr] = inp.annual_contribution * inflation_factor
 
             if inp.social_security_enabled and inp.social_security_mba > 0:
-                from datetime import datetime
-
-                current_year = datetime.now().year
                 sim_year = current_year + yr
                 if sim_year > inp.social_security_withdrawal_year:
-                    income += (inp.social_security_mba * 12) * inflation_factor
+                    base_incomes[yr] += (inp.social_security_mba * 12) * inflation_factor
                 elif sim_year == inp.social_security_withdrawal_year:
                     months_collected = 13 - inp.social_security_withdrawal_month
                     if 1 <= months_collected <= 12:
-                        income += (
+                        base_incomes[yr] += (
                             inp.social_security_mba * months_collected
                         ) * inflation_factor
 
-            net_cashflow = income - spending
+        net_cashflows = base_incomes - spending_array
+        returns_plus_one = 1 + returns
 
-            portfolios[:, yr + 1] = (
-                portfolios[:, yr] * (1 + returns[:, yr]) + net_cashflow
-            )
-            portfolios[:, yr + 1] = np.maximum(portfolios[:, yr + 1], 0)
+        for yr in range(total_years):
+            current_portfolios *= returns_plus_one[:, yr]
+            current_portfolios += net_cashflows[yr]
+            np.maximum(current_portfolios, 0, out=current_portfolios)
 
         # If the earliest possible age we check (current age) works,
         # our FIRE date is RIGHT NOW!
-        survived = np.sum(portfolios[:, -1] > 0) / inp.iterations
+        survived = np.sum(current_portfolios > 0) / inp.iterations
         # Round to align with the UI's probability display (which rounds to 1 decimal, i.e 94.95% -> 95.0%)
         if round(survived, 3) >= 0.950:
             best_age = test_age
@@ -452,15 +453,12 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
         port = portfolio_at_retire.copy()
 
         if actual_years_post > 0:
-            annual_withdrawals = np.outer(
-                portfolio_at_retire * withdrawal_rate, inflation_yr
-            )
+            initial_withdrawal = portfolio_at_retire * withdrawal_rate
 
             for yr in range(actual_years_post):
-                port = port * returns_post[:, yr] - (
-                    annual_withdrawals[:, yr] - ss_incomes[yr]
-                )
-                port = np.maximum(port, 0)
+                port *= returns_post[:, yr]
+                port -= (initial_withdrawal * inflation_yr[yr]) - ss_incomes[yr]
+                np.maximum(port, 0, out=port)
 
         survival_rate = np.sum(port > 0) / inp.iterations
         if round(survival_rate, 3) >= 0.950:
@@ -531,19 +529,17 @@ def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
         test_spend = (low + high) / 2
 
         # Simulate trajectory using this test spend
-        portfolios = np.zeros((inp.iterations, total_years + 1))
-        portfolios[:, 0] = inp.current_portfolio
+        current_portfolios = np.full(inp.iterations, float(inp.current_portfolio))
 
         test_spend_inflation = test_spend * inflation_factors
         net_cashflows = base_incomes - test_spend_inflation
 
         for yr in range(total_years):
-            portfolios[:, yr + 1] = (
-                portfolios[:, yr] * returns_plus_one[:, yr] + net_cashflows[yr]
-            )
-            portfolios[:, yr + 1] = np.maximum(portfolios[:, yr + 1], 0)
+            current_portfolios *= returns_plus_one[:, yr]
+            current_portfolios += net_cashflows[yr]
+            np.maximum(current_portfolios, 0, out=current_portfolios)
 
-        survival_rate = np.sum(portfolios[:, -1] > 0) / inp.iterations
+        survival_rate = np.sum(current_portfolios > 0) / inp.iterations
         if round(survival_rate, 3) >= 0.950:
             # We survived! Try to spend MORE money to find the maximum possible.
             best_spend = test_spend
