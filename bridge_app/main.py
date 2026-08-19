@@ -1002,7 +1002,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c); white-space: nowrap;" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="flex: 1; min-width: 100px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: #6b7280; white-space: nowrap;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1607 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1625 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1927,7 +1927,7 @@ LOADING_HTML = """
                         method: 'DELETE'
                     });
                     if (res.ok) {
-                        showToast("Transaction deleted successfully", "success");
+                        showToast("Log entry deleted", "success");
                         rowWrapper.style.transition = "max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out";
                         rowWrapper.style.maxHeight = rowWrapper.offsetHeight + "px";
                         rowWrapper.offsetHeight;
@@ -3190,40 +3190,23 @@ async def get_logs(db: AsyncSession = Depends(get_db)):
 @app.delete("/api/logs/{log_id}")
 async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
     """
-    Delete a history log entry, and optionally delete the transaction in Monarch
-    and the local parsed Transaction record.
+    Delete a history log entry from the local logs database table only.
+    Does NOT delete from Monarch Money or local Transaction tables.
     """
     try:
-        from .models import Log, Transaction
+        from .models import Log
         log_stmt = select(Log).where(Log.id == log_id)
         log_result = await db.execute(log_stmt)
         log_entry = log_result.scalar_one_or_none()
         
         if not log_entry:
             raise HTTPException(status_code=404, detail="Log entry not found")
-            
-        # Try to delete from Monarch Money if monarch_tx_id exists
-        if log_entry.monarch_tx_id:
-            try:
-                creds = await get_latest_credentials(db)
-                if creds:
-                    mm = await get_monarch_client(db, creds.id)
-                    await mm.delete_transaction(log_entry.monarch_tx_id)
-                    print(f"Deleted transaction {log_entry.monarch_tx_id} in Monarch Money.")
-            except Exception as mm_err:
-                print(f"⚠️ Failed to delete transaction {log_entry.monarch_tx_id} in Monarch Money: {mm_err}")
 
-        # Delete local Transaction cache if it matches the same monarch_tx_id
-        if log_entry.monarch_tx_id:
-            tx_stmt = delete(Transaction).where(Transaction.parsed_data["monarch_tx_id"].as_string() == log_entry.monarch_tx_id)
-            await db.execute(tx_stmt)
-            print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
-
-        # Delete Log entry
+        # Delete Log entry only
         await db.delete(log_entry)
         await db.commit()
         
-        return {"status": "success", "message": "Log entry and transaction deleted"}
+        return {"status": "success", "message": "Log entry deleted"}
     except HTTPException:
         raise
     except Exception as e:
