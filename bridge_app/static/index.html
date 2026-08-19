@@ -536,6 +536,11 @@
                     <span>Cash Txns</span>
                 </a>
                 <div class="menu-divider"></div>
+                <a href="#" id="manageStarredLink" class="deep-link-item" onclick="openManageStarredModal(event)">
+                    <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⭐</span>
+                    <span>Starred Merchants</span>
+                </a>
+                <div class="menu-divider"></div>
                 <a href="#" id="updateAppLink" class="deep-link-item">
                     <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔄</span>
                     <span>Update App</span>
@@ -712,7 +717,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260819.1450 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260819.1510 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -849,9 +854,15 @@
 
             <form action="/manual" method="post" id="manualForm">
                 <div style="text-align: left; margin-bottom: 1rem;">
-                    <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Merchant</label>
-                    <input type="text" name="merchant" required placeholder="e.g. Starbucks"
-                        style="width: 100%; height: 48px; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                        <label style="color: #666; font-size: 0.9rem; font-weight: bold; margin: 0;">Merchant</label>
+                        <a href="#" id="starredMerchantsLink" onclick="openSelectStarredModal(event)"
+                            style="color: #667eea; font-size: 0.9rem; font-weight: bold; text-decoration: none; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                            <span>Starred Merchants</span> <span>⭐</span>
+                        </a>
+                    </div>
+                    <input type="text" name="merchant" id="manualMerchantInput" required placeholder="e.g. Starbucks"
+                        style="width: 100%; height: 48px; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
                 </div>
 
                 <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
@@ -943,6 +954,66 @@
         </div>
     </div>
 
+    <!-- Select Starred Merchant Modal (for Manual Entry) -->
+    <div id="selectStarredModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2500; justify-content: center; align-items: center;">
+        <div style="position:relative; margin: 1rem; max-width: 420px; width: 90%; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+            <span id="closeSelectStarredModal" onclick="closeSelectStarredModal()" style="position:absolute; top: 12px; right: 16px; font-size: 1.5rem; cursor: pointer; color: #78350f; font-weight: bold;">&times;</span>
+            <h3 style="color: #78350f; margin-top: 0; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 8px; font-size: 1.4rem; font-family: 'Sriracha', cursive;">
+                ⭐ Select Starred Merchant
+            </h3>
+            <p style="font-size: 0.85rem; color: #92400e; margin-top: 0; margin-bottom: 0.8rem;">
+                Click any merchant to populate into manual entry:
+            </p>
+
+            <div id="selectStarredList" style="max-height: 260px; overflow-y: auto; background: rgba(255,255,255,0.92); border-radius: 10px; padding: 0.4rem; border: 1px solid rgba(217, 119, 6, 0.3);">
+                <!-- Loaded dynamically -->
+            </div>
+            <div id="selectStarredLoading" style="text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
+                Loading starred merchants... ⏳
+            </div>
+            <div id="selectStarredEmpty" style="display: none; text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
+                No starred merchants yet! ⭐<br>
+                <button type="button" onclick="closeSelectStarredModal(); openManageStarredModal(event);" style="margin-top: 10px; background: #d97706; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">Manage Starred Merchants ⚙️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Starred Merchants Modal -->
+    <div id="manageStarredModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2600; justify-content: center; align-items: center;">
+        <div style="position:relative; margin: 1rem; max-width: 500px; width: 92%; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+            <span id="closeManageStarredModal" onclick="closeManageStarredModal()" style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #78350f; font-weight: bold;">&times;</span>
+            <h2 style="color: #78350f; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-family: 'Sriracha', cursive; justify-content: center;">
+                ⭐ Starred Merchants
+            </h2>
+
+            <!-- Add Merchant Input -->
+            <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
+                <input type="text" id="newMerchantInput" placeholder="New merchant name..." style="flex: 1; height: 42px; padding: 0.5rem 0.8rem; border: 1px solid #d97706; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;" onkeydown="if(event.key==='Enter') addNewStarredMerchant()">
+                <button type="button" onclick="addNewStarredMerchant()" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; border: none; padding: 0 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: bold; height: 42px; display: flex; align-items: center; gap: 4px;">
+                    <span>Add ⭐</span>
+                </button>
+            </div>
+
+            <!-- Search / Filter Input -->
+            <div style="margin-bottom: 0.8rem;">
+                <input type="text" id="searchMerchantsInput" oninput="filterMerchantsList()" placeholder="🔍 Filter merchants..." style="width: 100%; height: 38px; padding: 0.4rem 0.8rem; border: 1px solid rgba(217, 119, 6, 0.4); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; background: rgba(255,255,255,0.95);">
+            </div>
+
+            <!-- Merchants List -->
+            <div id="merchantsListContainer" style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.92); border-radius: 12px; padding: 0.5rem; border: 1px solid rgba(217, 119, 6, 0.3);">
+                <div id="merchantsListBody">
+                    <!-- Loaded dynamically -->
+                </div>
+                <div id="merchantsLoading" style="text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
+                    Loading merchants... ⏳
+                </div>
+                <div id="merchantsNoData" style="display: none; text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
+                    No merchants found. Add one above! ⭐
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Modal Logic
         const modal = document.getElementById('manualModal');
@@ -973,6 +1044,14 @@
             if (event.target == historyModal) {
                 historyModal.style.display = "none";
                 dismissDeleteConfirmation();
+            }
+            const selectStarredModal = document.getElementById('selectStarredModal');
+            if (selectStarredModal && event.target == selectStarredModal) {
+                selectStarredModal.style.display = "none";
+            }
+            const manageStarredModal = document.getElementById('manageStarredModal');
+            if (manageStarredModal && event.target == manageStarredModal) {
+                manageStarredModal.style.display = "none";
             }
         }
 
@@ -1726,6 +1805,225 @@
                 url.searchParams.set('v', Date.now());
                 url.searchParams.set('updated', '1');
                 window.location.href = url.toString();
+            });
+        }
+
+        // --- Starred Merchants Support ---
+        let allMerchantsCache = [];
+
+        async function openSelectStarredModal(e) {
+            if (e) e.preventDefault();
+            const modal = document.getElementById('selectStarredModal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            
+            const loadingEl = document.getElementById('selectStarredLoading');
+            const emptyEl = document.getElementById('selectStarredEmpty');
+            const listEl = document.getElementById('selectStarredList');
+            
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (emptyEl) emptyEl.style.display = 'none';
+            if (listEl) listEl.innerHTML = '';
+            
+            try {
+                const res = await fetch('/api/merchants/starred');
+                if (res.ok) {
+                    const data = await res.json();
+                    const starred = data.merchants || [];
+                    if (starred.length === 0) {
+                        if (emptyEl) emptyEl.style.display = 'block';
+                    } else {
+                        starred.forEach(m => {
+                            const row = document.createElement('div');
+                            row.style.cssText = 'padding: 10px 12px; cursor: pointer; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s; border-bottom: 1px solid rgba(217, 119, 6, 0.15);';
+                            row.onmouseover = () => row.style.background = '#fef08a';
+                            row.onmouseout = () => row.style.background = 'transparent';
+                            
+                            const catBadge = m.mapped_category ? `<span style="font-size:0.8rem; color:#78350f; background:rgba(217, 119, 6, 0.15); padding:2px 8px; border-radius:999px; font-weight:500;">${m.mapped_category}</span>` : '';
+                            row.innerHTML = `
+                                <span style="font-weight:600; color:#1f2937; display:flex; align-items:center; gap:6px;">⭐ ${m.name}</span>
+                                ${catBadge}
+                            `;
+                            row.onclick = () => {
+                                selectStarredMerchant(m.name, m.mapped_category);
+                            };
+                            listEl.appendChild(row);
+                        });
+                    }
+                } else {
+                    showToast('Failed to load starred merchants', 'error');
+                }
+            } catch (e) {
+                showToast('Network error: ' + e.message, 'error');
+            } finally {
+                if (loadingEl) loadingEl.style.display = 'none';
+            }
+        }
+
+        function closeSelectStarredModal() {
+            const modal = document.getElementById('selectStarredModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function selectStarredMerchant(merchantName, mappedCategory) {
+            const mInput = document.getElementById('manualMerchantInput') || document.querySelector('input[name="merchant"]');
+            if (mInput) {
+                mInput.value = merchantName;
+            }
+            closeSelectStarredModal();
+            const msg = mappedCategory ? `Selected "${merchantName}" (${mappedCategory}) ⭐` : `Selected "${merchantName}" ⭐`;
+            showToast(msg, 'success');
+        }
+
+        async function openManageStarredModal(e) {
+            if (e) e.preventDefault();
+            const deepLinkDropdown = document.getElementById('deepLinkDropdown');
+            if (deepLinkDropdown) deepLinkDropdown.classList.remove('show');
+            
+            document.getElementById('manageStarredModal').style.display = 'flex';
+            document.getElementById('newMerchantInput').value = '';
+            document.getElementById('searchMerchantsInput').value = '';
+            await fetchManageMerchants();
+        }
+
+        function closeManageStarredModal() {
+            document.getElementById('manageStarredModal').style.display = 'none';
+        }
+
+        async function fetchManageMerchants() {
+            const loadingEl = document.getElementById('merchantsLoading');
+            const noDataEl = document.getElementById('merchantsNoData');
+            const bodyEl = document.getElementById('merchantsListBody');
+            
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (noDataEl) noDataEl.style.display = 'none';
+            if (bodyEl) bodyEl.innerHTML = '';
+            
+            try {
+                const res = await fetch('/api/merchants');
+                if (res.ok) {
+                    const data = await res.json();
+                    allMerchantsCache = data.merchants || [];
+                    renderMerchantsList(allMerchantsCache);
+                } else {
+                    showToast('Failed to load merchants', 'error');
+                }
+            } catch (e) {
+                showToast('Network error: ' + e.message, 'error');
+            } finally {
+                if (loadingEl) loadingEl.style.display = 'none';
+            }
+        }
+
+        function renderMerchantsList(merchants) {
+            const bodyEl = document.getElementById('merchantsListBody');
+            const noDataEl = document.getElementById('merchantsNoData');
+            if (!bodyEl) return;
+            
+            bodyEl.innerHTML = '';
+            if (!merchants || merchants.length === 0) {
+                if (noDataEl) noDataEl.style.display = 'block';
+                return;
+            }
+            if (noDataEl) noDataEl.style.display = 'none';
+            
+            merchants.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'merchant-list-item';
+                item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-bottom:1px solid rgba(217, 119, 6, 0.15);';
+                
+                const isStarred = !!m.is_starred;
+                const starIcon = isStarred ? '⭐' : '✰';
+                const starTitle = isStarred ? 'Starred (click to unstar)' : 'Unstarred (click to star)';
+                
+                item.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+                        <button onclick="toggleMerchantItemStar('${encodeURIComponent(m.name)}', ${isStarred})" title="${starTitle}" style="background:none; border:none; font-size:1.2rem; cursor:pointer; padding:0; line-height:1;">
+                            ${starIcon}
+                        </button>
+                        <span style="font-weight:600; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${m.name}">${m.name}</span>
+                    </div>
+                    <button onclick="deleteMerchantItem('${encodeURIComponent(m.name)}')" title="Delete merchant" style="background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; border-radius:6px; padding:3px 8px; cursor:pointer; font-size:0.8rem;">
+                        🗑️
+                    </button>
+                `;
+                bodyEl.appendChild(item);
+            });
+        }
+
+        function filterMerchantsList() {
+            const q = (document.getElementById('searchMerchantsInput').value || '').trim().toLowerCase();
+            if (!q) {
+                renderMerchantsList(allMerchantsCache);
+                return;
+            }
+            const filtered = allMerchantsCache.filter(m => m.name.toLowerCase().includes(q));
+            renderMerchantsList(filtered);
+        }
+
+        async function addNewStarredMerchant() {
+            const input = document.getElementById('newMerchantInput');
+            const name = (input.value || '').trim();
+            if (!name) {
+                showToast('Please enter a merchant name', 'error');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/merchants', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, is_starred: true })
+                });
+                if (res.ok) {
+                    input.value = '';
+                    showToast(`Added "${name}" to Starred Merchants! ⭐`, 'success');
+                    await fetchManageMerchants();
+                } else {
+                    const err = await res.json();
+                    showToast('Error: ' + (err.detail || 'Could not add merchant'), 'error');
+                }
+            } catch (e) {
+                showToast('Network error: ' + e.message, 'error');
+            }
+        }
+
+        async function toggleMerchantItemStar(encodedName, currentStarred) {
+            const merchantName = decodeURIComponent(encodedName);
+            const newStarState = !currentStarred;
+            try {
+                const res = await fetch(`/api/merchants/${encodedName}/star`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_starred: newStarState })
+                });
+                if (res.ok) {
+                    showToast(newStarState ? `"${merchantName}" starred! ⭐` : `"${merchantName}" unstarred`, 'success');
+                    await fetchManageMerchants();
+                } else {
+                    showToast('Failed to update star', 'error');
+                }
+            } catch (e) {
+                showToast('Network error: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteMerchantItem(encodedName) {
+            const merchantName = decodeURIComponent(encodedName);
+            showConfirmToast(`Delete "${merchantName}"?`, async () => {
+                try {
+                    const res = await fetch(`/api/merchants/${encodedName}`, {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) {
+                        showToast(`"${merchantName}" deleted`, 'success');
+                        await fetchManageMerchants();
+                    } else {
+                        showToast('Failed to delete merchant', 'error');
+                    }
+                } catch (e) {
+                    showToast('Network error: ' + e.message, 'error');
+                }
             });
         }
 

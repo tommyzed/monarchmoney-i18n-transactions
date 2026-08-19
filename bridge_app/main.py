@@ -12,9 +12,9 @@ from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client, get_latest_credentials
-from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction
+from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant
 from sqlalchemy.future import select
-from sqlalchemy import delete
+from sqlalchemy import delete, func
 from pydantic import BaseModel
 from typing import Optional, Any
 from datetime import datetime, timedelta
@@ -188,6 +188,13 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
                          result = await process_manual_transaction(manual_data, db, progress_callback=progress_callback, force_override=force_override)
                     else:
                          result = await process_transaction(content, db, progress_callback=progress_callback, user_currency=user_currency, force_override=force_override)
+                    
+                    if isinstance(result, dict) and "data" in result and isinstance(result["data"], dict):
+                        merchant_name = result["data"].get("merchant")
+                        if merchant_name:
+                            m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == merchant_name.strip().lower())
+                            m_res = await db.execute(m_stmt)
+                            result["data"]["is_starred"] = bool(m_res.scalar_one_or_none())
                 
                 # Success
                 jobs[job_id] = {
@@ -921,6 +928,11 @@ LOADING_HTML = """
                         <span>Cash Txns</span>
                     </a>
                     <div class="menu-divider"></div>
+                    <a href="#" id="manageStarredLink" class="deep-link-item" onclick="openManageStarredModal(event)">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⭐</span>
+                        <span>Starred Merchants</span>
+                    </a>
+                    <div class="menu-divider"></div>
                     <a href="#" id="updateAppLink" class="deep-link-item">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔄</span>
                         <span>Update App</span>
@@ -931,9 +943,12 @@ LOADING_HTML = """
             <p id="cardTitle" class="title">Transaction Processed</p>
             
             <div id="detailsContainer">
-                <div class="detail-row">
+                <div class="detail-row" style="align-items: center;">
                     <span class="label">Merchant</span>
-                    <span id="merchantValue" class="value">--</span>
+                    <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex: 1;">
+                        <button id="starMerchantBtn" onclick="toggleProcessedMerchantStar()" title="Star this merchant" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 0; line-height: 1; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">✰</button>
+                        <span id="merchantValue" class="value">--</span>
+                    </div>
                 </div>
                 <div class="detail-row">
                     <span class="label">Amount</span>
@@ -978,7 +993,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c);" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="margin-top: 0; background: #6b7280;">Process Another</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260818.1724 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1510 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1152,6 +1167,42 @@ LOADING_HTML = """
             </div>
         </div>
 
+        <!-- Manage Starred Merchants Modal -->
+        <div id="manageStarredModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2500; justify-content: center; align-items: center;">
+            <div style="position:relative; margin: 1rem; max-width: 500px; width: 92%; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+                <span id="closeManageStarredModal" onclick="closeManageStarredModal()" style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #78350f; font-weight: bold;">&times;</span>
+                <h2 style="color: #78350f; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-family: 'Sriracha', cursive; justify-content: center;">
+                    ⭐ Starred Merchants
+                </h2>
+
+                <!-- Add Merchant Input -->
+                <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
+                    <input type="text" id="newMerchantInput" placeholder="New merchant name..." style="flex: 1; height: 42px; padding: 0.5rem 0.8rem; border: 1px solid #d97706; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;" onkeydown="if(event.key==='Enter') addNewStarredMerchant()">
+                    <button onclick="addNewStarredMerchant()" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; border: none; padding: 0 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: bold; height: 42px; display: flex; align-items: center; gap: 4px;">
+                        <span>Add ⭐</span>
+                    </button>
+                </div>
+
+                <!-- Search / Filter Input -->
+                <div style="margin-bottom: 0.8rem;">
+                    <input type="text" id="searchMerchantsInput" oninput="filterMerchantsList()" placeholder="🔍 Filter merchants..." style="width: 100%; height: 38px; padding: 0.4rem 0.8rem; border: 1px solid rgba(217, 119, 6, 0.4); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; background: rgba(255,255,255,0.95);">
+                </div>
+
+                <!-- Merchants List -->
+                <div id="merchantsListContainer" style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.92); border-radius: 12px; padding: 0.5rem; border: 1px solid rgba(217, 119, 6, 0.3);">
+                    <div id="merchantsListBody">
+                        <!-- Loaded dynamically -->
+                    </div>
+                    <div id="merchantsLoading" style="text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
+                        Loading merchants... ⏳
+                    </div>
+                    <div id="merchantsNoData" style="display: none; text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
+                        No merchants found. Add one above! ⭐
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script>
             const jobId = "__JOB_ID__";
             const pollInterval = 500; // 0.5 seconds
@@ -1296,6 +1347,10 @@ LOADING_HTML = """
 
                 document.getElementById('merchantValue').textContent =
                     (isHistorical ? '💜 ' : '') + data.merchant;
+
+                const isStarred = !!data.is_starred;
+                window.currentMerchantStarred = isStarred;
+                updateStarIcon(isStarred);
 
                 document.getElementById('dateValue').innerHTML = data.date;
                 document.getElementById('datePicker').value = data.date;
@@ -2330,6 +2385,197 @@ LOADING_HTML = """
                 }
             }
 
+            // --- Starred Merchants Support ---
+            let allMerchantsCache = [];
+
+            function updateStarIcon(isStarred) {
+                const btn = document.getElementById('starMerchantBtn');
+                if (!btn) return;
+                if (isStarred) {
+                    btn.textContent = '⭐';
+                    btn.title = 'Starred Merchant (Click to unstar)';
+                } else {
+                    btn.textContent = '✰';
+                    btn.title = 'Star this merchant';
+                }
+            }
+
+            async function toggleProcessedMerchantStar() {
+                if (!window.currentTransactionData || !window.currentTransactionData.merchant) return;
+                const merchantName = window.currentTransactionData.merchant;
+                const newStarState = !window.currentMerchantStarred;
+                
+                try {
+                    const res = await fetch(`/api/merchants/${encodeURIComponent(merchantName)}/star`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ is_starred: newStarState })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        window.currentMerchantStarred = !!data.is_starred;
+                        updateStarIcon(window.currentMerchantStarred);
+                        showToast(window.currentMerchantStarred ? `"${merchantName}" starred! ⭐` : `"${merchantName}" unstarred`, 'success');
+                    } else {
+                        showToast('Failed to update star', 'error');
+                    }
+                } catch (e) {
+                    showToast('Error: ' + e.message, 'error');
+                }
+            }
+
+            async function openManageStarredModal(e) {
+                if (e) e.preventDefault();
+                const deepLinkDropdown = document.getElementById('deepLinkDropdown');
+                if (deepLinkDropdown) deepLinkDropdown.classList.remove('show');
+                
+                document.getElementById('manageStarredModal').style.display = 'flex';
+                document.getElementById('newMerchantInput').value = '';
+                document.getElementById('searchMerchantsInput').value = '';
+                await fetchManageMerchants();
+            }
+
+            function closeManageStarredModal() {
+                document.getElementById('manageStarredModal').style.display = 'none';
+            }
+
+            async function fetchManageMerchants() {
+                const loadingEl = document.getElementById('merchantsLoading');
+                const noDataEl = document.getElementById('merchantsNoData');
+                const bodyEl = document.getElementById('merchantsListBody');
+                
+                if (loadingEl) loadingEl.style.display = 'block';
+                if (noDataEl) noDataEl.style.display = 'none';
+                if (bodyEl) bodyEl.innerHTML = '';
+                
+                try {
+                    const res = await fetch('/api/merchants');
+                    if (res.ok) {
+                        const data = await res.json();
+                        allMerchantsCache = data.merchants || [];
+                        renderMerchantsList(allMerchantsCache);
+                    } else {
+                        showToast('Failed to load merchants', 'error');
+                    }
+                } catch (e) {
+                    showToast('Network error: ' + e.message, 'error');
+                } finally {
+                    if (loadingEl) loadingEl.style.display = 'none';
+                }
+            }
+
+            function renderMerchantsList(merchants) {
+                const bodyEl = document.getElementById('merchantsListBody');
+                const noDataEl = document.getElementById('merchantsNoData');
+                if (!bodyEl) return;
+                
+                bodyEl.innerHTML = '';
+                if (!merchants || merchants.length === 0) {
+                    if (noDataEl) noDataEl.style.display = 'block';
+                    return;
+                }
+                if (noDataEl) noDataEl.style.display = 'none';
+                
+                merchants.forEach(m => {
+                    const item = document.createElement('div');
+                    item.className = 'merchant-list-item';
+                    item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-bottom:1px solid rgba(217, 119, 6, 0.15);';
+                    
+                    const isStarred = !!m.is_starred;
+                    const starIcon = isStarred ? '⭐' : '✰';
+                    const starTitle = isStarred ? 'Starred (click to unstar)' : 'Unstarred (click to star)';
+                    
+                    item.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+                            <button onclick="toggleMerchantItemStar('${encodeURIComponent(m.name)}', ${isStarred})" title="${starTitle}" style="background:none; border:none; font-size:1.2rem; cursor:pointer; padding:0; line-height:1;">
+                                ${starIcon}
+                            </button>
+                            <span style="font-weight:600; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${m.name}">${m.name}</span>
+                        </div>
+                        <button onclick="deleteMerchantItem('${encodeURIComponent(m.name)}')" title="Delete merchant" style="background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; border-radius:6px; padding:3px 8px; cursor:pointer; font-size:0.8rem;">
+                            🗑️
+                        </button>
+                    `;
+                    bodyEl.appendChild(item);
+                });
+            }
+
+            function filterMerchantsList() {
+                const q = (document.getElementById('searchMerchantsInput').value || '').trim().toLowerCase();
+                if (!q) {
+                    renderMerchantsList(allMerchantsCache);
+                    return;
+                }
+                const filtered = allMerchantsCache.filter(m => m.name.toLowerCase().includes(q));
+                renderMerchantsList(filtered);
+            }
+
+            async function addNewStarredMerchant() {
+                const input = document.getElementById('newMerchantInput');
+                const name = (input.value || '').trim();
+                if (!name) {
+                    showToast('Please enter a merchant name', 'error');
+                    return;
+                }
+                
+                try {
+                    const res = await fetch('/api/merchants', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: name, is_starred: true })
+                    });
+                    if (res.ok) {
+                        input.value = '';
+                        showToast(`Added "${name}" to Starred Merchants! ⭐`, 'success');
+                        await fetchManageMerchants();
+                    } else {
+                        const err = await res.json();
+                        showToast('Error: ' + (err.detail || 'Could not add merchant'), 'error');
+                    }
+                } catch (e) {
+                    showToast('Network error: ' + e.message, 'error');
+                }
+            }
+
+            async function toggleMerchantItemStar(encodedName, currentStarred) {
+                const merchantName = decodeURIComponent(encodedName);
+                const newStarState = !currentStarred;
+                try {
+                    const res = await fetch(`/api/merchants/${encodedName}/star`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ is_starred: newStarState })
+                    });
+                    if (res.ok) {
+                        showToast(newStarState ? `"${merchantName}" starred! ⭐` : `"${merchantName}" unstarred`, 'success');
+                        await fetchManageMerchants();
+                    } else {
+                        showToast('Failed to update star', 'error');
+                    }
+                } catch (e) {
+                    showToast('Network error: ' + e.message, 'error');
+                }
+            }
+
+            async function deleteMerchantItem(encodedName) {
+                const merchantName = decodeURIComponent(encodedName);
+                showConfirmToast(`Delete "${merchantName}"?`, async () => {
+                    try {
+                        const res = await fetch(`/api/merchants/${encodedName}`, {
+                            method: 'DELETE'
+                        });
+                        if (res.ok) {
+                            showToast(`"${merchantName}" deleted`, 'success');
+                            await fetchManageMerchants();
+                        } else {
+                            showToast('Failed to delete merchant', 'error');
+                        }
+                    } catch (e) {
+                        showToast('Network error: ' + e.message, 'error');
+                    }
+                });
+            }
+
             // Start polling and load initial badge count
             updateFailedBadgeCount();
             setTimeout(checkStatus, 100);
@@ -2402,6 +2648,169 @@ async def handle_share(
     except Exception as e:
         print(f"Error starting job: {e}")
         return HTMLResponse(content="Error starting job", status_code=500)
+
+class MerchantCreate(BaseModel):
+    name: str
+    is_starred: bool = True
+
+class MerchantStarRequest(BaseModel):
+    is_starred: Optional[bool] = True
+
+@app.get("/api/merchants")
+async def get_merchants(starred: Optional[bool] = None, q: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    """
+    List merchants, optionally filtered by starred status and query string.
+    """
+    try:
+        stmt = select(Merchant)
+        if starred is not None:
+            stmt = stmt.where(Merchant.is_starred == starred)
+        if q:
+            stmt = stmt.where(Merchant.name.ilike(f"%{q.strip()}%"))
+        
+        stmt = stmt.order_by(Merchant.is_starred.desc(), func.lower(Merchant.name).asc())
+        result = await db.execute(stmt)
+        merchants = result.scalars().all()
+        return {
+            "merchants": [
+                {
+                    "id": m.id,
+                    "name": m.name,
+                    "is_starred": m.is_starred,
+                    "created_at": m.created_at.isoformat() if m.created_at else None,
+                    "updated_at": m.updated_at.isoformat() if m.updated_at else None,
+                }
+                for m in merchants
+            ]
+        }
+    except Exception as e:
+        print(f"Error fetching merchants: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/merchants/starred")
+async def get_starred_merchants(db: AsyncSession = Depends(get_db)):
+    """
+    Get all starred merchants, along with their mapped category if configured.
+    """
+    try:
+        stmt = select(Merchant).where(Merchant.is_starred == True).order_by(func.lower(Merchant.name).asc())
+        result = await db.execute(stmt)
+        starred = result.scalars().all()
+
+        # Fetch mappings to auto-populate category if present
+        mappings_result = await db.execute(select(MerchantMapping))
+        mappings = mappings_result.scalars().all()
+        mapping_map = {}
+        for m in mappings:
+            if m.receipt_merchant_name:
+                mapping_map[m.receipt_merchant_name.strip().lower()] = m.category_name
+            if m.monarch_merchant_name:
+                mapping_map[m.monarch_merchant_name.strip().lower()] = m.category_name
+
+        data = []
+        for s in starred:
+            name_clean = s.name.strip()
+            cat = mapping_map.get(name_clean.lower())
+            data.append({
+                "id": s.id,
+                "name": name_clean,
+                "is_starred": True,
+                "mapped_category": cat
+            })
+        return {"merchants": data}
+    except Exception as e:
+        print(f"Error fetching starred merchants: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/merchants/{name}/status")
+async def get_merchant_status(name: str, db: AsyncSession = Depends(get_db)):
+    try:
+        clean_name = name.strip()
+        stmt = select(Merchant).where(func.lower(Merchant.name) == clean_name.lower())
+        result = await db.execute(stmt)
+        merchant = result.scalar_one_or_none()
+        return {
+            "name": clean_name,
+            "exists": merchant is not None,
+            "is_starred": merchant.is_starred if merchant else False
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/merchants")
+async def create_or_star_merchant(payload: MerchantCreate, db: AsyncSession = Depends(get_db)):
+    clean_name = payload.name.strip()
+    if not clean_name:
+        raise HTTPException(status_code=400, detail="Merchant name cannot be empty")
+    try:
+        stmt = select(Merchant).where(func.lower(Merchant.name) == clean_name.lower())
+        result = await db.execute(stmt)
+        existing = result.scalar_one_or_none()
+        if existing:
+            existing.is_starred = payload.is_starred
+            await db.commit()
+            await db.refresh(existing)
+            return {"id": existing.id, "name": existing.name, "is_starred": existing.is_starred, "created": False}
+        
+        new_m = Merchant(name=clean_name, is_starred=payload.is_starred)
+        db.add(new_m)
+        await db.commit()
+        await db.refresh(new_m)
+        return {"id": new_m.id, "name": new_m.name, "is_starred": new_m.is_starred, "created": True}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/merchants/{name}/star")
+async def toggle_merchant_star(name: str, payload: Optional[MerchantStarRequest] = None, db: AsyncSession = Depends(get_db)):
+    clean_name = name.strip()
+    if not clean_name:
+        raise HTTPException(status_code=400, detail="Merchant name cannot be empty")
+    try:
+        stmt = select(Merchant).where(func.lower(Merchant.name) == clean_name.lower())
+        result = await db.execute(stmt)
+        existing = result.scalar_one_or_none()
+        
+        if existing:
+            if payload and payload.is_starred is not None:
+                existing.is_starred = payload.is_starred
+            else:
+                existing.is_starred = not existing.is_starred
+            await db.commit()
+            await db.refresh(existing)
+            return {"id": existing.id, "name": existing.name, "is_starred": existing.is_starred}
+        else:
+            is_starred = payload.is_starred if (payload and payload.is_starred is not None) else True
+            new_m = Merchant(name=clean_name, is_starred=is_starred)
+            db.add(new_m)
+            await db.commit()
+            await db.refresh(new_m)
+            return {"id": new_m.id, "name": new_m.name, "is_starred": new_m.is_starred}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/merchants/{name}")
+async def delete_merchant(name: str, db: AsyncSession = Depends(get_db)):
+    clean_name = name.strip()
+    try:
+        stmt = select(Merchant).where(func.lower(Merchant.name) == clean_name.lower())
+        result = await db.execute(stmt)
+        existing = result.scalar_one_or_none()
+        if not existing:
+            if clean_name.isdigit():
+                stmt_id = select(Merchant).where(Merchant.id == int(clean_name))
+                res_id = await db.execute(stmt_id)
+                existing = res_id.scalar_one_or_none()
+        
+        if existing:
+            await db.delete(existing)
+            await db.commit()
+            return {"success": True, "message": f"Merchant '{existing.name}' deleted"}
+        return {"success": True, "message": "Merchant not found or already deleted"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 class MappingRequest(BaseModel):
     receipt_merchant_name: str
