@@ -1,6 +1,8 @@
 import asyncio
 import httpx
 
+_exchange_rate_cache = {}
+
 async def _fetch_with_retry(url: str, max_attempts: int = 3, initial_delay: float = 1.0, report_func=None) -> httpx.Response:
     """
     Fetch a URL with retries on transient errors (network errors, timeouts, HTTP 5xx, or HTTP 429).
@@ -42,12 +44,18 @@ async def get_exchange_rate(from_curr: str, to_curr: str, date_str: str, report_
     Fetch the exchange rate for a specific date using Frankfurter API.
     date_str: YYYY-MM-DD
     """
+    cache_key = (from_curr, to_curr, date_str)
+    if cache_key in _exchange_rate_cache:
+        return _exchange_rate_cache[cache_key]
+
     url = f"https://api.frankfurter.dev/v1/{date_str}?base={from_curr}&symbols={to_curr}"
     
     try:
         response = await _fetch_with_retry(url, report_func=report_func)
         data = response.json()
-        return data["rates"][to_curr]
+        rate = data["rates"][to_curr]
+        _exchange_rate_cache[cache_key] = rate
+        return rate
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
              # Date might be today/weekend/future. Fallback to latest.
