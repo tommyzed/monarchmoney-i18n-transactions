@@ -4,9 +4,10 @@ from datetime import datetime
 from google import genai
 from PIL import Image
 import io
+import asyncio
 from typing import Optional
 
-def extract_transaction_data(image_bytes: bytes, historical_merchant_names: Optional[list] = None) -> dict:
+async def extract_transaction_data(image_bytes: bytes, historical_merchant_names: Optional[list] = None) -> dict:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return {"error": "GEMINI_API_KEY not set"}
@@ -50,10 +51,10 @@ Do NOT include any markdown fences or extra text — only the raw JSON object.
 """
 
     try:
-        image = Image.open(io.BytesIO(image_bytes))
+        image = await asyncio.to_thread(Image.open, io.BytesIO(image_bytes))
 
         # New SDK call
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model="gemini-3.6-flash",
             contents=[prompt, image]
         )

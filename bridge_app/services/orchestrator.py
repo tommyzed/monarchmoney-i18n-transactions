@@ -73,7 +73,7 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
         if attempt > 0:
              await report(f"Retrying Gemini scan (Attempt {attempt+1})...", 35)
 
-        data = await run_in_threadpool(extract_transaction_data, content, historical_names)
+        data = await extract_transaction_data(content, historical_names)
         
         if data and "error" in data:
             err_str = str(data["error"])
