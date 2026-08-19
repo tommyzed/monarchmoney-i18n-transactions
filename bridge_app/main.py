@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
+import hmac
 from sqlalchemy.ext.asyncio import AsyncSession
 from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
@@ -117,7 +118,7 @@ async def activate(request: Request, s: str):
     if not UNLOCK_SECRET:
         return Response(status_code=500, content="Security not configured on server.")
         
-    if s != UNLOCK_SECRET:
+    if not hmac.compare_digest(s, UNLOCK_SECRET):
         # Fake a 404 if secret is wrong to prevent guessing
         return Response(status_code=404, content="Not Found")
     
