@@ -189,12 +189,21 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
                     else:
                          result = await process_transaction(content, db, progress_callback=progress_callback, user_currency=user_currency, force_override=force_override)
                     
-                    if isinstance(result, dict) and "data" in result and isinstance(result["data"], dict):
-                        merchant_name = result["data"].get("merchant")
-                        if merchant_name:
-                            m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == merchant_name.strip().lower())
-                            m_res = await db.execute(m_stmt)
-                            result["data"]["is_starred"] = bool(m_res.scalar_one_or_none())
+                    merchant_name = None
+                    target_dict = None
+                    if isinstance(result, dict):
+                        if "merchant" in result:
+                            merchant_name = result.get("merchant")
+                            target_dict = result
+                        elif "data" in result and isinstance(result["data"], dict) and "merchant" in result["data"]:
+                            merchant_name = result["data"].get("merchant")
+                            target_dict = result["data"]
+                    
+                    if merchant_name and target_dict is not None:
+                        m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == merchant_name.strip().lower())
+                        m_res = await db.execute(m_stmt)
+                        is_starred_val = m_res.scalar_one_or_none()
+                        target_dict["is_starred"] = bool(is_starred_val) if is_starred_val is not None else False
                 
                 # Success
                 jobs[job_id] = {
@@ -946,7 +955,7 @@ LOADING_HTML = """
                 <div class="detail-row" style="align-items: center;">
                     <span class="label">Merchant</span>
                     <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex: 1;">
-                        <button id="starMerchantBtn" onclick="toggleProcessedMerchantStar()" title="Star this merchant" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 0; line-height: 1; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">✰</button>
+                        <button id="starMerchantBtn" onclick="toggleProcessedMerchantStar()" title="Star this merchant" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 0; line-height: 1; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">☆</button>
                         <span id="merchantValue" class="value">--</span>
                     </div>
                 </div>
@@ -984,16 +993,16 @@ LOADING_HTML = """
             
             <div id="successActions" style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
                 <button id="editMappingBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #fcad03, #f76b1c);" onclick="openMappingModal()">Edit Mapping</button>
-                <a href="/" class="btn" style="margin-top: 0;">Process Another</a>
+                <a href="/" class="btn" style="margin-top: 0;">Return 🏡</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
             </div>
 
             <div id="errorActions" style="display: none; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
                 <button id="retryErrorBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #4f46e5, #7c3aed);" onclick="forceSubmit()">🔄 Retry Now</button>
                 <button id="viewFailedBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c);" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
-                <a href="/" class="btn" style="margin-top: 0; background: #6b7280;">Process Another</a>
+                <a href="/" class="btn" style="margin-top: 0; background: #6b7280;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1510 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1526 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1351,6 +1360,18 @@ LOADING_HTML = """
                 const isStarred = !!data.is_starred;
                 window.currentMerchantStarred = isStarred;
                 updateStarIcon(isStarred);
+
+                if (data.merchant) {
+                    fetch(`/api/merchants/${encodeURIComponent(data.merchant)}/status`)
+                        .then(res => res.json())
+                        .then(statusData => {
+                            if (statusData && typeof statusData.is_starred === 'boolean') {
+                                window.currentMerchantStarred = statusData.is_starred;
+                                updateStarIcon(statusData.is_starred);
+                            }
+                        })
+                        .catch(err => console.error("Error fetching merchant status:", err));
+                }
 
                 document.getElementById('dateValue').innerHTML = data.date;
                 document.getElementById('datePicker').value = data.date;
@@ -2395,7 +2416,7 @@ LOADING_HTML = """
                     btn.textContent = '⭐';
                     btn.title = 'Starred Merchant (Click to unstar)';
                 } else {
-                    btn.textContent = '✰';
+                    btn.textContent = '☆';
                     btn.title = 'Star this merchant';
                 }
             }
@@ -2482,7 +2503,7 @@ LOADING_HTML = """
                     item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-bottom:1px solid rgba(217, 119, 6, 0.15);';
                     
                     const isStarred = !!m.is_starred;
-                    const starIcon = isStarred ? '⭐' : '✰';
+                    const starIcon = isStarred ? '⭐' : '☆';
                     const starTitle = isStarred ? 'Starred (click to unstar)' : 'Unstarred (click to star)';
                     
                     item.innerHTML = `

@@ -299,6 +299,22 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
         # 5. Save Record
         await _save_transaction_and_log(data, image_hash, db, report_func, force_override)
         
+        # 5b. Fetch Merchant Starred Status
+        merchant_name = data.get("merchant")
+        if merchant_name:
+            try:
+                from ..models import Merchant
+                from sqlalchemy import func
+                m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == merchant_name.strip().lower())
+                m_res = await db.execute(m_stmt)
+                is_starred_val = m_res.scalar_one_or_none()
+                data["is_starred"] = bool(is_starred_val) if is_starred_val is not None else False
+            except Exception as m_err:
+                print(f"Error fetching merchant star status: {m_err}")
+                data["is_starred"] = False
+        else:
+            data["is_starred"] = False
+
         return data
     except Exception as e:
         if not hasattr(e, "parsed_data"):
