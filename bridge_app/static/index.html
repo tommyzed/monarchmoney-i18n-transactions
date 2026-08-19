@@ -588,7 +588,7 @@
                         </div>
                         <div class="magic-option" data-value="USD"
                             style="padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 1.2rem;">💵</span> <span>USD (US Dollar)</span>
+                            <span style="font-size: 1.2rem;">💵</span> <span>USD (US $)</span>
                         </div>
                         <div class="magic-option" data-value="GBP"
                             style="padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px;">
@@ -712,7 +712,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260818.1724 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260819.1450 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -851,13 +851,60 @@
                 <div style="text-align: left; margin-bottom: 1rem;">
                     <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Merchant</label>
                     <input type="text" name="merchant" required placeholder="e.g. Starbucks"
-                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
+                        style="width: 100%; height: 48px; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
                 </div>
 
-                <div style="text-align: left; margin-bottom: 1rem;">
-                    <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Amount</label>
-                    <input type="number" step="0.01" name="amount" required
-                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
+                <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
+                    <div style="flex: 1; text-align: left;">
+                        <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Amount</label>
+                        <input type="number" step="0.01" name="amount" required
+                            style="width: 100%; height: 48px; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; box-sizing: border-box;">
+                    </div>
+
+                    <!-- Reusing Magic Dropdown Logic Structure for Manual -->
+                    <div style="flex: 1; text-align: left;">
+                        <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Currency</label>
+                        <div style="position: relative; margin-top: 0.3rem;">
+                            <input type="hidden" name="currency" id="manualCurrencyInput" value="EUR">
+                            <div id="manualCurrencyTrigger"
+                                style="width: 100%; height: 48px; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                                <span>EUR (Euro)</span>
+                                <span>▼</span>
+                            </div>
+
+                            <div id="manualCurrencyDropdown" style="
+                                display: none;
+                                position: absolute;
+                                top: 100%;
+                                left: 0;
+                                width: 100%;
+                                background: white;
+                                border-radius: 8px;
+                                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                                z-index: 100;
+                                max-height: 200px;
+                                overflow-y: auto;
+                                margin-top: 5px;
+                            ">
+                                <div class="manual-currency-option" data-value="EUR"
+                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💶 EUR (Euro)
+                                </div>
+                                <div class="manual-currency-option" data-value="USD"
+                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💵 USD (US $)</div>
+                                <div class="manual-currency-option" data-value="GBP"
+                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💷 GBP (Pound)
+                                </div>
+                                <div class="manual-currency-option" data-value="JPY"
+                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💴 JPY (Yen)
+                                </div>
+                                <div class="manual-currency-option" data-value="CZK"
+                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">🇨🇿 CZK
+                                    (Czech Koruna)</div>
+                                <div class="manual-currency-option" data-value="HUF"
+                                    style="padding: 10px; cursor: pointer;">🇭🇺 HUF (Hungarian Forint)</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div style="text-align: left; margin-bottom: 1rem; display: flex; align-items: center; gap: 1.5rem;">
@@ -875,62 +922,16 @@
                     </div>
                 </div>
 
-                <!-- Reusing Magic Dropdown Logic Structure for Manual -->
-                <div style="text-align: left; margin-bottom: 1rem;">
-                    <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Currency</label>
-                    <div style="position: relative; margin-top: 0.3rem;">
-                        <input type="hidden" name="currency" id="manualCurrencyInput" value="EUR">
-                        <div id="manualCurrencyTrigger"
-                            style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-                            <span>EUR (Euro)</span>
-                            <span>▼</span>
-                        </div>
-
-                        <div id="manualCurrencyDropdown" style="
-                            display: none;
-                            position: absolute;
-                            top: 100%;
-                            left: 0;
-                            width: 100%;
-                            background: white;
-                            border-radius: 8px;
-                            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-                            z-index: 100;
-                            max-height: 200px;
-                            overflow-y: auto;
-                            margin-top: 5px;
-                        ">
-                            <div class="manual-currency-option" data-value="EUR"
-                                style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💶 EUR (Euro)
-                            </div>
-                            <div class="manual-currency-option" data-value="USD"
-                                style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💵 USD (US
-                                Dollar)</div>
-                            <div class="manual-currency-option" data-value="GBP"
-                                style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💷 GBP (Pound)
-                            </div>
-                            <div class="manual-currency-option" data-value="JPY"
-                                style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💴 JPY (Yen)
-                            </div>
-                            <div class="manual-currency-option" data-value="CZK"
-                                style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">🇨🇿 CZK
-                                (Czech Koruna)</div>
-                            <div class="manual-currency-option" data-value="HUF"
-                                style="padding: 10px; cursor: pointer;">🇭🇺 HUF (Hungarian Forint)</div>
-                        </div>
-                    </div>
-                </div>
-
                 <div style="text-align: left; margin-bottom: 1rem;">
                     <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Date</label>
                     <input type="date" name="date" required id="dateInput"
-                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; font-family: inherit; box-sizing: border-box;">
+                        style="width: 100%; height: 48px; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; font-family: inherit; box-sizing: border-box;">
                 </div>
 
                 <div style="text-align: left; margin-bottom: 1rem;">
                     <label style="color: #666; font-size: 0.9rem; font-weight: bold;">Notes</label>
                     <input type="text" name="notes" placeholder="e.g. Lunch with business client"
-                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; font-family: inherit; box-sizing: border-box;">
+                        style="width: 100%; height: 48px; padding: 0.8rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-top: 0.3rem; font-family: inherit; box-sizing: border-box;">
                 </div>
 
 
