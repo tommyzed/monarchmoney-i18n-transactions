@@ -993,8 +993,8 @@ LOADING_HTML = """
             
             <div id="successActions" style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: nowrap;">
                 <button id="editMappingBtn" class="btn" style="flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #fcad03, #f76b1c); white-space: nowrap;" onclick="openMappingModal()">Edit Mapping</button>
-                <a href="/" class="btn" style="flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; white-space: nowrap;">Return 🏡</a>
                 <button id="forceSubmitBtn" class="btn" style="display:none; flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0; white-space: nowrap;" onclick="forceSubmit()">Force Submit</button>
+                <a href="/" class="btn" style="flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; white-space: nowrap;">Return 🏡</a>
             </div>
 
             <div id="errorActions" style="display: none; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
@@ -1002,7 +1002,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c); white-space: nowrap;" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="flex: 1; min-width: 100px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: #6b7280; white-space: nowrap;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1625 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260822.1918 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1342,12 +1342,16 @@ LOADING_HTML = """
                     amountHtml += `<br><span style="font-size: 0.8em; color: #352224;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
                 }
                 
-                if (data.used_historical_name || data.original_merchant_name) {
-                    document.getElementById('editMappingBtn').style.display = 'inline-block';
-                    document.getElementById('editMappingBtn').textContent = "Edit Mapping";
+                if (!isDuplicate) {
+                    if (data.used_historical_name || data.original_merchant_name) {
+                        document.getElementById('editMappingBtn').style.display = 'inline-block';
+                        document.getElementById('editMappingBtn').textContent = "Edit Mapping";
+                    } else {
+                        document.getElementById('editMappingBtn').style.display = 'inline-block';
+                        document.getElementById('editMappingBtn').textContent = "Add Mapping";
+                    }
                 } else {
-                    document.getElementById('editMappingBtn').style.display = 'inline-block';
-                    document.getElementById('editMappingBtn').textContent = "Add Mapping";
+                    document.getElementById('editMappingBtn').style.display = 'none';
                 }
 
                 document.getElementById('amountValue').innerHTML = amountHtml;
