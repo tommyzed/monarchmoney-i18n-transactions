@@ -68,6 +68,12 @@ def parse_args():
         help="Output raw structured JSON instead of formatted text tables.",
     )
     parser.add_argument(
+        "--save-db",
+        action="store_true",
+        default=False,
+        help="Persist calculated report into the database for the web UI.",
+    )
+    parser.add_argument(
         "--email",
         type=str,
         default=None,
@@ -76,11 +82,13 @@ def parse_args():
     return parser.parse_args()
 
 
+
 async def fetch_spending_report(
     start_date: str,
     end_date: str,
     include_hidden: bool = False,
     email: str = None,
+    save_db: bool = False,
 ):
     if email:
         os.environ["MM_EMAIL"] = email
@@ -194,6 +202,44 @@ async def fetch_spending_report(
                 else:
                     itemized_income_total += amount
 
+        if save_db:
+            from bridge_app.models import SpendingReport
+            from sqlalchemy.future import select
+            try:
+                report_year = int(start_date[:4])
+                stmt = select(SpendingReport).where(SpendingReport.year == report_year).order_by(SpendingReport.updated_at.desc())
+                res = await session.execute(stmt)
+                db_report = res.scalars().first()
+                if not db_report:
+                    db_report = SpendingReport(
+                        user_id=creds.id,
+                        year=report_year,
+                        start_date=start_date,
+                        end_date=end_date,
+                        include_hidden=include_hidden,
+                        sync_status="ready",
+                    )
+                    session.add(db_report)
+                db_report.summary = {
+                    "total_expense": abs(server_summary.get("sumExpense", 0.0)),
+                    "total_income": server_summary.get("sumIncome", 0.0),
+                    "net_savings": server_summary.get("savings", 0.0),
+                    "savings_rate": server_summary.get("savingsRate", 0.0),
+                    "itemized_expense": itemized_expense_total,
+                    "itemized_income": itemized_income_total,
+                    "itemized_transfers": itemized_transfers_total,
+                    "total_transactions": len(all_txs),
+                }
+                db_report.category_groups = category_group_breakdown
+                db_report.categories = categorized_breakdown
+                db_report.monthly_spending = monthly_breakdown
+                db_report.sync_status = "ready"
+                db_report.error_message = None
+                await session.commit()
+                print(f"💾 Successfully saved {report_year} report to database.")
+            except Exception as save_err:
+                print(f"⚠️ Warning: Could not save to DB: {save_err}")
+
         return {
             "period": {"start_date": start_date, "end_date": end_date},
             "include_hidden": include_hidden,
@@ -214,6 +260,7 @@ async def fetch_spending_report(
             "categories": categorized_breakdown,
             "monthly_spending": monthly_breakdown,
         }
+
 
 
 def print_formatted_report(data: dict, top_n: int = 15):
@@ -278,6 +325,7 @@ def main():
                 end_date=end_date,
                 include_hidden=args.include_hidden,
                 email=args.email,
+                save_db=args.save_db,
             )
         )
 
@@ -293,3 +341,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

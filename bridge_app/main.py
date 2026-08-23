@@ -12,7 +12,7 @@ from .database import engine, Base, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client, get_latest_credentials
-from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant
+from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant, SpendingReport
 from sqlalchemy.future import select
 from sqlalchemy import delete, func
 from pydantic import BaseModel
@@ -95,9 +95,10 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         if request.url.path.endswith((".png", ".jpg", ".css", ".js", ".gif")):
              return await call_next(request)
 
-        # Allow FIRE demo mode access
-        if request.url.path == "/fire" or request.url.path.startswith("/api/fire/"):
+        # Allow FIRE and Spending Report access
+        if request.url.path in ["/fire", "/spending"] or request.url.path.startswith(("/api/fire", "/api/spending")):
             return await call_next(request)
+
         
         # If no secret is configured, block protected routes
         if not UNLOCK_SECRET:
@@ -911,6 +912,10 @@ LOADING_HTML = """
                         <span id="failedBadge" style="display:none; background:#ef4444; color:white; border-radius:999px; font-size:0.75rem; padding:2px 7px; font-weight:bold; margin-left:5px;">0</span>
                     </a>
                     <div class="menu-divider"></div>
+                    <a href="/spending" class="deep-link-item">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">📊</span>
+                        <span>Spending Report</span>
+                    </a>
                     <a href="/fire" class="deep-link-item">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔥</span>
                         <span>FIRE Dashboard</span>
@@ -1002,7 +1007,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c); white-space: nowrap;" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="flex: 1; min-width: 100px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: #6b7280; white-space: nowrap;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260822.1918 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260823.1725 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -3786,4 +3791,144 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     )
 
 
+# =============================================================================
+# 📊 SPENDING REPORT Routes
+# =============================================================================
+
+@app.get("/spending", response_class=HTMLResponse)
+async def spending_page(request: Request):
+    """Serve the Spending Report dashboard page."""
+    import pathlib
+    spending_html = pathlib.Path("bridge_app/static/spending.html").read_text()
+    
+    # Inject authentication state
+    is_auth_str = "true" if request.state.is_authenticated else "false"
+    spending_html = spending_html.replace(
+        "/* INIT_AUTH_STATE */", 
+        f"</style><script>window.IS_AUTHENTICATED = {is_auth_str};</script><style>"
+    )
+    
+    return HTMLResponse(content=spending_html)
+
+
+@app.get("/api/spending")
+async def get_spending_report_endpoint(
+    request: Request,
+    year: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch stored spending report for a given year."""
+    target_year = year or datetime.now().year
+    
+    stmt = (
+        select(SpendingReport)
+        .where(SpendingReport.year == target_year)
+        .order_by(SpendingReport.updated_at.desc())
+    )
+    res = await db.execute(stmt)
+    report = res.scalars().first()
+
+    if not report:
+        return {
+            "status": "not_found",
+            "year": target_year,
+            "message": f"No spending report found for {target_year}. Click Recalculate to generate one.",
+        }
+
+    return {
+        "status": "ok",
+        "year": report.year,
+        "start_date": report.start_date,
+        "end_date": report.end_date,
+        "include_hidden": report.include_hidden,
+        "summary": report.summary,
+        "category_groups": report.category_groups,
+        "categories": report.categories,
+        "monthly_spending": report.monthly_spending,
+        "sync_status": report.sync_status,
+        "error_message": report.error_message,
+        "updated_at": report.updated_at.isoformat() if report.updated_at else None,
+    }
+
+
+@app.post("/api/spending/recalculate")
+async def recalculate_spending_report_endpoint(
+    background_tasks: BackgroundTasks,
+    request: Request,
+    year: Optional[int] = None,
+    include_hidden: bool = False,
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger background recalculation of the spending report from Monarch Money."""
+    from .services.spending_service import calculate_and_save_spending_report
+    target_year = year or datetime.now().year
+
+    stmt = select(SpendingReport).where(SpendingReport.year == target_year)
+    res = await db.execute(stmt)
+    report = res.scalars().first()
+
+    if not report:
+        report = SpendingReport(
+            year=target_year,
+            start_date=f"{target_year}-01-01",
+            end_date=f"{target_year}-12-31",
+            include_hidden=include_hidden,
+            sync_status="syncing",
+        )
+        db.add(report)
+    else:
+        report.sync_status = "syncing"
+        report.error_message = None
+
+    await db.commit()
+
+    background_tasks.add_task(
+        calculate_and_save_spending_report,
+        year=target_year,
+        include_hidden=include_hidden,
+    )
+
+    return {
+        "status": "syncing",
+        "year": target_year,
+        "message": f"Recalculation started for {target_year}.",
+    }
+
+
+@app.get("/api/spending/status")
+async def get_spending_status_endpoint(
+    year: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Check sync/recalculation status for a given year."""
+    target_year = year or datetime.now().year
+    stmt = select(SpendingReport).where(SpendingReport.year == target_year).order_by(SpendingReport.updated_at.desc())
+    res = await db.execute(stmt)
+    report = res.scalars().first()
+
+    if not report:
+        return {"status": "not_found", "year": target_year, "sync_status": "none"}
+
+    return {
+        "status": "ok",
+        "year": report.year,
+        "sync_status": report.sync_status,
+        "error_message": report.error_message,
+        "updated_at": report.updated_at.isoformat() if report.updated_at else None,
+    }
+
+
+@app.get("/api/spending/years")
+async def get_spending_years_endpoint(db: AsyncSession = Depends(get_db)):
+    """List all years that have reports stored in the database."""
+    stmt = select(SpendingReport.year).distinct().order_by(SpendingReport.year.desc())
+    res = await db.execute(stmt)
+    years = [r[0] for r in res.all()]
+    current_year = datetime.now().year
+    if current_year not in years:
+        years.insert(0, current_year)
+    return {"years": sorted(list(set(years)), reverse=True)}
+
+
 app.mount("/", StaticFiles(directory="bridge_app/static", html=True), name="static")
+
