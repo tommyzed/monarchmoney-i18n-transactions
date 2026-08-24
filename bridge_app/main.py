@@ -1007,7 +1007,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c); white-space: nowrap;" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="flex: 1; min-width: 100px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: #6b7280; white-space: nowrap;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260824.1006 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260824.1027 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
