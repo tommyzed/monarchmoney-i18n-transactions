@@ -25,6 +25,6 @@ trigger: always_on
 - Never generate generic fallback titles like "update file", "minor fixes", or "fix bug".
 - Do not output markdown backticks (```) around the final text payload. Only return raw text.
 - NEVER mention that the BUILD ID, versioning, or application build timestamp was updated/incremented.
-- Strictly OMIT any references such as "update build timestamp", "update application build timestamp", "update BUILD_ID", or similar timestamp text from both the commit subject and body.
+- Strictly OMIT any references such as "update build timestamp", "update build version timestamps", "update application build timestamp", "update BUILD_ID", or any similar timestamp/versioning text from both the commit subject and body.
 
 

@@ -437,17 +437,38 @@
         .group-header {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 0.9rem;
+            gap: 12px;
         }
 
         .group-name {
             font-weight: 600;
             color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
         }
 
-        .group-amount {
-            color: var(--text-secondary);
+        .group-amount-wrap {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            text-align: right;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .group-amount-val {
+            color: var(--text-primary);
             font-weight: 600;
+        }
+
+        .group-amount-pct {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            font-weight: normal;
         }
 
         .progress-track {
@@ -580,6 +601,18 @@
             }
             .chart-container {
                 height: 250px;
+            }
+            .group-header {
+                align-items: flex-start;
+            }
+            .group-amount-wrap {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 2px;
+            }
+            .group-amount-pct {
+                font-size: 0.74rem;
+                line-height: 1.2;
             }
         }
     </style>
@@ -1009,11 +1042,14 @@
                 item.className = 'group-item';
                 item.innerHTML = `
                     <div class="group-header">
-                        <span class="group-name" style="display:flex; align-items:center; gap:8px;">
-                            <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color};"></span>
-                            ${name}
+                        <span class="group-name">
+                            <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
+                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
                         </span>
-                        <span class="group-amount">${formatCurrency(amt)} <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(${pct.toFixed(1)}%${yyBadge})</span></span>
+                        <div class="group-amount-wrap">
+                            <span class="group-amount-val">${formatCurrency(amt)}</span>
+                            <span class="group-amount-pct">(${pct.toFixed(1)}%${yyBadge})</span>
+                        </div>
                     </div>
                     <div class="progress-track">
                         <div class="progress-fill" style="width: ${Math.min(pct, 100)}%; background: ${color};"></div>

@@ -10,5 +10,5 @@ Whenever generating commit messages:
 3. Keep the subject line under 50 characters, use imperative mood, and do not end with a period.
 4. Detail *why* the change was made in the body using a bulleted list.
 5. NEVER mention that the BUILD ID, versioning, or application build timestamp was updated/incremented.
-6. Strictly OMIT phrases like "update build timestamp", "update application build timestamp", "update BUILD_ID", or similar timestamp references from both the commit subject line and the body.
+6. Strictly OMIT phrases like "update build timestamp", "update build version timestamps", "update application build timestamp", "update BUILD_ID", or similar timestamp/versioning references from both the commit subject line and the body.
 
