@@ -906,6 +906,10 @@ LOADING_HTML = """
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">📜</span>
                         <span>History Log</span>
                     </a>
+                    <a href="#" id="manageStarredLink" class="deep-link-item" onclick="openManageStarredModal(event)">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⭐</span>
+                        <span>Starred Merchants</span>
+                    </a>
                     <a href="#" id="failedTxnsLink" class="deep-link-item" onclick="openFailedModal(event)">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⚠️</span>
                         <span style="flex: 1;">Failed Txns</span>
@@ -940,11 +944,6 @@ LOADING_HTML = """
                         target="_blank" class="deep-link-item">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">💵</span>
                         <span>Cash Txns</span>
-                    </a>
-                    <div class="menu-divider"></div>
-                    <a href="#" id="manageStarredLink" class="deep-link-item" onclick="openManageStarredModal(event)">
-                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⭐</span>
-                        <span>Starred Merchants</span>
                     </a>
                     <div class="menu-divider"></div>
                     <a href="#" id="updateAppLink" class="deep-link-item">
@@ -1007,7 +1006,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c); white-space: nowrap;" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="flex: 1; min-width: 100px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: #6b7280; white-space: nowrap;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260824.1234 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260824.1249 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->

@@ -666,22 +666,48 @@
                 font-size: 0.74rem;
                 line-height: 1.2;
             }
+        }
 
-            #recalcText {
-                display: none;
-            }
+        /* Toast Notification */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px;
+            position: fixed;
+            z-index: 3000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 0.95rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
 
-            .recalc-btn {
-                padding: 8px 12px;
-                min-width: 38px;
-                justify-content: center;
-                font-size: 0.95rem;
-            }
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+
+        .toast.success {
+            background-color: #be185d;
+        }
+
+        .toast.error {
+            background-color: #9f1239;
         }
     </style>
 </head>
 
 <body>
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
     <!-- Sticky Header -->
     <header class="header">
         <div class="header-container">
@@ -706,22 +732,16 @@
                     <div class="menu-divider"></div>
                     <a href="/" class="menu-item">
                         <span>🏡</span>
-                        <span>Home & Receipt Sync</span>
+                        <span>Receipt Sync</span>
                     </a>
                     <a href="/fire" class="menu-item">
                         <span>🔥</span>
                         <span>FIRE Dashboard</span>
                     </a>
                     <div class="menu-divider"></div>
-                    <a href="intent://transactions?needsReview=true#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions;end"
-                        target="_blank" class="menu-item">
-                        <span>🔍</span>
-                        <span>Monarch Review</span>
-                    </a>
-                    <a href="intent://accounts#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Faccounts;end"
-                        target="_blank" class="menu-item">
-                        <span>💳</span>
-                        <span>Monarch Accounts</span>
+                    <a href="#" id="updateAppLink" class="menu-item">
+                        <span>🔄</span>
+                        <span>Update App</span>
                     </a>
                 </div>
             </div>
@@ -758,6 +778,22 @@
         let pollTimer = null;
         let monthlyChart = null;
         let groupChart = null;
+
+        // Toast Helper
+        let toastTimeout = null;
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById("toast");
+            if (!toast) return;
+            if (toastTimeout) clearTimeout(toastTimeout);
+
+            toast.textContent = message;
+            toast.className = "toast show " + type;
+
+            toastTimeout = setTimeout(() => {
+                toast.className = toast.className.replace("show", "").trim();
+                toastTimeout = null;
+            }, 3000);
+        }
 
         // Colors for category groups
         const GROUP_COLORS = [
@@ -854,6 +890,15 @@
 
         // Init App
         async function init() {
+            // Check if returned from app update
+            if (new URLSearchParams(window.location.search).get('updated') === '1') {
+                showToast("✨ Updated to the latest version!", "success");
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('updated');
+                cleanUrl.searchParams.delete('v');
+                window.history.replaceState({}, '', cleanUrl.toString());
+            }
+
             // Setup Hamburger Menu Toggle
             const toggle = document.getElementById('menuToggle');
             const dropdown = document.getElementById('menuDropdown');
@@ -864,6 +909,34 @@
             document.addEventListener('click', () => {
                 dropdown.classList.remove('show');
             });
+
+            // Update App Logic
+            const updateAppBtn = document.getElementById('updateAppLink');
+            if (updateAppBtn) {
+                updateAppBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    showToast("Updating app...", "success");
+                    try {
+                        if ('serviceWorker' in navigator) {
+                            const registrations = await navigator.serviceWorker.getRegistrations();
+                            for (let registration of registrations) {
+                                await registration.unregister();
+                            }
+                        }
+                        if ('caches' in window) {
+                            const cacheNames = await caches.keys();
+                            await Promise.all(cacheNames.map(name => caches.delete(name)));
+                        }
+                    } catch (err) {
+                        console.error("Failed to clear app cache:", err);
+                    }
+                    await new Promise(r => setTimeout(r, 200));
+                    const url = new URL('/spending', window.location.origin);
+                    url.searchParams.set('v', Date.now());
+                    url.searchParams.set('updated', '1');
+                    window.location.href = url.toString();
+                });
+            }
 
             // Fetch list of years from database
             try {
