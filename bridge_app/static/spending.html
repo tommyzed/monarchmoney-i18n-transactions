@@ -201,6 +201,30 @@
             transition: background 0.15s;
         }
 
+        button.menu-item {
+            width: 100%;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        button.menu-item.action-item {
+            color: #6ee7b7;
+            font-weight: 600;
+        }
+
+        button.menu-item.action-item:hover {
+            background: rgba(16, 185, 129, 0.15);
+            color: #a7f3d0;
+        }
+
+        button.menu-item:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .menu-item:hover {
             background: rgba(255, 255, 255, 0.06);
         }
@@ -308,6 +332,12 @@
             border-color: rgba(139, 92, 246, 0.35);
             background: rgba(139, 92, 246, 0.08);
             color: #ddd6fe;
+        }
+
+        .freshness-pill.syncing {
+            border-color: rgba(99, 102, 241, 0.5);
+            background: rgba(99, 102, 241, 0.12);
+            color: #c7d2fe;
         }
 
         .freshness-dot {
@@ -669,6 +699,11 @@
                     <span class="hamburger-bar"></span>
                 </button>
                 <div class="menu-dropdown" id="menuDropdown">
+                    <button class="menu-item action-item" id="menuRefreshBtn" onclick="triggerRefreshFromMenu(event)">
+                        <span id="menuRefreshIcon">🔄</span>
+                        <span id="menuRefreshText">Refresh Data</span>
+                    </button>
+                    <div class="menu-divider"></div>
                     <a href="/" class="menu-item">
                         <span>🏡</span>
                         <span>Home & Receipt Sync</span>
@@ -704,10 +739,6 @@
                 <div id="freshnessContainer">
                     <span class="freshness-pill">Checking freshness...</span>
                 </div>
-                <button class="recalc-btn" id="recalcBtn" onclick="triggerRecalculate()">
-                    <span id="recalcIcon">🔄</span>
-                    <span id="recalcText">Recalculate</span>
-                </button>
             </div>
         </section>
 
@@ -897,15 +928,6 @@
                 reportData = data;
                 const freshness = getFreshnessDetails(data.updated_at, year);
                 document.getElementById('freshnessContainer').innerHTML = freshness.pillHtml;
-
-                // For closed years, adjust recalculate button styling
-                const nowYear = new Date().getFullYear();
-                const recalcBtn = document.getElementById('recalcBtn');
-                if (year < nowYear) {
-                    recalcBtn.title = `Historical year ${year} is finalized and closed.`;
-                } else {
-                    recalcBtn.title = `Sync recent ${year} transactions with Monarch.`;
-                }
 
                 if (data.sync_status === 'syncing') {
                     setSyncingState(true);
@@ -1330,7 +1352,15 @@
             window.addEventListener('resize', () => groupChart.resize());
         }
 
-        // Trigger Recalculate
+        // Trigger Refresh from Hamburger Menu
+        async function triggerRefreshFromMenu(e) {
+            if (e) e.stopPropagation();
+            const dropdown = document.getElementById('menuDropdown');
+            if (dropdown) dropdown.classList.remove('show');
+            await triggerRecalculate();
+        }
+
+        // Trigger Recalculate / Background Sync
         async function triggerRecalculate() {
             setSyncingState(true);
             try {
@@ -1338,29 +1368,38 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 startPolling();
             } catch (err) {
-                alert(`Could not start recalculation: ${err.message}`);
+                alert(`Could not start refresh: ${err.message}`);
                 setSyncingState(false);
             }
         }
 
         function setSyncingState(syncing) {
             isSyncing = syncing;
-            const btn = document.getElementById('recalcBtn');
-            const text = document.getElementById('recalcText');
-            const icon = document.getElementById('recalcIcon');
+            const menuBtn = document.getElementById('menuRefreshBtn');
+            const menuIcon = document.getElementById('menuRefreshIcon');
+            const menuText = document.getElementById('menuRefreshText');
+            const fContainer = document.getElementById('freshnessContainer');
 
             if (syncing) {
-                btn.disabled = true;
-                icon.innerHTML = '<div class="spinner"></div>';
-                text.textContent = 'Recalculating...';
-                const fContainer = document.getElementById('freshnessContainer');
+                if (menuBtn) menuBtn.disabled = true;
+                if (menuIcon) menuIcon.innerHTML = '<div class="spinner" style="width:12px; height:12px; border-width:2px;"></div>';
+                if (menuText) menuText.textContent = 'Refreshing data...';
                 if (fContainer) {
-                    fContainer.innerHTML = '<span class="freshness-pill">⏳ Syncing with Monarch...</span>';
+                    fContainer.innerHTML = `
+                        <div class="freshness-pill syncing" title="Querying Monarch Money for ${currentYear} transactions">
+                            <span class="spinner" style="width:10px; height:10px; border-width:2px; margin-right:4px;"></span>
+                            <span>Refreshing data with Monarch...</span>
+                        </div>
+                    `;
                 }
             } else {
-                btn.disabled = false;
-                icon.textContent = '🔄';
-                text.textContent = 'Recalculate';
+                if (menuBtn) menuBtn.disabled = false;
+                if (menuIcon) menuIcon.textContent = '🔄';
+                if (menuText) menuText.textContent = 'Refresh Data';
+                if (reportData && reportData.status === 'ok') {
+                    const freshness = getFreshnessDetails(reportData.updated_at, currentYear);
+                    if (fContainer) fContainer.innerHTML = freshness.pillHtml;
+                }
             }
         }
 
