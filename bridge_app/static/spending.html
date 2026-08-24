@@ -845,7 +845,21 @@
                     setSyncingState(false);
                 }
 
-                renderDashboard(data);
+                // Fetch previous year data for Y/Y comparison if available
+                let prevYearData = null;
+                try {
+                    const prevRes = await fetch(`/api/spending?year=${year - 1}`);
+                    if (prevRes.ok) {
+                        const pData = await prevRes.json();
+                        if (pData.status === 'ok') {
+                            prevYearData = pData;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not fetch previous year for Y/Y comparison', e);
+                }
+
+                renderDashboard(data, prevYearData);
 
             } catch (err) {
                 contentArea.innerHTML = `
@@ -876,7 +890,7 @@
         }
 
         // Render Full Dashboard
-        function renderDashboard(data) {
+        function renderDashboard(data, prevYearData = null) {
             const sum = data.summary || {};
             const catGroups = data.category_groups || {};
             const cats = data.categories || {};
@@ -887,6 +901,9 @@
             const netSavings = sum.net_savings || 0;
             const savingsRate = (sum.savings_rate || 0) * 100;
             const txCount = sum.total_transactions || 0;
+
+            const prevYear = currentYear - 1;
+            const hasPrevYear = prevYearData && (prevYearData.summary?.total_expense || 0) > 0;
 
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = `
@@ -927,6 +944,7 @@
                 <div class="section-card">
                     <div class="section-title">
                         <span>🏷️ Spending by Category Group</span>
+                        ${hasPrevYear ? `<span style="font-size:0.78rem; color:var(--text-muted); font-weight:normal;">Y/Y vs ${prevYear} (% of total spend)</span>` : ''}
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items:center;">
                         <div id="groupDonutChart" style="height: 280px; width:100%;"></div>
@@ -961,13 +979,32 @@
                 </div>
             `;
 
-            // Populate Category Groups List
+            // Populate Category Groups List with Y/Y comparison
             const groupContainer = document.getElementById('groupListContainer');
             const sortedGroups = Object.entries(catGroups).sort((a, b) => b[1] - a[1]);
             
+            const prevTotalExpense = prevYearData?.summary?.total_expense || 0;
+            const prevCatGroups = prevYearData?.category_groups || {};
+
             sortedGroups.forEach(([name, amt], idx) => {
                 const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
                 const color = GROUP_COLORS[idx % GROUP_COLORS.length];
+                
+                let yyBadge = '';
+                if (hasPrevYear) {
+                    const prevAmt = prevCatGroups[name] || 0;
+                    const prevPct = (prevAmt / prevTotalExpense) * 100;
+                    const delta = pct - prevPct;
+
+                    if (Math.abs(delta) < 0.05) {
+                        yyBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;" title="${prevYear}: ${prevPct.toFixed(1)}% (0.0% change)">0.0%</span>`;
+                    } else if (delta > 0) {
+                        yyBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;" title="${prevYear}: ${prevPct.toFixed(1)}% (increased +${delta.toFixed(1)}% of spending)">▲ +${delta.toFixed(1)}%</span>`;
+                    } else {
+                        yyBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;" title="${prevYear}: ${prevPct.toFixed(1)}% (decreased -${Math.abs(delta).toFixed(1)}% of spending)">🔻${Math.abs(delta).toFixed(1)}%</span>`;
+                    }
+                }
+
                 const item = document.createElement('div');
                 item.className = 'group-item';
                 item.innerHTML = `
@@ -976,7 +1013,7 @@
                             <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color};"></span>
                             ${name}
                         </span>
-                        <span class="group-amount">${formatCurrency(amt)} <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(${pct.toFixed(1)}%)</span></span>
+                        <span class="group-amount">${formatCurrency(amt)} <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(${pct.toFixed(1)}%${yyBadge})</span></span>
                     </div>
                     <div class="progress-track">
                         <div class="progress-fill" style="width: ${Math.min(pct, 100)}%; background: ${color};"></div>
@@ -990,7 +1027,7 @@
 
             // Render Charts
             renderMonthlyChart(monthly, currentYear);
-            renderGroupDonutChart(sortedGroups);
+            renderGroupDonutChart(sortedGroups, prevYearData, totalExpense);
         }
 
         // Render Ranked Category Table
@@ -1169,12 +1206,15 @@
             window.addEventListener('resize', () => monthlyChart.resize());
         }
 
-        // Render Group Donut Chart
-        function renderGroupDonutChart(sortedGroups) {
+        // Render Group Donut Chart with Y/Y Comparison Tooltip
+        function renderGroupDonutChart(sortedGroups, prevYearData = null, totalExpense = 0) {
             const chartDom = document.getElementById('groupDonutChart');
             if (!chartDom) return;
             if (groupChart) groupChart.dispose();
             groupChart = echarts.init(chartDom);
+
+            const prevTotalExpense = prevYearData?.summary?.total_expense || 0;
+            const prevCatGroups = prevYearData?.category_groups || {};
 
             const data = sortedGroups.map(([name, value], idx) => ({
                 name,
@@ -1185,7 +1225,20 @@
             const option = {
                 tooltip: {
                     trigger: 'item',
-                    formatter: (p) => `<b>${p.name}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`
+                    formatter: (p) => {
+                        let res = `<b>${p.name}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
+                        if (prevYearData && prevTotalExpense > 0) {
+                            const prevAmt = prevCatGroups[p.name] || 0;
+                            const prevPct = (prevAmt / prevTotalExpense) * 100;
+                            const delta = p.percent - prevPct;
+                            if (delta > 0.05) {
+                                res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${delta.toFixed(1)}% vs ${currentYear - 1} (${prevPct.toFixed(1)}%)</span>`;
+                            } else if (delta < -0.05) {
+                                res += `<br/><span style="color:#f43f5e; font-size:0.85em;">🔻${Math.abs(delta).toFixed(1)}% vs ${currentYear - 1} (${prevPct.toFixed(1)}%)</span>`;
+                            }
+                        }
+                        return res;
+                    }
                 },
                 series: [{
                     name: 'Category Group',
