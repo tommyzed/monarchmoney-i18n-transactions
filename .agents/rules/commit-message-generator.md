@@ -7,40 +7,31 @@ triggers:
 
 # Instructions for Commit Descriptions
 
-## 1. Context Gathering & Pre-filtering
-- Evaluate only the staged changes using `git diff --cached`.
-- Disregard any unstaged changes in the working directory.
-- **MANDATORY FILTER**: Completely ignore all automated build metadata, timestamp, cache-busting, and versioning diffs before generating output. Treat the following diff lines as non-existent:
-  - Any changes to `BUILD_ID`, build identifiers, build timestamps, version timestamps, copyright/build footers (e.g. `YYYYMMDD.HHMM ©...`), or `?v=...` query parameters in ANY file (e.g. `index.html`, `spending.html`, `public/index.html`, `bridge_app/static/*.html`, `main.py`, template files, etc.).
-  - Any cache-busting query parameter additions/updates (e.g. `Date.now()`, `?v=...`, `searchParams.set('v', ...)`).
-  - Any changes to `<lastmod>` timestamps in `sitemap.xml` or metadata files.
-  - Any cache-busting, asset tag, or version query updates.
-  Do NOT summarize, reference, or append these diffs into the commit message under any phrasing.
+## STEP 1: SANITIZE THE DIFF (Mandatory Pre-processing)
+Before analyzing the changes, completely strip out and discard all of the following diff lines:
+1. ANY line changing a timestamp, date, or build number (e.g., `20260824.1100`, `Date.now()`, `v=...`, `<lastmod>`, `©2025-26 ego/DEV/null`).
+2. ANY line changing `BUILD_ID`, version numbers, or asset cache tags in HTML, Python, XML, or config files.
+3. If an entire file only contains timestamp/version footer changes (e.g., `index.html`), remove that file completely from consideration.
 
-## 2. Format Requirements
-- **Structure**: Format the commit strictly using the Conventional Commits specification: `<type>(<scope>): <subject>`.
+DO NOT describe, summarize, acknowledge, or mention any stripped lines in your commit message.
+
+## STEP 2: IDENTIFY THE CORE PURPOSE
+- Focus 100% of the commit message on the actual functional, visual, or structural changes made by the developer (e.g., UI layout, button styles, API endpoints, logic fixes).
+
+## STEP 3: FORMAT REQUIREMENTS
+- **Structure**: Format strictly as: `<type>(<scope>): <subject>`
 - **Allowed Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `tweak`.
 - **Subject Constraints**: 
-  - Keep the first line (subject) under 50 characters.
-  - Use the imperative mood (e.g., "add feature" instead of "added feature").
-  - Do not end the subject line with a period.
-  - Focus strictly on the primary functional/structural change (NEVER append trailing metadata clauses like "and update tags", "and update cache busters", "and update version timestamp", "and update build version", etc.).
-  - A true `refactor` is one which has NO user-facing change. A small feature is a `tweak`.
+  - Keep under 50 characters, imperative mood, no ending period.
+  - NEVER append trailing metadata clauses (e.g., do NOT write "... and update version", "... and update timestamp", "... and update tags", "... and update build version").
+- **Body Rules**:
+  - If multiple files or complex logic changed, leave one blank line and provide a bulleted list explaining *why* the changes were made.
+  - Raw text only (no markdown code blocks).
 
-## 3. Description Body Rules
-- If the changes span multiple files or contain complex logic, leave one blank line and provide a bulleted list.
-- Detail *why* the change was made, not just *what* code lines changed.
-- Explain the business or technical impact clearly.
-
-## 4. Forbidden Output
-- Never generate generic fallback titles like "update file", "minor fixes", or "fix bug".
-- Do not output markdown backticks (```) around the final text payload. Only return raw text.
-- NEVER mention, describe, or reference any of the following (or synonyms/rephrasings thereof) anywhere in the subject or body:
-  - "update version timestamp", "update version timestamps", "update build version", "update build version timestamps", "update build timestamp", "update application build timestamp", "update BUILD_ID", "bump version", "update versioning", "update version".
-  - Any mention of BUILD ID, build identifier, build timestamp, version timestamp, or build version.
-  - Cache busting, cache tags, cache busters, cache versioning, asset versioning tags.
-  - Query parameters, `?v=...` tags, asset tags.
-  - Sitemap `<lastmod>` or sitemap timestamp updates.
-  - Phrases like "update asset version cache busters", "update asset versioning tags", "update cache tags".
+## FORBIDDEN TERMS (Zero-Tolerance)
+NEVER output any of the following in the subject or body:
+- "update build timestamp", "update build version timestamps", "update version timestamp", "update build version", "update application build timestamp", "update BUILD_ID"
+- Any mention of "BUILD_ID", "build identifier", "build timestamp", "version timestamp", "build version", or "versioning"
+- Any mention of "cache busting", "cache tags", "cache busters", or "asset tags"
 
 

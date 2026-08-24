@@ -17,6 +17,9 @@ Scope — "frontend UI" includes ANY of the following files/constructs:
 - `LOADING_HTML` string inside `bridge_app/main.py` (this is HTML served to the browser)
 - Any other inline HTML string in a Python/backend file that is rendered in the browser
 
+CRITICAL:
+These BUILD_ID / timestamp changes are automated build artifacts. NEVER describe, summarize, or mention these timestamp/BUILD_ID diffs in Git commit messages or CL descriptions.
+
 End-of-turn checklist: Before finishing any response where you edited frontend UI, confirm:
 1. Did I touch any file/string in the Scope list above? If YES →
 2. Update the BUILD_ID in `bridge_app/static/index.html` to the current timestamp.
