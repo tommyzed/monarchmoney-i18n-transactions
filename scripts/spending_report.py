@@ -281,7 +281,7 @@ def print_formatted_report(data: dict, top_n: int = 15):
     print()
 
     print("--- EXECUTIVE SUMMARY ---")
-    print(f"Total Spending (Net Expenses) : ${server_sum['total_expense']:>12,.2f}")
+    print(f"Total Spending (Net)          : ${server_sum['total_expense']:>12,.2f}")
     print(f"Total Income                  : ${server_sum['total_income']:>12,.2f}")
     print(f"Net Savings                   : ${server_sum['net_savings']:>12,.2f} ({server_sum['savings_rate']*100:.1f}%)")
     print(f"Itemized Gross Sum            : ${itemized_sum['total_expense']:>12,.2f}")
