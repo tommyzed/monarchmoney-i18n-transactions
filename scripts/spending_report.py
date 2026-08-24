@@ -335,11 +335,14 @@ def main():
             print_formatted_report(report_data, top_n=args.top)
 
     except Exception as e:
+        import traceback
         print(f"❌ Error generating spending report: {e}", file=sys.stderr)
+        traceback.print_exc()
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
+
 
 

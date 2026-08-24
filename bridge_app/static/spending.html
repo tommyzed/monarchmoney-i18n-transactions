@@ -256,11 +256,52 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .status-badge {
-            font-size: 0.8rem;
-            color: var(--text-muted);
+        .freshness-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .freshness-pill.fresh {
+            border-color: rgba(16, 185, 129, 0.35);
+            background: rgba(16, 185, 129, 0.08);
+            color: #a7f3d0;
+        }
+
+        .freshness-pill.moderate {
+            border-color: rgba(96, 165, 250, 0.35);
+            background: rgba(96, 165, 250, 0.08);
+            color: #bfdbfe;
+        }
+
+        .freshness-pill.stale {
+            border-color: rgba(245, 158, 11, 0.35);
+            background: rgba(245, 158, 11, 0.08);
+            color: #fde68a;
+        }
+
+        .freshness-pill.closed {
+            border-color: rgba(139, 92, 246, 0.35);
+            background: rgba(139, 92, 246, 0.08);
+            color: #ddd6fe;
+        }
+
+        .freshness-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
         }
 
         .recalc-btn {
@@ -588,10 +629,12 @@
         <!-- Controls Bar -->
         <section class="controls-bar">
             <div class="year-selector" id="yearSelector">
-                <!-- Year buttons populated by JS -->
+                <!-- Year pills populated by JS -->
             </div>
             <div class="action-group">
-                <span class="status-badge" id="lastUpdated">Checking status...</span>
+                <div id="freshnessContainer">
+                    <span class="freshness-pill">Checking freshness...</span>
+                </div>
                 <button class="recalc-btn" id="recalcBtn" onclick="triggerRecalculate()">
                     <span id="recalcIcon">🔄</span>
                     <span id="recalcText">Recalculate</span>
@@ -607,8 +650,9 @@
 
     <script>
         // State
-        let currentYear = new Date().getFullYear();
-        let availableYears = [currentYear, currentYear - 1, currentYear - 2];
+        const DEFAULT_YEARS = [2026, 2025, 2024];
+        let currentYear = 2026;
+        let availableYears = [...DEFAULT_YEARS];
         let reportData = null;
         let isSyncing = false;
         let pollTimer = null;
@@ -628,12 +672,84 @@
             return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        // Format Date / Timestamp Helper
-        function formatTimeAgo(isoStr) {
-            if (!isoStr) return 'Never';
+        // Get Freshness Details & Pill HTML
+        function getFreshnessDetails(isoStr, year) {
+            const now = new Date();
+            const realYear = now.getFullYear();
+            const isClosedYear = year < realYear;
+
+            if (!isoStr) {
+                return {
+                    status: 'unknown',
+                    pillHtml: `<div class="freshness-pill">⚪ Not calculated yet</div>`
+                };
+            }
+
             const date = new Date(isoStr);
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + 
-                   date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            let relativeStr = '';
+            if (diffMins < 1) {
+                relativeStr = 'Just now';
+            } else if (diffMins < 60) {
+                relativeStr = `${diffMins}m ago`;
+            } else if (diffHours < 24) {
+                relativeStr = `${diffHours}h ago`;
+            } else if (diffDays === 1) {
+                relativeStr = 'Yesterday';
+            } else {
+                relativeStr = `${diffDays}d ago`;
+            }
+
+            const exactStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + 
+                             date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+            if (isClosedYear) {
+                return {
+                    status: 'closed',
+                    pillHtml: `
+                        <div class="freshness-pill closed" title="Historical year finalized. Snapshot saved on ${exactStr}">
+                            <span class="freshness-dot" style="background: #8b5cf6;"></span>
+                            <span>🔒 <b>${year} Closed</b> · Snapshot: ${exactStr}</span>
+                        </div>
+                    `
+                };
+            }
+
+            if (diffDays >= 7) {
+                return {
+                    status: 'stale',
+                    pillHtml: `
+                        <div class="freshness-pill stale" title="Calculated on ${exactStr}. Recalculation recommended.">
+                            <span class="freshness-dot" style="background: #f59e0b;"></span>
+                            <span>🟠 <b>Stale (${relativeStr})</b> · ${exactStr}</span>
+                        </div>
+                    `
+                };
+            } else if (diffDays >= 2) {
+                return {
+                    status: 'moderate',
+                    pillHtml: `
+                        <div class="freshness-pill moderate" title="Calculated on ${exactStr}">
+                            <span class="freshness-dot" style="background: #60a5fa;"></span>
+                            <span>🟡 Updated: <b>${relativeStr}</b> (${exactStr})</span>
+                        </div>
+                    `
+                };
+            } else {
+                return {
+                    status: 'fresh',
+                    pillHtml: `
+                        <div class="freshness-pill fresh" title="Calculated on ${exactStr}">
+                            <span class="freshness-dot" style="background: #10b981;"></span>
+                            <span>🟢 Fresh (<b>${relativeStr}</b>) · ${exactStr}</span>
+                        </div>
+                    `
+                };
+            }
         }
 
         // Init App
@@ -649,13 +765,15 @@
                 dropdown.classList.remove('show');
             });
 
-            // Fetch list of years
+            // Fetch list of years from database
             try {
                 const res = await fetch('/api/spending/years');
                 if (res.ok) {
                     const data = await res.json();
                     if (data.years && data.years.length > 0) {
-                        availableYears = data.years;
+                        const merged = [...new Set([...data.years, ...DEFAULT_YEARS])];
+                        merged.sort((a, b) => b - a); // 2026, 2025, 2024
+                        availableYears = merged;
                     }
                 }
             } catch (e) {
@@ -703,12 +821,22 @@
 
                 if (data.status === 'not_found') {
                     renderEmptyState(year);
-                    document.getElementById('lastUpdated').textContent = 'Not calculated yet';
+                    document.getElementById('freshnessContainer').innerHTML = `<span class="freshness-pill">⚪ Not calculated yet</span>`;
                     return;
                 }
 
                 reportData = data;
-                document.getElementById('lastUpdated').textContent = `Last updated: ${formatTimeAgo(data.updated_at)}`;
+                const freshness = getFreshnessDetails(data.updated_at, year);
+                document.getElementById('freshnessContainer').innerHTML = freshness.pillHtml;
+
+                // For closed years, adjust recalculate button styling
+                const nowYear = new Date().getFullYear();
+                const recalcBtn = document.getElementById('recalcBtn');
+                if (year < nowYear) {
+                    recalcBtn.title = `Historical year ${year} is finalized and closed.`;
+                } else {
+                    recalcBtn.title = `Sync recent ${year} transactions with Monarch.`;
+                }
 
                 if (data.sync_status === 'syncing') {
                     setSyncingState(true);
@@ -1100,7 +1228,10 @@
                 btn.disabled = true;
                 icon.innerHTML = '<div class="spinner"></div>';
                 text.textContent = 'Recalculating...';
-                document.getElementById('lastUpdated').textContent = 'Fetching from Monarch...';
+                const fContainer = document.getElementById('freshnessContainer');
+                if (fContainer) {
+                    fContainer.innerHTML = '<span class="freshness-pill">⏳ Syncing with Monarch...</span>';
+                }
             } else {
                 btn.disabled = false;
                 icon.textContent = '🔄';
