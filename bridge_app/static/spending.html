@@ -124,6 +124,19 @@
         .header-title {
             font-family: 'Sriracha', cursive;
             font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+        }
+
+        .header-title .header-icon {
+            -webkit-text-fill-color: initial;
+            background: none;
+            display: inline-block;
+        }
+
+        .header-title .header-text {
             background: linear-gradient(135deg, #818cf8, #c084fc);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -166,7 +179,7 @@
             background: #1e1e2f;
             border: 1px solid var(--border);
             border-radius: 14px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             padding: 8px;
             min-width: 220px;
             z-index: 200;
@@ -189,7 +202,7 @@
         }
 
         .menu-item:hover {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255, 255, 255, 0.06);
         }
 
         .menu-divider {
@@ -241,7 +254,7 @@
         }
 
         .year-btn:hover {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255, 255, 255, 0.06);
             color: var(--text-primary);
         }
 
@@ -334,14 +347,16 @@
             display: inline-block;
             width: 14px;
             height: 14px;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             border-top-color: white;
             animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* KPI Cards Grid */
@@ -474,7 +489,7 @@
         .progress-track {
             width: 100%;
             height: 8px;
-            background: rgba(255,255,255,0.06);
+            background: rgba(255, 255, 255, 0.06);
             border-radius: 999px;
             overflow: hidden;
         }
@@ -496,7 +511,7 @@
         }
 
         .search-input {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 8px 14px;
@@ -529,12 +544,12 @@
 
         .custom-table td {
             padding: 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             color: var(--text-secondary);
         }
 
         .custom-table tr:hover td {
-            background: rgba(255,255,255,0.02);
+            background: rgba(255, 255, 255, 0.02);
             color: var(--text-primary);
         }
 
@@ -593,26 +608,44 @@
                 flex-direction: column;
                 align-items: stretch;
             }
+
             .action-group {
                 justify-content: space-between;
+                width: 100%;
             }
+
             .kpi-value {
                 font-size: 1.35rem;
             }
+
             .chart-container {
                 height: 250px;
             }
+
             .group-header {
                 align-items: flex-start;
             }
+
             .group-amount-wrap {
                 flex-direction: column;
                 align-items: flex-end;
                 gap: 2px;
             }
+
             .group-amount-pct {
                 font-size: 0.74rem;
                 line-height: 1.2;
+            }
+
+            #recalcText {
+                display: none;
+            }
+
+            .recalc-btn {
+                padding: 8px 12px;
+                min-width: 38px;
+                justify-content: center;
+                font-size: 0.95rem;
             }
         }
     </style>
@@ -624,7 +657,10 @@
         <div class="header-container">
             <div class="header-left">
                 <a href="/" class="back-btn" title="Back to Home">←</a>
-                <h1 class="header-title">📊 Spending Report</h1>
+                <h1 class="header-title">
+                    <span class="header-icon">📊</span>
+                    <span class="header-text">Spending Report</span>
+                </h1>
             </div>
             <div style="position: relative;">
                 <button class="hamburger-btn" id="menuToggle" aria-label="Open Menu">
@@ -694,8 +730,8 @@
 
         // Colors for category groups
         const GROUP_COLORS = [
-            '#6366f1', '#ec4899', '#10b981', '#f59e0b', 
-            '#3b82f6', '#8b5cf6', '#14b8a6', '#f43f5e', 
+            '#6366f1', '#ec4899', '#10b981', '#f59e0b',
+            '#3b82f6', '#8b5cf6', '#14b8a6', '#f43f5e',
             '#84cc16', '#a855f7', '#06b6d4', '#eab308'
         ];
 
@@ -737,16 +773,16 @@
                 relativeStr = `${diffDays}d ago`;
             }
 
-            const exactStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + 
-                             date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const exactTooltip = dateStr + ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
             if (isClosedYear) {
                 return {
                     status: 'closed',
                     pillHtml: `
-                        <div class="freshness-pill closed" title="Historical year finalized. Snapshot saved on ${exactStr}">
+                        <div class="freshness-pill closed" title="Historical year snapshot saved on ${exactTooltip}">
                             <span class="freshness-dot" style="background: #8b5cf6;"></span>
-                            <span>🔒 Snapshot: ${exactStr}</span>
+                            <span>🔒 Snapshot: ${dateStr}</span>
                         </div>
                     `
                 };
@@ -756,9 +792,9 @@
                 return {
                     status: 'stale',
                     pillHtml: `
-                        <div class="freshness-pill stale" title="Calculated on ${exactStr}. Recalculation recommended.">
+                        <div class="freshness-pill stale" title="Calculated on ${exactTooltip}. Recalculation recommended.">
                             <span class="freshness-dot" style="background: #f59e0b;"></span>
-                            <span>🟠 <b>Stale (${relativeStr})</b> · ${exactStr}</span>
+                            <span>🟠 <b>Stale (${relativeStr})</b> · ${dateStr}</span>
                         </div>
                     `
                 };
@@ -766,9 +802,9 @@
                 return {
                     status: 'moderate',
                     pillHtml: `
-                        <div class="freshness-pill moderate" title="Calculated on ${exactStr}">
+                        <div class="freshness-pill moderate" title="Calculated on ${exactTooltip}">
                             <span class="freshness-dot" style="background: #60a5fa;"></span>
-                            <span>🟡 Updated: <b>${relativeStr}</b> (${exactStr})</span>
+                            <span>🟡 Updated: <b>${relativeStr}</b> · ${dateStr}</span>
                         </div>
                     `
                 };
@@ -776,9 +812,9 @@
                 return {
                     status: 'fresh',
                     pillHtml: `
-                        <div class="freshness-pill fresh" title="Calculated on ${exactStr}">
+                        <div class="freshness-pill fresh" title="Calculated on ${exactTooltip}">
                             <span class="freshness-dot" style="background: #10b981;"></span>
-                            <span>🟢 Fresh (<b>${relativeStr}</b>) · ${exactStr}</span>
+                            <span>🟢 Fresh (<b>${relativeStr}</b>) · ${dateStr}</span>
                         </div>
                     `
                 };
@@ -967,7 +1003,7 @@
                 <!-- Monthly Spending Trend Chart -->
                 <div class="section-card">
                     <div class="section-title">
-                        <span>📅 Monthly Progression</span>
+                        <span>📅 Monthly Spend</span>
                         <span id="monthlyAvgBadge" style="display:none; font-size:0.8rem; font-weight:600; color:#fbbf24; background:rgba(245,158,11,0.12); padding:4px 10px; border-radius:6px; border:1px solid rgba(245,158,11,0.3);"></span>
                     </div>
                     <div id="monthlyChart" class="chart-container"></div>
@@ -1015,14 +1051,14 @@
             // Populate Category Groups List with Y/Y comparison
             const groupContainer = document.getElementById('groupListContainer');
             const sortedGroups = Object.entries(catGroups).sort((a, b) => b[1] - a[1]);
-            
+
             const prevTotalExpense = prevYearData?.summary?.total_expense || 0;
             const prevCatGroups = prevYearData?.category_groups || {};
 
             sortedGroups.forEach(([name, amt], idx) => {
                 const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
                 const color = GROUP_COLORS[idx % GROUP_COLORS.length];
-                
+
                 let yyBadge = '';
                 if (hasPrevYear) {
                     const prevAmt = prevCatGroups[name] || 0;
@@ -1141,8 +1177,8 @@
                 const startM = completedMonths[0].substring(5);
                 const endM = completedMonths[completedMonths.length - 1].substring(5);
                 const monthNames = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const rangeStr = completedMonths.length === 1 
-                    ? monthNames[parseInt(startM, 10)] 
+                const rangeStr = completedMonths.length === 1
+                    ? monthNames[parseInt(startM, 10)]
                     : `${monthNames[parseInt(startM, 10)]}–${monthNames[parseInt(endM, 10)]}`;
                 avgLabelText = `Avg: ${formatCurrency(avgSpend)}/mo (${rangeStr})`;
             }
@@ -1335,7 +1371,7 @@
                     const res = await fetch(`/api/spending/status?year=${currentYear}`);
                     if (!res.ok) return;
                     const statusData = await res.json();
-                    
+
                     if (statusData.sync_status === 'ready') {
                         clearInterval(pollTimer);
                         pollTimer = null;
