@@ -31,6 +31,7 @@ from .models import (
     Log,
     FailedTransaction,
     Merchant,
+    SpendingReport,
 )
 from sqlalchemy.future import select
 from sqlalchemy import delete, func
@@ -114,16 +115,11 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
                 response.headers["Cache-Control"] = "no-cache, must-revalidate"
             return response
 
-        if request.url.path in ["/", "/index.html"]:
-            response = await call_next(request)
-            response.headers["Cache-Control"] = "no-cache, must-revalidate"
-            return response
-
         if request.url.path.endswith((".png", ".jpg", ".css", ".js", ".gif")):
             return await call_next(request)
 
-        # Allow FIRE demo mode access
-        if request.url.path == "/fire" or request.url.path.startswith("/api/fire/"):
+        # Allow FIRE dashboard demo access
+        if request.url.path == "/fire" or request.url.path.startswith("/api/fire"):
             return await call_next(request)
 
         # If no secret is configured, block protected routes
@@ -978,12 +974,20 @@ LOADING_HTML = """
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">📜</span>
                         <span>History Log</span>
                     </a>
+                    <a href="#" id="manageStarredLink" class="deep-link-item" onclick="openManageStarredModal(event)">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⭐</span>
+                        <span>Starred Merchants</span>
+                    </a>
                     <a href="#" id="failedTxnsLink" class="deep-link-item" onclick="openFailedModal(event)">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⚠️</span>
                         <span style="flex: 1;">Failed Txns</span>
                         <span id="failedBadge" style="display:none; background:#ef4444; color:white; border-radius:999px; font-size:0.75rem; padding:2px 7px; font-weight:bold; margin-left:5px;">0</span>
                     </a>
                     <div class="menu-divider"></div>
+                    <a href="/spending" class="deep-link-item">
+                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">📊</span>
+                        <span>Spending Report</span>
+                    </a>
                     <a href="/fire" class="deep-link-item">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔥</span>
                         <span>FIRE Dashboard</span>
@@ -1008,11 +1012,6 @@ LOADING_HTML = """
                         target="_blank" class="deep-link-item">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">💵</span>
                         <span>Cash Txns</span>
-                    </a>
-                    <div class="menu-divider"></div>
-                    <a href="#" id="manageStarredLink" class="deep-link-item" onclick="openManageStarredModal(event)">
-                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⭐</span>
-                        <span>Starred Merchants</span>
                     </a>
                     <div class="menu-divider"></div>
                     <a href="#" id="updateAppLink" class="deep-link-item">
@@ -1064,18 +1063,18 @@ LOADING_HTML = """
                 </div>
             </div>
             
-            <div id="successActions" style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
-                <button id="editMappingBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #fcad03, #f76b1c);" onclick="openMappingModal()">Edit Mapping</button>
-                <a href="/" class="btn" style="margin-top: 0;">Return 🏡</a>
-                <button id="forceSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0;" onclick="forceSubmit()">Force Submit</button>
+            <div id="successActions" style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: nowrap;">
+                <button id="editMappingBtn" class="btn" style="flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #fcad03, #f76b1c); white-space: nowrap;" onclick="openMappingModal()">Edit Mapping</button>
+                <button id="forceSubmitBtn" class="btn" style="display:none; flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0; white-space: nowrap;" onclick="forceSubmit()">Force Submit</button>
+                <a href="/" class="btn" style="flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; white-space: nowrap;">Return 🏡</a>
             </div>
 
             <div id="errorActions" style="display: none; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
-                <button id="retryErrorBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #4f46e5, #7c3aed);" onclick="forceSubmit()">🔄 Retry Now</button>
-                <button id="viewFailedBtn" class="btn" style="margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c);" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
-                <a href="/" class="btn" style="margin-top: 0; background: #6b7280;">Return 🏡</a>
+                <button id="retryErrorBtn" class="btn" style="flex: 1; min-width: 120px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #4f46e5, #7c3aed); white-space: nowrap;" onclick="forceSubmit()">🔄 Retry Now</button>
+                <button id="viewFailedBtn" class="btn" style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c); white-space: nowrap;" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
+                <a href="/" class="btn" style="flex: 1; min-width: 100px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: #6b7280; white-space: nowrap;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260819.1526 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260825.1201 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1251,39 +1250,39 @@ LOADING_HTML = """
 
         <!-- Manage Starred Merchants Modal -->
         <div id="manageStarredModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2500; justify-content: center; align-items: center;">
-            <div style="position:relative; margin: 1rem; max-width: 500px; width: 92%; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
-                <span id="closeManageStarredModal" onclick="closeManageStarredModal()" style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #78350f; font-weight: bold;">&times;</span>
-                <h2 style="color: #78350f; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-family: 'Sriracha', cursive; justify-content: center;">
+            <div style="position:relative; margin: 1rem; max-width: 500px; width: 92%; background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+                <span id="closeManageStarredModal" onclick="closeManageStarredModal()" style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #4c1d95; font-weight: bold;">&times;</span>
+                <h2 style="color: #4c1d95; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-family: 'Sriracha', cursive; justify-content: center;">
                     ⭐ Starred Merchants
                 </h2>
 
                 <!-- Add Merchant Input -->
                 <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
-                    <input type="text" id="newMerchantInput" placeholder="New merchant name..." style="flex: 1; height: 42px; padding: 0.5rem 0.8rem; border: 1px solid #d97706; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;" onkeydown="if(event.key==='Enter') addNewStarredMerchant()">
-                    <button onclick="addNewStarredMerchant()" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; border: none; padding: 0 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: bold; height: 42px; display: flex; align-items: center; gap: 4px;">
+                    <input type="text" id="newMerchantInput" placeholder="New merchant name..." style="flex: 1; height: 42px; padding: 0.5rem 0.8rem; border: 1px solid #8b5cf6; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;" onkeydown="if(event.key==='Enter') addNewStarredMerchant()">
+                    <button onclick="addNewStarredMerchant()" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; border: none; padding: 0 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: bold; height: 42px; display: flex; align-items: center; gap: 4px;">
                         <span>Add ⭐</span>
                     </button>
                 </div>
 
                 <!-- Search / Filter Input -->
                 <div style="margin-bottom: 0.8rem;">
-                    <input type="text" id="searchMerchantsInput" oninput="filterMerchantsList()" placeholder="🔍 Filter merchants..." style="width: 100%; height: 38px; padding: 0.4rem 0.8rem; border: 1px solid rgba(217, 119, 6, 0.4); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; background: rgba(255,255,255,0.95);">
+                    <input type="text" id="searchMerchantsInput" oninput="filterMerchantsList()" placeholder="🔍 Filter merchants..." style="width: 100%; height: 38px; padding: 0.4rem 0.8rem; border: 1px solid rgba(124, 58, 237, 0.4); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; background: rgba(255,255,255,0.95);">
                 </div>
 
                 <!-- Merchants List -->
-                <div id="merchantsListContainer" style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.92); border-radius: 12px; padding: 0.5rem; border: 1px solid rgba(217, 119, 6, 0.3);">
-                    <div id="merchantsListBody">
-                        <!-- Loaded dynamically -->
-                    </div>
-                    <div id="merchantsLoading" style="text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
-                        Loading merchants... ⏳
-                    </div>
-                    <div id="merchantsNoData" style="display: none; text-align: center; padding: 1.5rem 0; color: #78350f; font-size: 0.9rem;">
-                        No merchants found. Add one above! ⭐
-                    </div>
+                <div id="merchantsListContainer" style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 0.5rem; border: 1px solid rgba(124, 58, 237, 0.25);">
+                <div id="merchantsListBody">
+                    <!-- Loaded dynamically -->
+                </div>
+                <div id="merchantsLoading" style="text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
+                    Loading merchants... ⏳
+                </div>
+                <div id="merchantsNoData" style="display: none; text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
+                    No merchants found. Add one above! ⭐
                 </div>
             </div>
         </div>
+    </div>
 
         <script>
             const jobId = "__JOB_ID__";
@@ -1415,12 +1414,16 @@ LOADING_HTML = """
                     amountHtml += `<br><span style="font-size: 0.8em; color: #352224;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
                 }
                 
-                if (data.used_historical_name || data.original_merchant_name) {
-                    document.getElementById('editMappingBtn').style.display = 'inline-block';
-                    document.getElementById('editMappingBtn').textContent = "Edit Mapping";
+                if (!isDuplicate) {
+                    if (data.used_historical_name || data.original_merchant_name) {
+                        document.getElementById('editMappingBtn').style.display = 'inline-block';
+                        document.getElementById('editMappingBtn').textContent = "Edit Mapping";
+                    } else {
+                        document.getElementById('editMappingBtn').style.display = 'inline-block';
+                        document.getElementById('editMappingBtn').textContent = "Add Mapping";
+                    }
                 } else {
-                    document.getElementById('editMappingBtn').style.display = 'inline-block';
-                    document.getElementById('editMappingBtn').textContent = "Add Mapping";
+                    document.getElementById('editMappingBtn').style.display = 'none';
                 }
 
                 document.getElementById('amountValue').innerHTML = amountHtml;
@@ -2000,7 +2003,7 @@ LOADING_HTML = """
                         method: 'DELETE'
                     });
                     if (res.ok) {
-                        showToast("Transaction deleted successfully", "success");
+                        showToast("Log entry deleted", "success");
                         rowWrapper.style.transition = "max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out";
                         rowWrapper.style.maxHeight = rowWrapper.offsetHeight + "px";
                         rowWrapper.offsetHeight;
@@ -2573,21 +2576,24 @@ LOADING_HTML = """
                 merchants.forEach(m => {
                     const item = document.createElement('div');
                     item.className = 'merchant-list-item';
-                    item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-bottom:1px solid rgba(217, 119, 6, 0.15);';
+                    item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:9px 12px; margin-bottom:6px; background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border:1px solid rgba(221, 214, 254, 0.3); border-radius:8px; transition: background 0.15s ease;';
+                    item.onmouseover = () => { item.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'; };
+                    item.onmouseout = () => { item.style.background = 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'; };
                     
                     const isStarred = !!m.is_starred;
                     const starIcon = isStarred ? '⭐' : '☆';
                     const starTitle = isStarred ? 'Starred (click to unstar)' : 'Unstarred (click to star)';
+                    const starColor = isStarred ? '#fbbf24' : '#e0e7ff';
                     
                     item.innerHTML = `
                         <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
-                            <button onclick="toggleMerchantItemStar('${encodeURIComponent(m.name)}', ${isStarred})" title="${starTitle}" style="background:none; border:none; font-size:1.2rem; cursor:pointer; padding:0; line-height:1;">
+                            <button onclick="toggleMerchantItemStar('${encodeURIComponent(m.name)}', ${isStarred})" title="${starTitle}" style="background:none; border:none; font-size:1.25rem; cursor:pointer; padding:0; line-height:1; color:${starColor};">
                                 ${starIcon}
                             </button>
-                            <span style="font-weight:600; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${m.name}">${m.name}</span>
+                            <span style="font-weight:600; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${m.name}">${m.name}</span>
                         </div>
-                        <button onclick="deleteMerchantItem('${encodeURIComponent(m.name)}')" title="Delete merchant" style="background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; border-radius:6px; padding:3px 8px; cursor:pointer; font-size:0.8rem;">
-                            🗑️
+                        <button onclick="deleteMerchantItem('${encodeURIComponent(m.name)}')" title="Delete merchant" style="background:rgba(254, 202, 202, 0.15); border:1px solid rgba(252, 165, 165, 0.45); border-radius:6px; padding:4px 6px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: all 0.15s ease;" onmouseover="this.style.background='rgba(252, 165, 165, 0.3)'; this.style.borderColor='#fca5a5';" onmouseout="this.style.background='rgba(254, 202, 202, 0.15)'; this.style.borderColor='rgba(252, 165, 165, 0.45)';">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </button>
                     `;
                     bodyEl.appendChild(item);
@@ -3375,11 +3381,11 @@ async def get_logs(db: AsyncSession = Depends(get_db)):
 @app.delete("/api/logs/{log_id}")
 async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
     """
-    Delete a history log entry, and optionally delete the transaction in Monarch
-    and the local parsed Transaction record.
+    Delete a history log entry from the local logs database table only.
+    Does NOT delete from Monarch Money or local Transaction tables.
     """
     try:
-        from .models import Log, Transaction
+        from .models import Log
 
         log_stmt = select(Log).where(Log.id == log_id)
         log_result = await db.execute(log_stmt)
@@ -3388,35 +3394,11 @@ async def delete_log_entry(log_id: int, db: AsyncSession = Depends(get_db)):
         if not log_entry:
             raise HTTPException(status_code=404, detail="Log entry not found")
 
-        # Try to delete from Monarch Money if monarch_tx_id exists
-        if log_entry.monarch_tx_id:
-            try:
-                creds = await get_latest_credentials(db)
-                if creds:
-                    mm = await get_monarch_client(db, creds.id)
-                    await mm.delete_transaction(log_entry.monarch_tx_id)
-                    print(
-                        f"Deleted transaction {log_entry.monarch_tx_id} in Monarch Money."
-                    )
-            except Exception as mm_err:
-                print(
-                    f"⚠️ Failed to delete transaction {log_entry.monarch_tx_id} in Monarch Money: {mm_err}"
-                )
-
-        # Delete local Transaction cache if it matches the same monarch_tx_id
-        if log_entry.monarch_tx_id:
-            tx_stmt = delete(Transaction).where(
-                Transaction.parsed_data["monarch_tx_id"].as_string()
-                == log_entry.monarch_tx_id
-            )
-            await db.execute(tx_stmt)
-            print(f"Deleted local Transaction cache for {log_entry.monarch_tx_id}")
-
-        # Delete Log entry
+        # Delete Log entry only
         await db.delete(log_entry)
         await db.commit()
 
-        return {"status": "success", "message": "Log entry and transaction deleted"}
+        return {"status": "success", "message": "Log entry deleted"}
     except HTTPException:
         raise
     except Exception as e:
@@ -4036,6 +4018,152 @@ async def run_fire_simulation(
         monthly_spend_avg=monthly_spend,
         settings_obj=settings,
     )
+
+
+# =============================================================================
+# 📊 SPENDING REPORT Routes
+# =============================================================================
+
+
+@app.get("/spending", response_class=HTMLResponse)
+async def spending_page(request: Request):
+    """Serve the Spending Report dashboard page."""
+    import pathlib
+
+    spending_html = pathlib.Path("bridge_app/static/spending.html").read_text()
+
+    # Inject authentication state
+    is_auth_str = "true" if request.state.is_authenticated else "false"
+    spending_html = spending_html.replace(
+        "/* INIT_AUTH_STATE */",
+        f"</style><script>window.IS_AUTHENTICATED = {is_auth_str};</script><style>",
+    )
+
+    return HTMLResponse(content=spending_html)
+
+
+@app.get("/api/spending")
+async def get_spending_report_endpoint(
+    request: Request,
+    year: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch stored spending report for a given year."""
+    target_year = year or datetime.now().year
+
+    stmt = (
+        select(SpendingReport)
+        .where(SpendingReport.year == target_year)
+        .order_by(SpendingReport.updated_at.desc())
+    )
+    res = await db.execute(stmt)
+    report = res.scalars().first()
+
+    if not report:
+        return {
+            "status": "not_found",
+            "year": target_year,
+            "message": f"No spending report found for {target_year}. Click Recalculate to generate one.",
+        }
+
+    return {
+        "status": "ok",
+        "year": report.year,
+        "start_date": report.start_date,
+        "end_date": report.end_date,
+        "include_hidden": report.include_hidden,
+        "summary": report.summary,
+        "category_groups": report.category_groups,
+        "categories": report.categories,
+        "monthly_spending": report.monthly_spending,
+        "sync_status": report.sync_status,
+        "error_message": report.error_message,
+        "updated_at": report.updated_at.isoformat() if report.updated_at else None,
+    }
+
+
+@app.post("/api/spending/recalculate")
+async def recalculate_spending_report_endpoint(
+    background_tasks: BackgroundTasks,
+    request: Request,
+    year: Optional[int] = None,
+    include_hidden: bool = False,
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger background recalculation of the spending report from Monarch Money."""
+    from .services.spending_service import calculate_and_save_spending_report
+
+    target_year = year or datetime.now().year
+
+    stmt = select(SpendingReport).where(SpendingReport.year == target_year)
+    res = await db.execute(stmt)
+    report = res.scalars().first()
+
+    if not report:
+        report = SpendingReport(
+            year=target_year,
+            start_date=f"{target_year}-01-01",
+            end_date=f"{target_year}-12-31",
+            include_hidden=include_hidden,
+            sync_status="syncing",
+        )
+        db.add(report)
+    else:
+        report.sync_status = "syncing"
+        report.error_message = None
+
+    await db.commit()
+
+    background_tasks.add_task(
+        calculate_and_save_spending_report,
+        year=target_year,
+        include_hidden=include_hidden,
+    )
+
+    return {
+        "status": "syncing",
+        "year": target_year,
+        "message": f"Recalculation started for {target_year}.",
+    }
+
+
+@app.get("/api/spending/status")
+async def get_spending_status_endpoint(
+    year: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Check sync/recalculation status for a given year."""
+    target_year = year or datetime.now().year
+    stmt = (
+        select(SpendingReport)
+        .where(SpendingReport.year == target_year)
+        .order_by(SpendingReport.updated_at.desc())
+    )
+    res = await db.execute(stmt)
+    report = res.scalars().first()
+
+    if not report:
+        return {"status": "not_found", "year": target_year, "sync_status": "none"}
+
+    return {
+        "status": "ok",
+        "year": report.year,
+        "sync_status": report.sync_status,
+        "error_message": report.error_message,
+        "updated_at": report.updated_at.isoformat() if report.updated_at else None,
+    }
+
+
+@app.get("/api/spending/years")
+async def get_spending_years_endpoint(db: AsyncSession = Depends(get_db)):
+    """List all years that have reports stored in the database."""
+    stmt = select(SpendingReport.year).distinct().order_by(SpendingReport.year.desc())
+    res = await db.execute(stmt)
+    years = [r[0] for r in res.all()]
+    current_year = datetime.now().year
+    if current_year not in years:
+        years.insert(0, current_year)
+    return {"years": sorted(list(set(years)), reverse=True)}
 
 
 app.mount("/", StaticFiles(directory="bridge_app/static", html=True), name="static")

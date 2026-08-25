@@ -218,29 +218,16 @@ async def test_delete_log_entry_endpoint():
 
     mock_db.execute = AsyncMock(side_effect=mock_execute)
 
-    # Patch monarch client so it doesn't try to call real Monarch API
-    with patch('bridge_app.main.get_monarch_client', new_callable=AsyncMock) as mock_get_client:
-        mock_mm = MagicMock()
-        mock_get_client.return_value = mock_mm
-        mock_mm.delete_transaction = AsyncMock()
+    res = await delete_log_entry(log_id=1, db=mock_db)
 
-        res = await delete_log_entry(log_id=1, db=mock_db)
+    # Assert db.delete was called on the log entry ONLY
+    delete_calls = [call[0][0] for call in mock_db.delete.call_args_list]
+    assert mock_log in delete_calls
 
-        # Assert Monarch delete was called
-        mock_mm.delete_transaction.assert_called_once_with("tx_starbucks")
+    mock_db.commit.assert_called_once()
 
-        # Assert db.delete was called on the log entry
-        delete_calls = [call[0][0] for call in mock_db.delete.call_args_list]
-        assert mock_log in delete_calls
-
-        # Assert that db.execute was called with a delete statement for transactions
-        execute_calls = [str(call[0][0]) for call in mock_db.execute.call_args_list]
-        assert any("DELETE FROM transactions" in call for call in execute_calls)
-
-        mock_db.commit.assert_called_once()
-
-        assert res["status"] == "success"
-        print("✅ SUCCESS: delete_log_entry endpoint works correctly and deletes both log and cached transaction")
+    assert res["status"] == "success"
+    print("✅ SUCCESS: delete_log_entry endpoint works correctly and deletes log entry only")
 
 
 async def run_all_tests():
