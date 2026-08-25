@@ -3246,7 +3246,9 @@ async def get_failed_transactions(db: AsyncSession = Depends(get_db)):
         
         items = []
         for tx in failed_list:
-            display_data = tx.parsed_data or tx.manual_data or {}
+            parsed = tx.parsed_data
+            manual = tx.manual_data
+            display_data = parsed or manual or {}
             items.append({
                 "id": tx.id,
                 "source_type": tx.source_type,
@@ -3267,8 +3269,8 @@ async def get_failed_transactions(db: AsyncSession = Depends(get_db)):
                 "category_emoji": display_data.get("category_emoji") or "",
                 "original_amount": display_data.get("original_amount"),
                 "original_currency": display_data.get("original_currency"),
-                "parsed_data": tx.parsed_data,
-                "manual_data": tx.manual_data
+                "parsed_data": parsed,
+                "manual_data": manual
             })
         return items
     except Exception as e:
