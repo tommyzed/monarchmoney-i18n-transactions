@@ -9,6 +9,6 @@ Whenever generating commit messages:
 2. Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `tweak`.
 3. Keep the subject line under 50 characters, use imperative mood, and do not end with a period.
 4. Detail *why* the change was made in the body using a bulleted list.
-5. Filter out and treat all build metadata/timestamp/BUILD_ID diffs as non-existent.
-6. NEVER mention, describe, or reference "update version timestamp", "update version timestamps", "update build version", "update build version timestamps", "update build timestamp", "update application build timestamp", "update BUILD_ID", or any similar build version/timestamp text in the subject line or body.
+5. Filter out and treat all build metadata/timestamp/BUILD_ID diffs as non-existent. If a file only contains timestamp/version footer changes, discard that file completely.
+6. The commit message MUST NEVER contain the words "timestamp", "timestamps", "build version", "BUILD_ID", "versioning", or phrases like "update build timestamps", "update build timestamp", "update version timestamps", or "update build version".
 

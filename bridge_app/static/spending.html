@@ -1342,12 +1342,9 @@
                         let res = `<b>${params[0].name}</b><br/>`;
                         params.forEach(p => {
                             if (p.seriesName === 'Spending') {
-                                res += `Spending: ${formatCurrency(p.value)}<br/>`;
+                                res += `Spend: ${formatCurrency(p.value)}`;
                             }
                         });
-                        if (avgSpend !== null) {
-                            res += `<span style="color:#fbbf24; font-size:0.85em;">Average (${completedMonths.length} completed ${completedMonths.length === 1 ? 'month' : 'months'}): ${formatCurrency(avgSpend)}</span>`;
-                        }
                         return res;
                     }
                 },
