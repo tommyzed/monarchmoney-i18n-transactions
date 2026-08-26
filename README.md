@@ -41,6 +41,16 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     -   **Visual Enhancements**: Displays merchant names with a `💵` cash emoji for cash transactions, color-codes debits in red (-) and credits in green (+), and shows pre-converted foreign currency amounts.
     -   **Deep Link Integration**: Includes clickable deep links to navigate directly to each transaction within the Monarch mobile app (or desktop browser fallback).
     -   **Automatic Synchronization**: Endpoints such as transaction date/amount updates automatically keep the history log database in sync.
+*   **📊 v2.0: Spending & Cash Flow Analysis Dashboard**:
+    -   **Interactive Spending Dashboard**: Dedicated, mobile-friendly analytics dashboard (`/spending`) with responsive ECharts visualizations, KPI metrics, and dark theme design.
+    -   **Executive Cash Flow KPIs**: Instant metrics for Total Net Spending, Total Inflow Income, Net Savings, and Savings Rate % across any calendar year.
+    -   **Monthly Spend Trends**: Interactive monthly spending breakdown chart with dynamic monthly average benchmarking.
+    -   **Category Groups & Donut Charts**: Visual group distribution breakdown with percentage of total spend and Year-over-Year (YoY) percentage comparisons against the previous year.
+    -   **Ranked Category Breakdown**: Searchable, itemized category table with real-time filtering and spending totals.
+    -   **Dynamic Data Freshness**: Visual freshness pills indicating whether snapshot data is current, stale, syncing, or locked for historical years, with one-click background recalculation.
+    -   **CLI Report Generator (`scripts/spending_report.py`)**: Standalone read-only command-line script to analyze Monarch cash flows and itemized transactions with terminal tables, JSON export, and database sync options.
+    -   **Failed Transaction Queue & Retry**: Persistent database store (`failed_transactions`) for failed receipt scans and manual submissions, with a dedicated review modal, editing capabilities, and single/batch retry mechanisms.
+    -   **Starred / Favorite Merchants**: Mark and prioritize frequently used merchants for fast lookup and automated suggestions.
 
 ## 🖼 Demo (v1.1 only)
 
@@ -54,9 +64,11 @@ The system is a lightweight **FastAPI** application backed by **PostgreSQL**.
 1.  **Orchestrator**: The brain. Handles two flows:
     *   **Image Flow**: Hashing -> De-duplication -> OCR -> Conversion -> Push.
     *   **Manual Flow**: Form Data -> Hashing -> Conversion -> Push.
-2.  **Monarch Service**: Handles authentication (including MFA), session persistence, and GraphQL interactions.
+2.  **Monarch Service**: Handles authentication (including MFA and session cookies), session persistence, and GraphQL interactions.
 3.  **Gemini Service**: Interacts with Google's GenAI SDK for image parsing. Accepts an optional list of historical merchant names to hint the model toward canonical names.
-4.  **Currency Service**: Fetches historical forex rates.
+4.  **Currency Service**: Fetches historical forex rates (via Frankfurter API).
+5.  **FIRE Engine**: Runs Monte Carlo simulations and safe withdrawal rate analysis against live portfolio data.
+6.  **Spending Service**: Read-only cash flow and transaction aggregation engine computing annual summaries, category breakdowns, monthly trends, and database caching.
 
 ## 🚀 Getting Started
 
@@ -151,6 +163,8 @@ To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
 
 ## 🛠 Management Scripts
 
+*   **`python scripts/spending_report.py`**: Generates a read-only spending and cash flow report in your terminal (supports `--year`, `--start-date`, `--end-date`, `--top`, `--json`, `--save-db`, `--include-hidden`).
+*   **`python scripts/cookie_login.py`**: Authenticates and stores session cookies securely for Monarch Money access.
 *   **`python scripts/reset_transactions.py`**: Clears the local "processed" cache. Useful if you want to re-upload a receipt that was previously marked as duplicate.
 *   **`python scripts/interactive_login.py`**: Re-authenticate if your session expires.
 *   **`python scripts/sync_categories.py`**: Imports categories (and emojis) from your Monarch account to the local database for mapping.
@@ -167,13 +181,16 @@ bridge_app/
 ├── database.py          # Database connection & session info
 ├── models.py            # SQLAlchemy database models
 ├── services/            # Business logic modules
+│   ├── currency.py      # Historical forex exchange rates
 │   ├── fire_engine.py   # FIRE Monte Carlo simulation engine
-│   ├── gemini.py        # OCR logic
-│   ├── monarch.py       # Monarch API interaction
-│   └── orchestrator.py  # Pipeline coordination
+│   ├── gemini.py        # OCR logic & AI merchant hinting
+│   ├── monarch.py       # Monarch API interaction & session management
+│   ├── orchestrator.py  # Pipeline coordination
+│   └── spending_service.py # Annual spending & cash flow aggregation
 └── static/              # Frontend assets
     ├── fire.html        # 🔥 Ignite FIRE dashboard
     ├── index.html       # PWA entry point
+    ├── spending.html    # 📊 Spending & Cash Flow report dashboard
     ├── sw.js            # Service Worker (Offline & Share Target)
     └── manifest.json    # App Manifest
 ```
