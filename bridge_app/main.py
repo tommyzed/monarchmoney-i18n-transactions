@@ -831,6 +831,12 @@ LOADING_HTML = """
             .history-header-merchant { flex: 2; text-align: left; }
             .history-header-amount { flex: 1; text-align: right; margin-right: 12px; }
             .history-header-date { flex: 1; text-align: center; max-width: 90px; }
+            .history-header-action {
+                display: none;
+                width: 28px;
+                margin-left: 10px;
+                flex-shrink: 0;
+            }
 
             .history-row-wrapper {
                 position: relative;
@@ -871,10 +877,45 @@ LOADING_HTML = """
                 box-sizing: border-box;
                 font-size: 0.9rem;
             }
+
+            .history-desktop-delete-btn {
+                display: none;
+                background: rgba(239, 68, 68, 0.12);
+                color: #dc2626;
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                border-radius: 6px;
+                padding: 4px 6px;
+                cursor: pointer;
+                line-height: 1;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.15s ease;
+                margin-left: 10px;
+                flex-shrink: 0;
+                width: 28px;
+                height: 28px;
+                box-sizing: border-box;
+            }
+
+            .history-desktop-delete-btn:hover {
+                background: #ef4444;
+                color: #ffffff;
+                border-color: #dc2626;
+                transform: scale(1.08);
+            }
             
             @media (hover: hover) {
                 .history-row-wrapper:hover {
                     background: rgba(255, 255, 255, 0.15);
+                }
+            }
+
+            @media (min-width: 601px), (hover: hover) and (pointer: fine) {
+                .history-header-action {
+                    display: block;
+                }
+                .history-desktop-delete-btn {
+                    display: inline-flex;
                 }
             }
 
@@ -1284,7 +1325,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c); white-space: nowrap;" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="flex: 1; min-width: 100px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: #6b7280; white-space: nowrap;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260828.1724 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260828.1738 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1352,6 +1393,7 @@ LOADING_HTML = """
                         <div class="history-header-merchant">Merchant</div>
                         <div class="history-header-amount">Amount</div>
                         <div class="history-header-date">Date</div>
+                        <div class="history-header-action"></div>
                     </div>
                     <div id="historyTableBody">
                         <!-- Loaded dynamically -->
@@ -2337,6 +2379,20 @@ LOADING_HTML = """
                         dateCol.style.maxWidth = "90px";
                         dateCol.textContent = log.date;
                         contentRow.appendChild(dateCol);
+
+                        // Desktop Delete Button
+                        const desktopDelBtn = document.createElement("button");
+                        desktopDelBtn.className = "history-desktop-delete-btn";
+                        desktopDelBtn.title = "Delete log";
+                        desktopDelBtn.setAttribute("aria-label", "Delete log");
+                        desktopDelBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+                        desktopDelBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            showConfirmToast(`Delete "${log.merchant}"?`, async () => {
+                                await deleteLogEntry(log.id, rowWrapper);
+                            });
+                        };
+                        contentRow.appendChild(desktopDelBtn);
 
                         rowWrapper.appendChild(contentRow);
 
