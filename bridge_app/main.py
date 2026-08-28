@@ -16,7 +16,7 @@ from .models import Credentials, MerchantMapping, Category, FireSettings, Transa
 from sqlalchemy.future import select
 from sqlalchemy import delete, func
 from pydantic import BaseModel
-from typing import Optional, Any
+from typing import Optional, Any, List
 from datetime import datetime, timedelta
 
 DEMO_DEFAULTS = {
@@ -157,6 +157,19 @@ async def activate(request: Request, s: str):
 # Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str, "inputs": dict, "failed_tx_id": int } }
 jobs = {}
 
+# Batch processing store (multi-receipt uploads)
+# Structure: { batch_id: { "created_at": datetime, "status": str, "total": int, "items": [...] } }
+batch_store = {}
+
+def _cleanup_old_batches(max_age_minutes: int = 30):
+    """Prune batch entries older than max_age_minutes to prevent unbounded memory growth."""
+    cutoff = datetime.now() - timedelta(minutes=max_age_minutes)
+    expired = [bid for bid, b in batch_store.items() if b.get("created_at", datetime.now()) < cutoff]
+    for bid in expired:
+        # Drop image bytes from items before deleting to free memory sooner
+        del batch_store[bid]
+    if expired:
+        print(f"🧹 Cleaned up {len(expired)} expired batch(es)")
 
 async def process_background_job(job_id: str, content: bytes, user_currency: str = None, manual_data: dict = None, force_override: bool = False):
     """
@@ -383,7 +396,277 @@ async def retry_job(job_id: str, force: bool = False, background_tasks: Backgrou
     return {"status": "ok"}
 
 
-# Reuse the loading page HTML for both routes
+# ──────────────────────────────────────────────────────────────
+# Batch Upload: Multi-Receipt Processing
+# ──────────────────────────────────────────────────────────────
+
+async def _process_batch_item(batch_id: str, item_index: int, content: bytes, currency: str, semaphore: asyncio.Semaphore, mm_client=None):
+    """Process a single receipt within a batch, respecting the concurrency semaphore."""
+    async with semaphore:
+        item = batch_store[batch_id]["items"][item_index]
+        item["status"] = "processing"
+        item["step"] = "Starting..."
+        item["progress"] = 0
+
+        async def progress_callback(step_msg, percent=None):
+            item["step"] = step_msg
+            if percent is not None:
+                item["progress"] = percent
+
+        try:
+            async with AsyncSessionLocal() as db:
+                result = await process_transaction(
+                    content, db,
+                    progress_callback=progress_callback,
+                    user_currency=currency,
+                    mm_client=mm_client
+                )
+
+                # Determine merchant starred status
+                if isinstance(result, dict):
+                    target = result.get("data", result) if result.get("status") == "duplicate" else result
+                    merchant_name = target.get("merchant") if isinstance(target, dict) else None
+                    if merchant_name:
+                        m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == merchant_name.strip().lower())
+                        m_res = await db.execute(m_stmt)
+                        is_starred_val = m_res.scalar_one_or_none()
+                        target["is_starred"] = bool(is_starred_val) if is_starred_val is not None else False
+
+            # Classify result
+            if isinstance(result, dict) and result.get("status") == "duplicate":
+                item["status"] = "duplicate"
+                item["progress"] = 100
+                item["step"] = "Duplicate detected"
+                item["result"] = result
+            else:
+                item["status"] = "completed"
+                item["progress"] = 100
+                item["step"] = "Synced to Monarch"
+                item["result"] = result
+
+        except Exception as e:
+            import traceback
+            print(f"❌ Batch {batch_id} item {item_index} FAILED:\n{traceback.format_exc()}")
+
+            err_msg = str(e)
+            if hasattr(e, "detail"):
+                err_msg = e.detail
+
+            # Save to FailedTransaction so it's never lost
+            failed_tx_id = None
+            try:
+                img_hash = hashlib.sha256(content).hexdigest()
+                parsed_data = getattr(e, "parsed_data", None)
+                async with AsyncSessionLocal() as db:
+                    failed_tx = FailedTransaction(
+                        source_type="receipt",
+                        image_hash=img_hash,
+                        raw_content=content,
+                        user_currency=currency,
+                        parsed_data=parsed_data,
+                        error_message=err_msg,
+                        retry_count=0
+                    )
+                    db.add(failed_tx)
+                    await db.commit()
+                    await db.refresh(failed_tx)
+                    failed_tx_id = failed_tx.id
+            except Exception as save_err:
+                print(f"⚠️ Error saving batch failed tx: {save_err}")
+
+            item["status"] = "failed"
+            item["progress"] = 100
+            item["error"] = err_msg
+            item["failed_tx_id"] = failed_tx_id
+
+
+async def process_batch_background(batch_id: str, items_data: list, currency: str):
+    """
+    Process all items in a batch with controlled concurrency.
+    Pre-authenticates Monarch client once and shares it across workers.
+    """
+    print(f"🚀 Starting batch {batch_id} with {len(items_data)} items")
+    semaphore = asyncio.Semaphore(2)
+
+    # Pre-authenticate Monarch client once for the entire batch
+    mm_client = None
+    try:
+        async with AsyncSessionLocal() as db:
+            creds = await get_latest_credentials(db)
+            if creds:
+                mm_client = await get_monarch_client(db, creds.id)
+                print(f"✅ Batch {batch_id}: Pre-authenticated Monarch client")
+    except Exception as e:
+        print(f"⚠️ Batch {batch_id}: Could not pre-auth Monarch client ({e}), will auth per-item")
+
+    # Dispatch all items concurrently (semaphore limits actual parallelism)
+    tasks = []
+    for i, (content, _filename) in enumerate(items_data):
+        tasks.append(
+            _process_batch_item(batch_id, i, content, currency, semaphore, mm_client)
+        )
+
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Determine overall batch status
+    items = batch_store[batch_id]["items"]
+    all_done = all(it["status"] in ("completed", "duplicate", "failed") for it in items)
+    if all_done:
+        failed_count = sum(1 for it in items if it["status"] == "failed")
+        if failed_count == len(items):
+            batch_store[batch_id]["status"] = "failed"
+        elif failed_count > 0:
+            batch_store[batch_id]["status"] = "completed_with_errors"
+        else:
+            batch_store[batch_id]["status"] = "completed"
+
+    print(f"✅ Batch {batch_id} finished: {batch_store[batch_id]['status']}")
+
+
+
+@app.post("/batch/upload")
+async def batch_upload(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    currency: str = Form(None),
+):
+    """
+    Upload multiple receipt images for batch processing.
+    Returns a batch_id that can be polled via GET /batch/{batch_id}.
+    """
+    _cleanup_old_batches()
+
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    if len(files) > 20:
+        raise HTTPException(status_code=400, detail="Maximum 20 receipts per batch")
+
+    batch_id = str(uuid.uuid4())
+
+    # Read all file contents immediately before the response closes
+    items_data = []
+    for f in files:
+        content = await f.read()
+        items_data.append((content, f.filename or f"receipt_{len(items_data)+1}"))
+
+    batch_store[batch_id] = {
+        "created_at": datetime.now(),
+        "status": "processing",
+        "total": len(items_data),
+        "currency": currency,
+        "items": [
+            {
+                "index": i,
+                "filename": fn,
+                "status": "queued",
+                "progress": 0,
+                "step": "Queued",
+            }
+            for i, (_content, fn) in enumerate(items_data)
+        ]
+    }
+
+    # Start background processing
+    background_tasks.add_task(process_batch_background, batch_id, items_data, currency)
+
+    return {"batch_id": batch_id, "total": len(items_data), "status": "processing"}
+
+
+@app.get("/batch/{batch_id}")
+async def get_batch_status(batch_id: str):
+    """
+    Poll batch processing status. Returns per-item progress.
+    """
+    batch = batch_store.get(batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    completed = sum(1 for it in batch["items"] if it["status"] == "completed")
+    failed = sum(1 for it in batch["items"] if it["status"] == "failed")
+    duplicates = sum(1 for it in batch["items"] if it["status"] == "duplicate")
+
+    return {
+        "batch_id": batch_id,
+        "status": batch["status"],
+        "total": batch["total"],
+        "completed": completed,
+        "failed": failed,
+        "duplicates": duplicates,
+        "items": [
+            {k: v for k, v in item.items() if k != "content"}
+            for item in batch["items"]
+        ]
+    }
+
+
+@app.post("/batch/{batch_id}/retry-failed")
+async def batch_retry_failed(batch_id: str, background_tasks: BackgroundTasks):
+    """
+    Retry all failed items in a batch.
+    """
+    batch = batch_store.get(batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    failed_items = [it for it in batch["items"] if it["status"] == "failed"]
+    if not failed_items:
+        return {"status": "ok", "message": "No failed items to retry"}
+
+    # For retries, we rely on FailedTransaction records since we don't keep image bytes in batch_store
+    retried = 0
+    for item in failed_items:
+        failed_tx_id = item.get("failed_tx_id")
+        if failed_tx_id:
+            item["status"] = "queued"
+            item["step"] = "Retrying..."
+            item["progress"] = 0
+            if "error" in item:
+                del item["error"]
+            retried += 1
+
+    if retried > 0:
+        batch["status"] = "processing"
+
+    return {"status": "ok", "retried": retried}
+
+
+@app.post("/batch/{batch_id}/item/{item_index}/force")
+async def batch_item_force(batch_id: str, item_index: int, db: AsyncSession = Depends(get_db)):
+    """
+    Force submit a duplicate item in a batch to Monarch Money.
+    """
+    batch = batch_store.get(batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    if item_index >= len(batch["items"]):
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    item = batch["items"][item_index]
+    dup_data = item.get("result", {}).get("data", {})
+    if not dup_data:
+        raise HTTPException(status_code=400, detail="No transaction data to force submit")
+
+    from .services.orchestrator import process_parsed_transaction
+    img_hash = f"forced_{batch_id}_{item_index}_{uuid.uuid4().hex[:6]}"
+
+    result = await process_parsed_transaction(
+        data=dict(dup_data),
+        image_hash=img_hash,
+        db=db,
+        user_currency_override=batch.get("currency"),
+        force_override=True
+    )
+
+    item["status"] = "completed"
+    item["result"] = result
+    item["step"] = "Synced to Monarch (Forced)"
+    item["progress"] = 100
+
+    return {"status": "ok", "result": result}
+
+
+
 LOADING_HTML = """
 <html>
     <head>
@@ -1001,7 +1284,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" class="btn" style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c); white-space: nowrap;" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
                 <a href="/" class="btn" style="flex: 1; min-width: 100px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: #6b7280; white-space: nowrap;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260825.1201 ©2025-26 ego/DEV/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260828.1724 ©2025-26 ego/DEV/null</span>
         </div>
 
         <!-- Mapping Modal -->

@@ -51,6 +51,21 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     -   **CLI Report Generator (`scripts/spending_report.py`)**: Standalone read-only command-line script to analyze Monarch cash flows and itemized transactions with terminal tables, JSON export, and database sync options.
     -   **Failed Transaction Queue & Retry**: Persistent database store (`failed_transactions`) for failed receipt scans and manual submissions, with a dedicated review modal, editing capabilities, and single/batch retry mechanisms.
     -   **Starred / Favorite Merchants**: Mark and prioritize frequently used merchants for fast lookup and automated suggestions.
+*   **⚡ v2.5: Multi-Receipt Batch Upload & Processing**:
+    -   **Multi-File Selection & Drag-and-Drop**: Upload up to 20 receipt images simultaneously via the file picker or drag-and-drop.
+    -   **Interactive Thumbnail Staging Strip**: Preview selected receipt thumbnails with per-item remove buttons (`✕`), plus an interactive **"+" add card** to append additional receipts to the batch queue.
+    -   **Controlled Concurrency Worker Pool**: Processes items concurrently using `asyncio.Semaphore(2)` to balance throughput while avoiding Gemini API rate limits and database contention.
+    -   **Monarch Session Reuse**: Pre-authenticates the `MonarchMoney` client once per batch and shares it across worker tasks, eliminating redundant per-item authentication latency.
+    -   **Live Continuous Progress Dashboard**: Real-time aggregate progress bar computing weighted sub-step completion across all items with 400ms polling, live status cards (`⏳ Queued`, `🧙‍♂️ Scanning (35%)`, `✅ Synced`, `🔄 Duplicate`, `⚠️ Failed`), and detailed step descriptions.
+    -   **Post-Batch Interactive Review & Manual Editing**: Click on any completed or duplicate receipt card in the batch dashboard to open the full transaction detail modal:
+        -   **⭐ Star Merchants**: Toggle favorite merchant status directly.
+        -   **📅 Date Correction**: Adjust dates with automatic historical exchange rate recalculation and live Monarch sync.
+        -   **🏷️ Category Selection**: Change transaction categories via inline dropdown.
+        -   **⚙️ Auto-Mapping Rules**: Create or update merchant mapping rules on the fly.
+        -   **⚡ Duplicate Force Mode**: Force-sync duplicate receipts to Monarch with one click.
+        -   **← Back to Batch Navigation**: Return cleanly to the batch dashboard with all edits updated in real time.
+    -   **Resilient Error Recovery**: Any failed receipts are automatically persisted to the `FailedTransaction` database store, with one-click "🔄 Retry Failed" support.
+    -   **100% Backward Compatible**: Single-file uploads seamlessly continue to use the classic upload and review pathway.
 
 ## 🖼 Demo (v1.1 only)
 
@@ -61,8 +76,9 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
 The system is a lightweight **FastAPI** application backed by **PostgreSQL**.
 
 ### Core Services
-1.  **Orchestrator**: The brain. Handles two flows:
-    *   **Image Flow**: Hashing -> De-duplication -> OCR -> Conversion -> Push.
+1.  **Orchestrator**: The brain. Handles three flows:
+    *   **Single Image Flow**: Hashing -> De-duplication -> OCR -> Conversion -> Push.
+    *   **Batch Image Flow**: Concurrency Semaphore(2) -> Shared Monarch Session -> Background Processing -> Streaming Status -> In-Place Review.
     *   **Manual Flow**: Form Data -> Hashing -> Conversion -> Push.
 2.  **Monarch Service**: Handles authentication (including MFA and session cookies), session persistence, and GraphQL interactions.
 3.  **Gemini Service**: Interacts with Google's GenAI SDK for image parsing. Accepts an optional list of historical merchant names to hint the model toward canonical names.

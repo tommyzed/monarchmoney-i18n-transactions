@@ -487,6 +487,248 @@
         }
         .btn-failed-del:hover { background: #fca5a5; }
     </style>
+
+    <style>
+        /* ── Batch Upload Styles ── */
+        .batch-staging {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        .batch-thumbs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        .batch-thumb {
+            position: relative;
+            flex-shrink: 0;
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #d1d5db;
+        }
+        .batch-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .batch-thumb-remove {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ef4444;
+            color: white;
+            border: none;
+            font-size: 0.65rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            padding: 0;
+            z-index: 2;
+        }
+        .batch-thumb-add {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #667eea;
+            background: rgba(255, 255, 255, 0.7);
+            color: #667eea;
+            font-size: 1.6rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        .batch-thumb-add:hover {
+            background: #e0e7ff;
+            border-color: #4f46e5;
+            color: #4f46e5;
+            transform: scale(1.05);
+        }
+        .batch-thumb-add:active {
+            transform: scale(0.95);
+        }
+
+        /* Batch Progress Dashboard */
+        .batch-dashboard {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1100;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow-y: auto;
+            padding: 1.5rem;
+            box-sizing: border-box;
+        }
+        .batch-dashboard-inner {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .batch-progress-bar-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 6px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .batch-progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(to right, #48bb78, #38a169);
+            border-radius: 6px;
+            transition: width 0.4s ease;
+            width: 0%;
+        }
+        .batch-item-card {
+            background: rgba(255,255,255,0.92);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        .batch-item-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            width: 28px;
+            text-align: center;
+        }
+        .batch-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .batch-item-name {
+            font-weight: 600;
+            color: #374151;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .batch-item-detail {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+        .batch-item-status {
+            font-size: 0.78rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            padding: 3px 8px;
+            border-radius: 999px;
+        }
+        .batch-item-status.queued { background: #e5e7eb; color: #6b7280; }
+        .batch-item-status.processing { background: #dbeafe; color: #2563eb; }
+        .batch-item-status.completed { background: #d1fae5; color: #065f46; }
+        .batch-item-status.duplicate { background: #fef3c7; color: #92400e; }
+        .batch-item-status.failed { background: #fee2e2; color: #991b1b; }
+
+        .batch-item-card.interactive {
+            cursor: pointer;
+        }
+        .batch-item-card.interactive:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+            background: #ffffff;
+        }
+
+        /* Detail Modal Pills */
+        .date-pill {
+            font-weight: 600;
+            color: #667eea;
+            cursor: pointer;
+            border-bottom: 2px dashed #667eea;
+            padding-bottom: 1px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s, border-color 0.2s;
+            user-select: none;
+        }
+        .date-pill:hover { color: #764ba2; border-color: #764ba2; }
+        .date-pill.updating { opacity: 0.5; pointer-events: none; }
+
+        .category-pill {
+            font-weight: 600;
+            color: #667eea;
+            cursor: pointer;
+            border-bottom: 2px dashed #667eea;
+            padding-bottom: 1px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s, border-color 0.2s;
+            user-select: none;
+        }
+        .category-pill:hover { color: #764ba2; border-color: #764ba2; }
+        .category-pill.updating { opacity: 0.5; pointer-events: none; }
+
+        /* Batch Summary (post-processing) */
+        .batch-summary-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 14px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 0.7rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .batch-summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .batch-summary-merchant {
+            font-weight: 700;
+            color: #1f2937;
+            font-size: 1rem;
+        }
+        .batch-summary-amount {
+            font-weight: 700;
+            color: #065f46;
+            font-size: 1rem;
+            white-space: nowrap;
+        }
+        .batch-summary-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+        .batch-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+        }
+        .batch-pill:hover {
+            filter: brightness(0.95);
+            transform: scale(1.03);
+        }
+        .batch-pill.date { background: #ede9fe; color: #5b21b6; }
+        .batch-pill.category { background: #dbeafe; color: #1e40af; }
+        .batch-pill.cash { background: #d1fae5; color: #065f46; }
+    </style>
 </head>
 
 <body>
@@ -557,12 +799,18 @@
             Money.</p>
 
         <div>
-            <form action="/share" method="post" enctype="multipart/form-data">
-                <input type="file" name="file" id="fileInput" accept="image/*" required style="display: none;">
+            <form id="receiptForm" action="/share" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" id="fileInput" accept="image/*" multiple required style="display: none;">
+                <input type="file" id="batchAddInput" accept="image/*" multiple style="display: none;">
 
                 <label for="fileInput" class="file-label">
-                    <span id="fileName">📂 Tap to Choose Receipt</span>
+                    <span id="fileName">📂 Tap to Choose Receipt(s)</span>
                 </label>
+
+                <!-- Batch Staging Strip (shown when multiple files selected) -->
+                <div id="batchStaging" class="batch-staging">
+                    <div id="batchThumbStrip" class="batch-thumbs"></div>
+                </div>
 
                 <!-- Magical Currency Selector -->
                 <div style="margin-top: 1.5rem; position: relative;">
@@ -677,7 +925,8 @@
                     });
                 </script>
 
-                <button type="submit" class="btn">🚀 Process Receipt</button>
+                <button type="submit" id="singleSubmitBtn" class="btn">🚀 Process Receipt</button>
+                <button type="button" id="batchSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #f59e0b, #d97706);" onclick="startBatchUpload()">⚡ Process Receipts</button>
             </form>
 
             <!-- Manual Entry Link -->
@@ -720,7 +969,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260825.1201 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260828.1724 ©2025-26 ego/DEV/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -1733,24 +1982,912 @@
         <p style="color: #666;">Our AI elves are reading your receipt! 🧙‍♂️</p>
     </div>
 
-    <script>
-        // Update file name when selected
-        document.getElementById('fileInput').onchange = function () {
-            if (this.files.length > 0) {
-                var name = this.files[0].name;
-                // Truncate if too long
-                if (name.length > 25) name = name.substring(0, 22) + '...';
+    <!-- Batch Progress Dashboard -->
+    <div id="batchDashboard" class="batch-dashboard">
+        <div class="batch-dashboard-inner">
+            <h2 id="batchTitle" style="color: white; text-align: center; margin-top: 0; font-size: 1.5rem;">
+                🧙‍♂️ AI Elves Processing Batch
+            </h2>
+            <p id="batchSubtitle" style="color: rgba(255,255,255,0.8); text-align: center; margin-top: -0.5rem; font-size: 0.9rem;">
+                0 of 0 completed
+            </p>
 
-                document.getElementById('fileName').textContent = '✅ ' + name;
-                document.querySelector('.file-label').style.borderColor = '#48bb78';
-                document.querySelector('.file-label').style.background = '#f0fff4';
-                document.querySelector('.file-label').style.color = '#2f855a';
+            <!-- Aggregate Progress Bar -->
+            <div class="batch-progress-bar-container">
+                <div id="batchProgressBar" class="batch-progress-bar-fill"></div>
+            </div>
+
+            <!-- Per-item status cards -->
+            <div id="batchItemsList"></div>
+
+            <!-- Actions (shown when batch completes) -->
+            <div id="batchActions" style="display: none; text-align: center; margin-top: 1.5rem;">
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button id="batchRetryBtn" class="btn" style="display:none; flex: 1; min-width: 120px; background: linear-gradient(to right, #4f46e5, #7c3aed); margin-top: 0; padding: 0.75rem 1rem; font-size: 0.95rem;" onclick="retryBatchFailed()">🔄 Retry Failed</button>
+                    <a href="/" class="btn" style="flex: 1; min-width: 100px; margin-top: 0; padding: 0.75rem 1rem; font-size: 0.95rem; text-align: center;">🏡 Done</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Item Detail / Manual Edit Modal -->
+    <div id="batchDetailModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.65); z-index:2200; justify-content:center; align-items:center; overflow-y:auto; padding:1rem; box-sizing:border-box;">
+        <div style="position:relative; width:95%; max-width:440px; background:linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%); border-radius:20px; padding:1.75rem; box-shadow:0 10px 30px rgba(0,0,0,0.3); box-sizing:border-box; margin:auto;">
+            <span onclick="closeBatchDetailModal()" style="position:absolute; top:12px; right:16px; font-size:1.6rem; cursor:pointer; color:#718096; font-weight:bold;">&times;</span>
+            
+            <div id="batchDetailCardIcon" style="font-size:2.8rem; margin-bottom:0.2rem; text-align:center;">🎉</div>
+            <p id="batchDetailCardTitle" style="font-size:1.3rem; font-weight:bold; color:#4a4a4a; margin-top:0; margin-bottom:1rem; text-align:center; font-family:'Sriracha', cursive;">Transaction Processed</p>
+            
+            <div id="batchDetailRows" style="text-align:left; background:rgba(255,255,255,0.75); border-radius:12px; padding:0.75rem 1rem; margin-bottom:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0;">
+                    <span style="color:#666; font-size:0.9rem;">Merchant</span>
+                    <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+                        <button id="batchDetailStarBtn" onclick="toggleBatchDetailMerchantStar()" title="Star this merchant" style="background:none; border:none; font-size:1.3rem; cursor:pointer; padding:0; line-height:1;">☆</button>
+                        <span id="batchDetailMerchant" style="font-weight:600; color:#1f2937;">--</span>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0;">
+                    <span style="color:#666; font-size:0.9rem;">Amount</span>
+                    <span id="batchDetailAmount" style="font-weight:600; text-align:right;">--</span>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0; position:relative;">
+                    <span style="color:#666; font-size:0.9rem;">Date</span>
+                    <span id="batchDetailDate" class="date-pill" title="Tap to correct date" onclick="openBatchDetailDatePicker()">--</span>
+                    <input type="date" id="batchDetailDatePicker" style="position:absolute; opacity:0; pointer-events:none; width:0; height:0;">
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0; position:relative;">
+                    <span style="color:#666; font-size:0.9rem;">Category</span>
+                    <span id="batchDetailCategory" class="category-pill" title="Tap to change category" onclick="openBatchDetailCategorySelector()">--</span>
+                    <select id="batchDetailCategorySelect" style="display:none; font-size:0.9rem; padding:4px; border-radius:6px; border:1px solid #d1d5db; background:white; max-width:180px;"></select>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
+                    <span style="color:#666; font-size:0.9rem;">Added to</span>
+                    <span id="batchDetailAccount" style="font-weight:600; color:#374151;">Monarch Money</span>
+                </div>
+            </div>
+
+            <!-- Historical name legend -->
+            <div id="batchDetailHistoricalLegend" style="display:none; font-size:0.75rem; color:#677ae3; font-style:italic; margin-bottom:0.75rem; text-align:center;">💜 matched from history</div>
+
+            <!-- Duplicate Warning Notice -->
+            <div id="batchDetailDuplicateNotice" style="display:none; margin-bottom:1rem; padding:0.6rem; background:#fef3c7; color:#92400e; border-radius:8px; font-size:0.85rem; border:1px solid #fde68a; text-align:center;">
+                ⚠️ <strong>Duplicate Detected:</strong> This receipt was already imported into Monarch.
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                <button id="batchDetailEditMappingBtn" onclick="openBatchMappingModal()" style="flex:1; min-width:110px; background:linear-gradient(to right, #fcad03, #f76b1c); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem;">Edit Mapping</button>
+                <button id="batchDetailForceBtn" onclick="forceSubmitBatchItem()" style="display:none; flex:1; min-width:110px; background:linear-gradient(to right, #ef4444, #b91c1c); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem;">⚡ Force Sync</button>
+                <button onclick="closeBatchDetailModal()" style="flex:1; min-width:100px; background:#4b5563; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem;">← Back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Mapping Modal -->
+    <div id="batchMappingModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2500; justify-content:center; align-items:center; padding:1rem; box-sizing:border-box;">
+        <div style="position:relative; width:90%; max-width:380px; background:white; border-radius:16px; padding:1.5rem; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+            <h3 style="margin-top:0; color:#374151;">Edit Mapping</h3>
+            
+            <div style="width:100%; text-align:left; margin-bottom:1rem;">
+                <label style="font-size:0.8rem; color:#6b7280; display:block; margin-bottom:4px;">Receipt Merchant (case insensitive)</label>
+                <input type="text" id="batchMapReceiptMerchant" readonly style="width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:6px; background:#f3f4f6; color:#6b7280; box-sizing:border-box;">
+            </div>
+
+            <div style="width:100%; text-align:left; margin-bottom:1rem;">
+                <label style="font-size:0.8rem; color:#6b7280; display:block; margin-bottom:4px;">Monarch Merchant Name</label>
+                <input type="text" id="batchMapMonarchMerchant" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; box-sizing:border-box;">
+            </div>
+
+            <div style="width:100%; text-align:left; margin-bottom:1.5rem;">
+                <label style="font-size:0.8rem; color:#6b7280; display:block; margin-bottom:4px;">Category</label>
+                <select id="batchMapCategory" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; background:white; box-sizing:border-box;">
+                    <option value="">Loading categories...</option>
+                </select>
+            </div>
+
+            <div style="display:flex; gap:10px; width:100%;">
+                <button onclick="deleteBatchMapping()" id="batchDeleteMappingBtn" style="padding:8px 14px; border:1px solid #fee2e2; background:#fee2e2; border-radius:6px; cursor:pointer; color:#991b1b; display:none;">Delete</button>
+                <div style="display:flex; gap:8px; margin-left:auto;">
+                    <button onclick="closeBatchMappingModal()" style="padding:8px 14px; border:1px solid #d1d5db; background:white; border-radius:6px; cursor:pointer; color:#374151;">Cancel</button>
+                    <button onclick="saveBatchMapping()" id="batchSaveMappingBtn" style="padding:8px 14px; border:none; background:#4f46e5; color:white; border-radius:6px; cursor:pointer;">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Batch Upload State ──
+        let selectedFiles = [];  // DataTransfer-like array of File objects
+        let isBatchMode = false; // Persistent batch mode flag once activated
+        let currentBatchId = null;
+        let batchPollTimer = null;
+
+        // Update file name / staging when files selected
+        document.getElementById('fileInput').onchange = function () {
+            selectedFiles = Array.from(this.files);
+            // Activate batch mode if multiple files selected, or if already in batch mode
+            if (selectedFiles.length > 1) {
+                isBatchMode = true;
+            } else if (selectedFiles.length === 1) {
+                // If user selects 1 file directly from file picker, use single-receipt mode
+                isBatchMode = false;
+            } else {
+                isBatchMode = false;
+            }
+            updateFileStaging();
+        };
+
+        // Add additional files to existing batch queue
+        document.getElementById('batchAddInput').onchange = function () {
+            if (this.files && this.files.length > 0) {
+                var newFiles = Array.from(this.files);
+                newFiles.forEach(function (f) {
+                    selectedFiles.push(f);
+                });
+                isBatchMode = true;
+                this.value = ''; // Reset to allow re-selecting same files if desired
+                updateFileStaging();
             }
         };
 
-        document.querySelector('form').onsubmit = function () {
-            document.getElementById('loadingOverlay').style.display = 'flex';
+        function updateFileStaging() {
+            const fileLabel = document.querySelector('.file-label');
+            const fileName = document.getElementById('fileName');
+            const staging = document.getElementById('batchStaging');
+            const thumbStrip = document.getElementById('batchThumbStrip');
+            const singleBtn = document.getElementById('singleSubmitBtn');
+            const batchBtn = document.getElementById('batchSubmitBtn');
+
+            if (selectedFiles.length === 0) {
+                isBatchMode = false;
+                fileName.textContent = '📂 Tap to Choose Receipt(s)';
+                fileLabel.style.display = '';
+                fileLabel.style.borderColor = '#ccc';
+                fileLabel.style.background = '#b1dfbb';
+                fileLabel.style.color = '#555';
+                staging.style.display = 'none';
+                singleBtn.style.display = '';
+                batchBtn.style.display = 'none';
+                return;
+            }
+
+            if (!isBatchMode && selectedFiles.length === 1) {
+                // Single file mode (directly selected 1 file)
+                var name = selectedFiles[0].name;
+                if (name.length > 25) name = name.substring(0, 22) + '...';
+                fileName.textContent = '✅ ' + name;
+                fileLabel.style.display = '';
+                fileLabel.style.borderColor = '#48bb78';
+                fileLabel.style.background = '#f0fff4';
+                fileLabel.style.color = '#2f855a';
+                staging.style.display = 'none';
+                singleBtn.style.display = '';
+                batchBtn.style.display = 'none';
+                return;
+            }
+
+            // Batch mode: hide the big single-file button to free up vertical space
+            fileLabel.style.display = 'none';
+            staging.style.display = 'block';
+            thumbStrip.innerHTML = '';
+
+            selectedFiles.forEach(function(file, idx) {
+                var thumb = document.createElement('div');
+                thumb.className = 'batch-thumb';
+
+                var img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.alt = file.name;
+                thumb.appendChild(img);
+
+                var removeBtn = document.createElement('button');
+                removeBtn.className = 'batch-thumb-remove';
+                removeBtn.textContent = '✕';
+                removeBtn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectedFiles.splice(idx, 1);
+                    updateFileStaging();
+                };
+                thumb.appendChild(removeBtn);
+
+                thumbStrip.appendChild(thumb);
+            });
+
+            // Append "+" card to add more receipts to the batch
+            var addCard = document.createElement('div');
+            addCard.className = 'batch-thumb batch-thumb-add';
+            addCard.title = 'Add more receipts';
+            addCard.setAttribute('aria-label', 'Add more receipts');
+            addCard.innerHTML = '+';
+            addCard.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                document.getElementById('batchAddInput').click();
+            };
+            thumbStrip.appendChild(addCard);
+
+            // Switch buttons
+            singleBtn.style.display = 'none';
+            batchBtn.style.display = '';
+            batchBtn.textContent = '⚡ Process ' + (selectedFiles.length === 1 ? '1 Receipt' : selectedFiles.length + ' Receipts');
+        }
+
+        // Form submit handler
+        document.getElementById('receiptForm').onsubmit = function (e) {
+            if (!isBatchMode && selectedFiles.length <= 1) {
+                // Let the form submit naturally to /share
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                return true;
+            }
+            // For batch mode, prevent default — handled by startBatchUpload()
+            e.preventDefault();
+            startBatchUpload();
+            return false;
         };
+
+        // ── Batch Upload via fetch() ──
+        async function startBatchUpload() {
+            if (selectedFiles.length < 1) return;
+
+            var currency = document.getElementById('hiddenCurrencyInput').value || 'EUR';
+
+            // Build FormData
+            var formData = new FormData();
+            selectedFiles.forEach(function(file) {
+                formData.append('files', file);
+            });
+            formData.append('currency', currency);
+
+            // Show batch dashboard
+            var dashboard = document.getElementById('batchDashboard');
+            dashboard.style.display = 'block';
+
+            // Initialize item cards
+            var listEl = document.getElementById('batchItemsList');
+            listEl.innerHTML = '';
+            selectedFiles.forEach(function(file, idx) {
+                var name = file.name;
+                if (name.length > 30) name = name.substring(0, 27) + '...';
+                var card = document.createElement('div');
+                card.className = 'batch-item-card';
+                card.id = 'batch-item-' + idx;
+                card.innerHTML =
+                    '<div class="batch-item-icon">⏳</div>' +
+                    '<div class="batch-item-info">' +
+                        '<div class="batch-item-name">' + name + '</div>' +
+                        '<div class="batch-item-detail">Queued</div>' +
+                    '</div>' +
+                    '<span class="batch-item-status queued">Queued</span>';
+                listEl.appendChild(card);
+            });
+
+            updateBatchProgress(0, selectedFiles.length, 0, 0);
+
+            try {
+                var res = await fetch('/batch/upload', { method: 'POST', body: formData });
+                if (!res.ok) {
+                    var errText = await res.text();
+                    showToast('Batch upload failed: ' + errText, 'error');
+                    dashboard.style.display = 'none';
+                    return;
+                }
+                var data = await res.json();
+                currentBatchId = data.batch_id;
+                // Start polling
+                pollBatchStatus();
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+                dashboard.style.display = 'none';
+            }
+        }
+
+        let activeBatchItemIndex = null;
+        let latestBatchData = null;
+
+        function pollBatchStatus() {
+            if (!currentBatchId) return;
+            batchPollTimer = setTimeout(async function() {
+                try {
+                    var res = await fetch('/batch/' + currentBatchId);
+                    if (!res.ok) {
+                        pollBatchStatus();
+                        return;
+                    }
+                    var data = await res.json();
+                    renderBatchStatus(data);
+
+                    var isFinished = data.status !== 'processing';
+                    if (!isFinished) {
+                        pollBatchStatus();
+                    }
+                } catch (err) {
+                    console.error('Batch poll error:', err);
+                    pollBatchStatus();
+                }
+            }, 400);
+        }
+
+        function renderBatchStatus(data) {
+            latestBatchData = data;
+            var items = data.items || [];
+            var total = data.total || items.length;
+            var doneCount = (data.completed || 0) + (data.duplicates || 0) + (data.failed || 0);
+
+            // Compute aggregate progress using partial steps of every item
+            var totalProgressSum = 0;
+            items.forEach(function(item) {
+                if (item.status === 'completed' || item.status === 'duplicate' || item.status === 'failed') {
+                    totalProgressSum += 100;
+                } else if (item.status === 'processing') {
+                    totalProgressSum += Math.max(10, item.progress || 10);
+                } else {
+                    totalProgressSum += 0;
+                }
+            });
+
+            var aggregatePct = total > 0 ? Math.min(100, Math.round(totalProgressSum / total)) : 0;
+            updateBatchProgress(aggregatePct, doneCount, total, data.failed, data.duplicates);
+
+            items.forEach(function(item) {
+                var card = document.getElementById('batch-item-' + item.index);
+                if (!card) return;
+
+                var icon, statusText, statusClass, detail;
+                var isClickable = item.status === 'completed' || item.status === 'duplicate';
+
+                switch (item.status) {
+                    case 'queued':
+                        icon = '⏳'; statusText = 'Queued'; statusClass = 'queued';
+                        detail = 'Waiting in queue...';
+                        break;
+                    case 'processing':
+                        icon = '🧙‍♂️'; statusText = 'Scanning'; statusClass = 'processing';
+                        var stepMsg = item.step || 'Processing...';
+                        var itemPct = (item.progress != null && item.progress > 0) ? ' (' + item.progress + '%)' : '';
+                        detail = stepMsg + itemPct;
+                        break;
+                    case 'completed':
+                        icon = '✅'; statusText = 'Synced'; statusClass = 'completed';
+                        var r = item.result || {};
+                        var merchant = r.merchant || 'Unknown';
+                        var amount = r.amount != null ? parseFloat(r.amount).toFixed(2) : '?';
+                        var currency = r.currency || '';
+                        detail = merchant + ' — ' + currency + ' ' + amount;
+                        if (r.category_name) detail += ' (' + r.category_name + ')';
+                        break;
+                    case 'duplicate':
+                        icon = '🔄'; statusText = 'Duplicate'; statusClass = 'duplicate';
+                        var rd = (item.result && item.result.data) || {};
+                        detail = (rd.merchant || 'Already imported');
+                        break;
+                    case 'failed':
+                        icon = '⚠️'; statusText = 'Failed'; statusClass = 'failed';
+                        detail = item.error || 'Unknown error';
+                        break;
+                    default:
+                        icon = '❓'; statusText = item.status; statusClass = 'queued';
+                        detail = '';
+                }
+
+                card.querySelector('.batch-item-icon').textContent = icon;
+                card.querySelector('.batch-item-detail').textContent = detail;
+
+                var statusEl = card.querySelector('.batch-item-status');
+                statusEl.textContent = statusText;
+                statusEl.className = 'batch-item-status ' + statusClass;
+
+                if (isClickable) {
+                    card.classList.add('interactive');
+                    card.title = 'Tap to review details, edit mapping, date, or category';
+                    card.onclick = function() {
+                        openBatchItemModal(item.index);
+                    };
+                } else {
+                    card.classList.remove('interactive');
+                    card.title = '';
+                    card.onclick = null;
+                }
+            });
+
+            // Show actions when batch is done
+            var isFinished = data.status !== 'processing';
+            if (isFinished) {
+                document.getElementById('batchActions').style.display = 'block';
+                document.getElementById('batchTitle').textContent = data.failed > 0
+                    ? '⚠️ Batch Completed with Errors'
+                    : '🎉 Batch Complete!';
+
+                if (data.failed > 0) {
+                    document.getElementById('batchRetryBtn').style.display = '';
+                }
+            }
+        }
+
+        function updateBatchProgress(pct, done, total, failed, duplicates) {
+            document.getElementById('batchProgressBar').style.width = pct + '%';
+            document.getElementById('batchSubtitle').textContent =
+                done + ' of ' + total + ' completed (' + pct + '%)' +
+                (failed > 0 ? ' • ' + failed + ' failed' : '') +
+                (duplicates > 0 ? ' • ' + duplicates + ' duplicate' + (duplicates > 1 ? 's' : '') : '');
+        }
+
+        async function retryBatchFailed() {
+            if (!currentBatchId) return;
+            try {
+                var res = await fetch('/batch/' + currentBatchId + '/retry-failed', { method: 'POST' });
+                if (res.ok) {
+                    showToast('Retrying failed items...', 'success');
+                    document.getElementById('batchActions').style.display = 'none';
+                    document.getElementById('batchRetryBtn').style.display = 'none';
+                    document.getElementById('batchTitle').textContent = '🧙‍♂️ Retrying Failed Items...';
+                    pollBatchStatus();
+                } else {
+                    showToast('Retry failed', 'error');
+                }
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+            }
+        }
+
+        // ── Batch Item Detail / Edit Modal Functions ──
+        function openBatchItemModal(itemIndex) {
+            if (!latestBatchData || !latestBatchData.items) return;
+            activeBatchItemIndex = itemIndex;
+            var item = latestBatchData.items[itemIndex];
+            if (!item) return;
+
+            var isDuplicate = item.status === 'duplicate';
+            var tx = isDuplicate ? (item.result && item.result.data ? item.result.data : {}) : (item.result || {});
+
+            // Icon & Title
+            document.getElementById('batchDetailCardIcon').textContent = isDuplicate ? '⚠️' : '🎉';
+            document.getElementById('batchDetailCardTitle').textContent = isDuplicate ? 'Duplicate Receipt' : 'Transaction Processed';
+            document.getElementById('batchDetailCardTitle').style.color = isDuplicate ? '#b45309' : '#4a4a4a';
+
+            // Duplicate notice & force button
+            document.getElementById('batchDetailDuplicateNotice').style.display = isDuplicate ? 'block' : 'none';
+            document.getElementById('batchDetailForceBtn').style.display = isDuplicate ? 'inline-block' : 'none';
+
+            // Merchant
+            var merchantName = tx.merchant || 'Unknown';
+            var isHistorical = !!tx.used_historical_name;
+            document.getElementById('batchDetailMerchant').textContent = (isHistorical ? '💜 ' : '') + merchantName;
+            document.getElementById('batchDetailHistoricalLegend').style.display = isHistorical ? 'block' : 'none';
+
+            // Star icon
+            var starBtn = document.getElementById('batchDetailStarBtn');
+            starBtn.textContent = tx.is_starred ? '⭐' : '☆';
+            starBtn.style.color = tx.is_starred ? '#f59e0b' : '#9ca3af';
+
+            // Amount
+            var amountStr = tx.amount != null ? parseFloat(tx.amount).toFixed(2) : '--';
+            var currencyStr = tx.currency || 'USD';
+            var amountHtml = `${amountStr} ${currencyStr}`;
+            if (tx.monarch_tx_id) {
+                var deepLink = `intent://transactions/${tx.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${tx.monarch_tx_id};end`;
+                var linkColor = tx.is_credit ? '#16a34a' : '#2563eb';
+                amountHtml = `<a href="${deepLink}" target="_blank" style="text-decoration:none; color:${linkColor};">${amountHtml}</a>`;
+            }
+            if (tx.original_amount && tx.original_currency) {
+                var rateInfo = tx.exchange_rate ? ` @ ${parseFloat(tx.exchange_rate).toFixed(3)}` : '';
+                amountHtml += `<br><span style="font-size:0.8em; color:#6b7280; font-weight:normal;">(${parseFloat(tx.original_amount).toFixed(2)} ${tx.original_currency}${rateInfo})</span>`;
+            }
+            document.getElementById('batchDetailAmount').innerHTML = amountHtml;
+
+            // Date
+            var dateVal = tx.date || '--';
+            document.getElementById('batchDetailDate').innerHTML = dateVal;
+            document.getElementById('batchDetailDatePicker').value = (dateVal !== '--') ? dateVal : '';
+
+            // Category
+            var catName = tx.category_name || '--';
+            var catDisplay = catName;
+            if (tx.category_emoji) {
+                catDisplay = tx.category_emoji + ' ' + catDisplay;
+            }
+            document.getElementById('batchDetailCategory').innerHTML = (isHistorical ? '💜 ' : '') + catDisplay;
+
+            // Account
+            document.getElementById('batchDetailAccount').textContent = tx.is_cash ? 'Cash On Hand' : 'Monarch Money';
+
+            // Mapping button
+            var hasOrig = !!tx.original_merchant_name;
+            document.getElementById('batchDetailEditMappingBtn').textContent = hasOrig ? 'Edit Mapping' : 'Add Mapping';
+
+            // Show modal
+            document.getElementById('batchDetailModal').style.display = 'flex';
+
+            // Pre-fetch categories
+            fetchCategories();
+        }
+
+        function closeBatchDetailModal() {
+            document.getElementById('batchDetailModal').style.display = 'none';
+            if (latestBatchData) {
+                renderBatchStatus(latestBatchData);
+            }
+        }
+
+        async function toggleBatchDetailMerchantStar() {
+            if (activeBatchItemIndex === null || !latestBatchData) return;
+            var item = latestBatchData.items[activeBatchItemIndex];
+            var tx = item.result && item.result.status === 'duplicate' ? item.result.data : item.result;
+            if (!tx || !tx.merchant) return;
+
+            var newStarState = !tx.is_starred;
+            try {
+                var res = await fetch(`/api/merchants/${encodeURIComponent(tx.merchant)}/star`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_starred: newStarState })
+                });
+                if (res.ok) {
+                    tx.is_starred = newStarState;
+                    var starBtn = document.getElementById('batchDetailStarBtn');
+                    starBtn.textContent = newStarState ? '⭐' : '☆';
+                    starBtn.style.color = newStarState ? '#f59e0b' : '#9ca3af';
+                    showToast(newStarState ? '⭐ Merchant starred!' : 'Merchant unstarred', 'success');
+                }
+            } catch (err) {
+                showToast('Failed to update star status', 'error');
+            }
+        }
+
+        function openBatchDetailDatePicker() {
+            var picker = document.getElementById('batchDetailDatePicker');
+            var curr = document.getElementById('batchDetailDate').textContent.replace(/[^\d\-]/g, '').trim();
+            if (curr) picker.value = curr;
+            if (picker.showPicker) picker.showPicker();
+            else picker.click();
+        }
+
+        document.getElementById('batchDetailDatePicker').addEventListener('change', async function() {
+            var newDate = this.value;
+            if (!newDate) return;
+            if (activeBatchItemIndex === null || !latestBatchData) return;
+            var item = latestBatchData.items[activeBatchItemIndex];
+            var tx = item.result && item.result.status === 'duplicate' ? item.result.data : item.result;
+            if (!tx || !tx.monarch_tx_id) {
+                showToast('Cannot update date: transaction not yet synced to Monarch', 'error');
+                return;
+            }
+
+            var pill = document.getElementById('batchDetailDate');
+            pill.classList.add('updating');
+            pill.innerHTML = newDate + ' ⏳';
+
+            try {
+                var payload = {
+                    monarch_tx_id: tx.monarch_tx_id,
+                    new_date: newDate,
+                    original_currency: tx.original_currency || tx.currency || 'USD',
+                    original_amount: tx.original_amount ?? tx.amount,
+                    is_credit: tx.is_credit || false
+                };
+
+                var res = await fetch('/api/transaction/update-date', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    var err = await res.json();
+                    throw new Error(err.detail || 'Update failed');
+                }
+
+                var result = await res.json();
+                tx.date = result.new_date;
+                tx.amount = result.new_amount;
+                if (result.exchange_rate != null) tx.exchange_rate = result.exchange_rate;
+
+                pill.innerHTML = result.new_date;
+                document.getElementById('batchDetailDatePicker').value = result.new_date;
+
+                // Re-render amount in detail view
+                var amountStr = parseFloat(result.new_amount).toFixed(2);
+                var amountHtml = `${amountStr} ${tx.currency}`;
+                if (tx.monarch_tx_id) {
+                    var deepLink = `intent://transactions/${tx.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${tx.monarch_tx_id};end`;
+                    var linkColor = tx.is_credit ? '#16a34a' : '#2563eb';
+                    amountHtml = `<a href="${deepLink}" target="_blank" style="text-decoration:none; color:${linkColor};">${amountHtml}</a>`;
+                }
+                if (tx.original_amount && tx.original_currency) {
+                    var rateInfo = result.exchange_rate ? ` @ ${parseFloat(result.exchange_rate).toFixed(3)}` : '';
+                    amountHtml += `<br><span style="font-size:0.8em; color:#6b7280; font-weight:normal;">(${parseFloat(tx.original_amount).toFixed(2)} ${tx.original_currency}${rateInfo})</span>`;
+                }
+                document.getElementById('batchDetailAmount').innerHTML = amountHtml;
+
+                showToast('✅ Date & rate updated in Monarch!', 'success');
+            } catch (err) {
+                pill.innerHTML = tx.date || '--';
+                showToast('Error: ' + err.message, 'error');
+            } finally {
+                pill.classList.remove('updating');
+            }
+        });
+
+        async function openBatchDetailCategorySelector() {
+            var select = document.getElementById('batchDetailCategorySelect');
+            var pill = document.getElementById('batchDetailCategory');
+
+            await fetchCategories();
+
+            select.innerHTML = '<option value="">Select Category</option>';
+            if (cachedCategories) {
+                cachedCategories.forEach(function(cat) {
+                    var opt = document.createElement('option');
+                    opt.value = cat.name;
+                    opt.textContent = (cat.emoji ? cat.emoji + ' ' : '') + cat.name;
+                    select.appendChild(opt);
+                });
+            }
+
+            if (activeBatchItemIndex !== null && latestBatchData) {
+                var item = latestBatchData.items[activeBatchItemIndex];
+                var tx = item.result && item.result.status === 'duplicate' ? item.result.data : item.result;
+                if (tx && tx.category_name) {
+                    for (var i = 0; i < select.options.length; i++) {
+                        if (select.options[i].value === tx.category_name) {
+                            select.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            pill.style.display = 'none';
+            select.style.display = 'inline-block';
+            select.focus();
+        }
+
+        document.getElementById('batchDetailCategorySelect').addEventListener('change', async function() {
+            var newCategory = this.value;
+            if (!newCategory) {
+                closeBatchDetailCategorySelector();
+                return;
+            }
+            if (activeBatchItemIndex === null || !latestBatchData) return;
+            var item = latestBatchData.items[activeBatchItemIndex];
+            var tx = item.result && item.result.status === 'duplicate' ? item.result.data : item.result;
+            if (!tx || !tx.monarch_tx_id) {
+                showToast('Cannot update category: transaction not yet synced to Monarch', 'error');
+                closeBatchDetailCategorySelector();
+                return;
+            }
+
+            if (newCategory === tx.category_name) {
+                closeBatchDetailCategorySelector();
+                return;
+            }
+
+            var pill = document.getElementById('batchDetailCategory');
+            pill.classList.add('updating');
+            pill.innerHTML = newCategory + ' ⏳';
+            closeBatchDetailCategorySelector();
+
+            try {
+                var payload = {
+                    monarch_tx_id: tx.monarch_tx_id,
+                    category_name: newCategory
+                };
+
+                var res = await fetch('/api/transaction/update-category', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    var err = await res.json();
+                    throw new Error(err.detail || 'Update failed');
+                }
+
+                var result = await res.json();
+                tx.category_name = newCategory;
+                if (result.category_emoji !== undefined) tx.category_emoji = result.category_emoji;
+                else delete tx.category_emoji;
+
+                var isHistorical = !!tx.used_historical_name;
+                var catDisplay = (tx.category_emoji ? tx.category_emoji + ' ' : '') + newCategory;
+                pill.innerHTML = (isHistorical ? '💜 ' : '') + catDisplay;
+
+                showToast('✅ Category updated in Monarch!', 'success');
+            } catch (err) {
+                var isHistorical = !!tx.used_historical_name;
+                var origDisplay = (tx.category_emoji ? tx.category_emoji + ' ' : '') + (tx.category_name || '--');
+                pill.innerHTML = (isHistorical ? '💜 ' : '') + origDisplay;
+                showToast('Error: ' + err.message, 'error');
+            } finally {
+                pill.classList.remove('updating');
+            }
+        });
+
+        document.getElementById('batchDetailCategorySelect').addEventListener('blur', function() {
+            closeBatchDetailCategorySelector();
+        });
+
+        function closeBatchDetailCategorySelector() {
+            document.getElementById('batchDetailCategory').style.display = 'inline-flex';
+            document.getElementById('batchDetailCategorySelect').style.display = 'none';
+        }
+
+        // ── Batch Mapping Modal Logic ──
+        async function openBatchMappingModal() {
+            if (activeBatchItemIndex === null || !latestBatchData) return;
+            var item = latestBatchData.items[activeBatchItemIndex];
+            var tx = item.result && item.result.status === 'duplicate' ? item.result.data : item.result;
+            if (!tx) return;
+
+            var receiptMerchant = tx.original_merchant_name || tx.merchant || '';
+            document.getElementById('batchMapReceiptMerchant').value = receiptMerchant;
+            document.getElementById('batchMapMonarchMerchant').value = tx.merchant || '';
+
+            await fetchCategories();
+            var select = document.getElementById('batchMapCategory');
+            select.innerHTML = '<option value="">Select Category</option>';
+            if (cachedCategories) {
+                cachedCategories.forEach(function(cat) {
+                    var opt = document.createElement('option');
+                    opt.value = cat.name;
+                    opt.textContent = (cat.emoji ? cat.emoji + ' ' : '') + cat.name;
+                    select.appendChild(opt);
+                });
+            }
+
+            if (tx.category_name) {
+                for (var i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === tx.category_name) {
+                        select.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            var delBtn = document.getElementById('batchDeleteMappingBtn');
+            if (tx.original_merchant_name) {
+                delBtn.style.display = 'inline-block';
+            } else {
+                delBtn.style.display = 'none';
+            }
+
+            document.getElementById('batchMappingModal').style.display = 'flex';
+        }
+
+        function closeBatchMappingModal() {
+            document.getElementById('batchMappingModal').style.display = 'none';
+        }
+
+        async function saveBatchMapping() {
+            if (activeBatchItemIndex === null || !latestBatchData) return;
+            var item = latestBatchData.items[activeBatchItemIndex];
+            var tx = item.result && item.result.status === 'duplicate' ? item.result.data : item.result;
+
+            var payload = {
+                receipt_merchant_name: document.getElementById('batchMapReceiptMerchant').value,
+                monarch_merchant_name: document.getElementById('batchMapMonarchMerchant').value,
+                category_name: document.getElementById('batchMapCategory').value,
+                monarch_tx_id: tx?.monarch_tx_id
+            };
+
+            if (!payload.category_name) {
+                showToast('Please select a category', 'error');
+                return;
+            }
+
+            var btn = document.getElementById('batchSaveMappingBtn');
+            var origText = btn.textContent;
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
+            try {
+                var res = await fetch('/api/mapping', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showToast('Mapping saved! Transaction updated in Monarch.', 'success');
+                    closeBatchMappingModal();
+
+                    if (!tx.original_merchant_name) {
+                        tx.original_merchant_name = payload.receipt_merchant_name;
+                    }
+                    tx.merchant = payload.monarch_merchant_name;
+                    tx.category_name = payload.category_name;
+
+                    document.getElementById('batchDetailMerchant').textContent = payload.monarch_merchant_name;
+                    document.getElementById('batchDetailEditMappingBtn').textContent = 'Edit Mapping';
+
+                    var emoji = '';
+                    if (cachedCategories) {
+                        var catObj = cachedCategories.find(function(c) { return c.name === payload.category_name; });
+                        if (catObj && catObj.emoji) emoji = catObj.emoji + ' ';
+                    }
+                    document.getElementById('batchDetailCategory').textContent = emoji + payload.category_name;
+                } else {
+                    var err = await res.json();
+                    showToast('Error saving: ' + err.detail, 'error');
+                }
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+            } finally {
+                btn.textContent = origText;
+                btn.disabled = false;
+            }
+        }
+
+        async function deleteBatchMapping() {
+            if (activeBatchItemIndex === null || !latestBatchData) return;
+            var item = latestBatchData.items[activeBatchItemIndex];
+            var tx = item.result && item.result.status === 'duplicate' ? item.result.data : item.result;
+
+            var receiptName = document.getElementById('batchMapReceiptMerchant').value;
+            var btn = document.getElementById('batchDeleteMappingBtn');
+            var origText = btn.textContent;
+            btn.textContent = 'Deleting...';
+            btn.disabled = true;
+
+            try {
+                var res = await fetch('/api/mapping', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ receipt_merchant_name: receiptName })
+                });
+
+                if (res.ok) {
+                    showToast('Mapping deleted.', 'success');
+                    closeBatchMappingModal();
+                    document.getElementById('batchDetailEditMappingBtn').textContent = 'Add Mapping';
+                    if (tx) {
+                        delete tx.original_merchant_name;
+                    }
+                } else {
+                    var err = await res.json();
+                    showToast('Error deleting: ' + err.detail, 'error');
+                }
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+            } finally {
+                btn.textContent = origText;
+                btn.disabled = false;
+            }
+        }
+
+        async function forceSubmitBatchItem() {
+            if (activeBatchItemIndex === null || !currentBatchId || !latestBatchData) return;
+            var item = latestBatchData.items[activeBatchItemIndex];
+            var btn = document.getElementById('batchDetailForceBtn');
+            var origText = btn.textContent;
+            btn.textContent = '⚡ Forcing...';
+            btn.disabled = true;
+
+            try {
+                var res = await fetch(`/batch/${currentBatchId}/item/${activeBatchItemIndex}/force`, { method: 'POST' });
+                if (res.ok) {
+                    var data = await res.json();
+                    showToast('✅ Forced sync to Monarch complete!', 'success');
+                    item.status = 'completed';
+                    item.result = data.result;
+                    item.step = 'Synced to Monarch (Forced)';
+                    openBatchItemModal(activeBatchItemIndex);
+                } else {
+                    var err = await res.json();
+                    showToast('Force submit failed: ' + (err.detail || 'Unknown error'), 'error');
+                }
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+            } finally {
+                btn.textContent = origText;
+                btn.disabled = false;
+            }
+        }
 
         // Deep Link Menu Logic
         const dlTrigger = document.getElementById('deepLinkTrigger');
