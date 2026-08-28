@@ -73,7 +73,7 @@ Single Mode and Batch Mode (v2.5+)
 <p align="center">
   <img width="324" src="https://github.com/user-attachments/assets/b4fefae9-ff0d-4cf5-a2b3-71befc6e29d8" alt="Single Mode Demo" />
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <img width="324" src="https://github.com/user-attachments/assets/ae047f66-73c1-4064-8b40-c628cb72da13" alt="Batch Mode Demo" />
+  <img width="324" height="720" alt="mm_batch_mode_demo_delete-compressed-ezgif com-video-to-gif-converter (1)" src="https://github.com/user-attachments/assets/0c82b65c-2b59-4730-b550-847143fcf94f" />
 </p>
 
 Spending Reports (v2.0+)
