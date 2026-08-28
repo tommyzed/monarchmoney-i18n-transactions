@@ -53,8 +53,9 @@ Do NOT include any markdown fences or extra text — only the raw JSON object.
         image = Image.open(io.BytesIO(image_bytes))
 
         # New SDK call
+        model_name = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model=model_name,
             contents=[prompt, image]
         )
 

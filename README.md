@@ -133,7 +133,7 @@ export FERNET_KEY="<your_generated_key>"
 
 # AI (Google Gemini)
 export GEMINI_API_KEY="<your_gemini_api_key>"
-export GEMINI_MODEL="gemini-3.5-flash"
+export GEMINI_MODEL="gemini-3.7-flash"
 
 # Monarch Settings
 export MM_EMAIL="<your_monarch_email>"
