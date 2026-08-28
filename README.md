@@ -67,9 +67,12 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     -   **Resilient Error Recovery**: Any failed receipts are automatically persisted to the `FailedTransaction` database store, with one-click "🔄 Retry Failed" support.
     -   **100% Backward Compatible**: Single-file uploads seamlessly continue to use the classic upload and review pathway.
 
-## 🖼 Demo (v1.1 only)
+## 🖼 Demos / Screenshots (v2.5)
 
 ![LatestMMDemo-ezgif com-speed](https://github.com/user-attachments/assets/b4fefae9-ff0d-4cf5-a2b3-71befc6e29d8)
+<img width="764" height="615" alt="Spending Report 1" src="https://github.com/user-attachments/assets/23b2c28b-ff75-43ea-bc27-2ca1d7b4c2dd" />
+<img width="786" height="500" alt="Spending Report 2" src="https://github.com/user-attachments/assets/06b23dde-b0e8-49bf-8357-995cbbbdf1c3" />
+<img width="758" height="686" alt="Spending Report 3" src="https://github.com/user-attachments/assets/567db11e-7d72-4905-b3ae-60d35bd02842" />
 
 ## 🏗 Architecture
 
