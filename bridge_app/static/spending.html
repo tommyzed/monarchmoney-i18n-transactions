@@ -405,6 +405,10 @@
             transition: all 0.2s;
             position: relative;
             overflow: hidden;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .kpi-card:hover {
@@ -427,6 +431,9 @@
             color: var(--text-secondary);
             margin-bottom: 6px;
             font-weight: 500;
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .kpi-value {
@@ -434,12 +441,18 @@
             font-weight: 800;
             color: var(--text-primary);
             letter-spacing: -0.5px;
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .kpi-sub {
             font-size: 0.78rem;
             color: var(--text-muted);
             margin-top: 4px;
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         /* Charts & Breakdowns */
@@ -634,6 +647,10 @@
 
         /* Responsive */
         @media (max-width: 640px) {
+            .container {
+                padding: 1.25rem 1rem 3rem;
+            }
+
             .controls-bar {
                 flex-direction: column;
                 align-items: stretch;
@@ -644,8 +661,32 @@
                 width: 100%;
             }
 
+            .kpi-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                margin-bottom: 1.5rem;
+            }
+
+            .kpi-card {
+                padding: 0.85rem 0.75rem 0.85rem 0.95rem;
+            }
+
+            .kpi-label {
+                font-size: 0.75rem;
+                line-height: 1.25;
+                margin-bottom: 4px;
+            }
+
             .kpi-value {
-                font-size: 1.35rem;
+                font-size: clamp(1.05rem, 4.2vw, 1.35rem);
+                line-height: 1.2;
+                letter-spacing: -0.3px;
+            }
+
+            .kpi-sub {
+                font-size: 0.7rem;
+                line-height: 1.2;
+                margin-top: 3px;
             }
 
             .chart-container {
