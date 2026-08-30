@@ -23,6 +23,22 @@ async def get_or_create_spending_report(
     return res.scalars().first()
 
 
+async def _retry_monarch_call(func, *args, max_retries=4, initial_delay=1.5, **kwargs):
+    """Execute a Monarch API call with automatic retries on transient errors."""
+    delay = initial_delay
+    last_err = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            last_err = e
+            logger.warning(f"Monarch call {func.__name__} attempt {attempt}/{max_retries} failed: {e}. Retrying in {delay:.1f}s...")
+            if attempt < max_retries:
+                await asyncio.sleep(delay)
+                delay *= 2
+    raise last_err
+
+
 async def calculate_and_save_spending_report(
     year: int,
     user_id: Optional[int] = None,
@@ -71,11 +87,11 @@ async def calculate_and_save_spending_report(
             mm = await get_monarch_client(db, resolved_user_id)
 
             # 3. Read Categories (READ-ONLY)
-            cat_res = await mm.get_transaction_categories()
+            cat_res = await _retry_monarch_call(mm.get_transaction_categories)
             categories_map = {c["id"]: c for c in cat_res.get("categories", [])}
 
             # 4. Read Cash Flow Aggregates (READ-ONLY)
-            cashflow_res = await mm.get_cashflow(start_date=start_date, end_date=end_date)
+            cashflow_res = await _retry_monarch_call(mm.get_cashflow, start_date=start_date, end_date=end_date)
             summary_list = cashflow_res.get("summary", [])
             server_sum = summary_list[0].get("summary", {}) if summary_list else {}
 
@@ -99,7 +115,8 @@ async def calculate_and_save_spending_report(
             hidden_filter = None if include_hidden else False
 
             while True:
-                tx_res = await mm.get_transactions(
+                tx_res = await _retry_monarch_call(
+                    mm.get_transactions,
                     start_date=start_date,
                     end_date=end_date,
                     hidden_from_reports=hidden_filter,
@@ -123,6 +140,8 @@ async def calculate_and_save_spending_report(
             categorized_breakdown = {}
             category_group_breakdown = {}
             monthly_breakdown = {}
+            monthly_category_group_breakdown = {}
+            monthly_categorized_breakdown = {}
 
             for tx in all_txs:
                 amount = tx.get("amount", 0.0)
@@ -149,6 +168,16 @@ async def calculate_and_save_spending_report(
                     monthly_breakdown[month_key] = (
                         monthly_breakdown.get(month_key, 0.0) + expense_val
                     )
+                    if month_key not in monthly_category_group_breakdown:
+                        monthly_category_group_breakdown[month_key] = {}
+                    monthly_category_group_breakdown[month_key][group_name] = (
+                        monthly_category_group_breakdown[month_key].get(group_name, 0.0) + expense_val
+                    )
+                    if month_key not in monthly_categorized_breakdown:
+                        monthly_categorized_breakdown[month_key] = {}
+                    monthly_categorized_breakdown[month_key][cat_name] = (
+                        monthly_categorized_breakdown[month_key].get(cat_name, 0.0) + expense_val
+                    )
                 elif group_type == "income":
                     itemized_income_total += amount
                 elif group_type == "transfer":
@@ -165,6 +194,16 @@ async def calculate_and_save_spending_report(
                         )
                         monthly_breakdown[month_key] = (
                             monthly_breakdown.get(month_key, 0.0) + expense_val
+                        )
+                        if month_key not in monthly_category_group_breakdown:
+                            monthly_category_group_breakdown[month_key] = {}
+                        monthly_category_group_breakdown[month_key][group_name] = (
+                            monthly_category_group_breakdown[month_key].get(group_name, 0.0) + expense_val
+                        )
+                        if month_key not in monthly_categorized_breakdown:
+                            monthly_categorized_breakdown[month_key] = {}
+                        monthly_categorized_breakdown[month_key][cat_name] = (
+                            monthly_categorized_breakdown[month_key].get(cat_name, 0.0) + expense_val
                         )
                     else:
                         itemized_income_total += amount
@@ -183,6 +222,8 @@ async def calculate_and_save_spending_report(
             report.category_groups = category_group_breakdown
             report.categories = categorized_breakdown
             report.monthly_spending = monthly_breakdown
+            report.monthly_category_groups = monthly_category_group_breakdown
+            report.monthly_categories = monthly_categorized_breakdown
             report.sync_status = "ready"
             report.error_message = None
 

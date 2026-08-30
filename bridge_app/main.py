@@ -46,6 +46,11 @@ async def lifespan(app: FastAPI):
         print("✅ LIFESPAN: Database connected.")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            for col in ["monthly_category_groups", "monthly_categories"]:
+                try:
+                    await conn.execute(text(f"ALTER TABLE spending_reports ADD COLUMN {col} JSON;"))
+                except Exception:
+                    pass
         print("✅ LIFESPAN: Database tables verified/created.")
     except Exception as e:
         print(f"❌ LIFESPAN: Database connection failed: {e}")
@@ -4180,6 +4185,8 @@ async def get_spending_report_endpoint(
         "category_groups": report.category_groups,
         "categories": report.categories,
         "monthly_spending": report.monthly_spending,
+        "monthly_category_groups": report.monthly_category_groups,
+        "monthly_categories": report.monthly_categories,
         "sync_status": report.sync_status,
         "error_message": report.error_message,
         "updated_at": report.updated_at.isoformat() if report.updated_at else None,

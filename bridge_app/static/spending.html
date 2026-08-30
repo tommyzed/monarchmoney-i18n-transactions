@@ -12,6 +12,27 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sriracha&display=swap"
         rel="stylesheet">
+    <script>
+        // Make scroll-blocking event listeners passive by default to eliminate Chrome [Violation] warnings and improve scroll responsiveness
+        (function () {
+            const originalAddEventListener = EventTarget.prototype.addEventListener;
+            EventTarget.prototype.addEventListener = function (type, listener, options) {
+                let newOptions = options;
+                if (['touchstart', 'touchmove', 'wheel', 'mousewheel'].includes(type)) {
+                    if (typeof options === 'boolean') {
+                        newOptions = { capture: options, passive: true };
+                    } else if (typeof options === 'object' && options !== null) {
+                        if (options.passive === undefined) {
+                            newOptions = Object.assign({}, options, { passive: true });
+                        }
+                    } else if (options === undefined) {
+                        newOptions = { passive: true };
+                    }
+                }
+                return originalAddEventListener.call(this, type, listener, newOptions);
+            };
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <style>
         /* ===== INIT_AUTH_STATE will be injected here ===== */
@@ -709,6 +730,98 @@
             }
         }
 
+        /* Month Chips & Drill-Down */
+        .month-active-badge {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #c7d2fe;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            padding: 3px 10px;
+            border-radius: 999px;
+        }
+
+        .month-chips-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 1.25rem;
+            padding-bottom: 4px;
+        }
+
+        .month-chips-wrapper::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .month-chips-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .month-chips {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            min-width: max-content;
+        }
+
+        .month-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .month-chip:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .month-chip.active {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-color: #818cf8;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .nav-month-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .nav-month-btn:hover:not(:disabled) {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            border-color: var(--accent-brand);
+        }
+
+        .nav-month-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .drilldown-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            align-items: center;
+        }
+
         /* Toast Notification */
         .toast {
             visibility: hidden;
@@ -815,10 +928,16 @@
         let currentYear = 2026;
         let availableYears = [...DEFAULT_YEARS];
         let reportData = null;
+        let cachedPrevYearData = null;
+        let selectedMonth = null;
         let isSyncing = false;
         let pollTimer = null;
         let monthlyChart = null;
         let groupChart = null;
+        let monthGroupChart = null;
+
+        const MONTH_FULL_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const MONTH_SHORT_NAMES = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
         // Toast Helper
         let toastTimeout = null;
@@ -996,6 +1115,13 @@
 
             renderYearSelector();
             await loadReport(currentYear);
+
+            // Unified passive resize listener for all ECharts instances
+            window.addEventListener('resize', () => {
+                monthlyChart?.resize();
+                groupChart?.resize();
+                monthGroupChart?.resize();
+            }, { passive: true });
         }
 
         // Render Year Selector Tabs
@@ -1064,6 +1190,7 @@
                     console.warn('Could not fetch previous year for Y/Y comparison', e);
                 }
 
+                cachedPrevYearData = prevYearData;
                 renderDashboard(data, prevYearData);
 
             } catch (err) {
@@ -1110,6 +1237,20 @@
             const prevYear = currentYear - 1;
             const hasPrevYear = prevYearData && (prevYearData.summary?.total_expense || 0) > 0;
 
+            // Determine default selectedMonth
+            const months = Object.keys(monthly).sort();
+            const now = new Date();
+            const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            if (!selectedMonth || !months.includes(selectedMonth)) {
+                if (months.includes(currentMonthPrefix)) {
+                    selectedMonth = currentMonthPrefix;
+                } else if (months.length > 0) {
+                    selectedMonth = months[months.length - 1];
+                } else {
+                    selectedMonth = null;
+                }
+            }
+
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = `
                 <!-- KPI Grid -->
@@ -1145,10 +1286,59 @@
                     <div id="monthlyChart" class="chart-container"></div>
                 </div>
 
-                <!-- Category Groups Breakdown -->
+                <!-- Monthly Drill-Down Section -->
+                <div class="section-card" id="monthlyDrillDownCard">
+                    <div class="section-title">
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span>🔍 Monthly Drill-Down</span>
+                            <span id="drillDownMonthBadge" class="month-active-badge"></span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button class="nav-month-btn" id="prevMonthBtn" onclick="stepMonth(-1)" title="Previous Month">‹</button>
+                            <span id="drillDownSpendTotal" style="font-size:0.95rem; font-weight:700; color:#fda4af;"></span>
+                            <button class="nav-month-btn" id="nextMonthBtn" onclick="stepMonth(1)" title="Next Month">›</button>
+                        </div>
+                    </div>
+
+                    <!-- Month Chips Carousel -->
+                    <div class="month-chips-wrapper">
+                        <div class="month-chips" id="monthChipsContainer"></div>
+                    </div>
+
+                    <!-- Category Groups Breakdown for Month -->
+                    <div class="drilldown-grid">
+                        <div id="monthGroupDonutChart" style="height: 280px; width:100%;"></div>
+                        <div class="group-list" id="monthGroupListContainer"></div>
+                    </div>
+
+                    <!-- Ranked Categories for Selected Month -->
+                    <div style="margin-top: 1.75rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                        <div class="table-filter-bar" style="margin-bottom: 0.75rem;">
+                            <span style="font-size:0.92rem; font-weight:600; color:var(--text-primary);">
+                                🏆 Top Categories in <span id="monthSubCatTitle" style="color: #a5b4fc;"></span>
+                            </span>
+                            <input type="text" id="monthCategorySearch" class="search-input" style="max-width:220px;" placeholder="Search month categories..." oninput="filterMonthCategories()">
+                        </div>
+                        <div style="overflow-x: auto; max-height: 320px;">
+                            <table class="custom-table" style="font-size:0.88rem;">
+                                <thead>
+                                    <tr>
+                                        <th style="width:40px;">#</th>
+                                        <th>Category</th>
+                                        <th style="text-align:right;">Spending</th>
+                                        <th style="text-align:right;">% of Month</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monthCategoryTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Groups Breakdown (Annual) -->
                 <div class="section-card">
                     <div class="section-title">
-                        <span>🏷️ Spending by Category Group</span>
+                        <span>🏷️ Spending by Category Group (${currentYear})</span>
                         ${hasPrevYear ? `<span style="font-size:0.78rem; color:var(--text-muted); font-weight:normal;">Y/Y vs ${prevYear} (% of total spend)</span>` : ''}
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items:center;">
@@ -1157,10 +1347,10 @@
                     </div>
                 </div>
 
-                <!-- Top Categories Table -->
+                <!-- Top Categories Table (Annual) -->
                 <div class="section-card">
                     <div class="section-title">
-                        <span>🏆 Ranked Spending Categories</span>
+                        <span>🏆 Ranked Spending Categories (${currentYear})</span>
                     </div>
                     <div class="table-filter-bar">
                         <input type="text" id="categorySearch" class="search-input" placeholder="Search categories..." oninput="filterCategories()">
@@ -1230,15 +1420,295 @@
                 groupContainer.appendChild(item);
             });
 
-            // Populate Table
+            // Populate Annual Categories Table
             renderCategoryTable(cats, totalExpense);
 
             // Render Charts
             renderMonthlyChart(monthly, currentYear);
             renderGroupDonutChart(sortedGroups, prevYearData, totalExpense);
+
+            // Render Monthly Drill-Down Card
+            renderMonthlyDrillDown();
         }
 
-        // Render Ranked Category Table
+        // Render Monthly Drill-Down
+        function renderMonthlyDrillDown() {
+            if (!reportData) return;
+            const monthlySpending = reportData.monthly_spending || {};
+            const months = Object.keys(monthlySpending).sort();
+            const card = document.getElementById('monthlyDrillDownCard');
+            if (!card) return;
+
+            if (months.length === 0 || !selectedMonth) {
+                card.style.display = 'none';
+                return;
+            }
+            card.style.display = 'block';
+
+            const [sYear, sMonth] = selectedMonth.split('-').map(Number);
+            const monthFullName = MONTH_FULL_NAMES[sMonth] || `Month ${sMonth}`;
+            const monthShortName = MONTH_SHORT_NAMES[sMonth] || `M${sMonth}`;
+            const monthTotalSpend = monthlySpending[selectedMonth] || 0;
+
+            // Header & Total
+            const badge = document.getElementById('drillDownMonthBadge');
+            if (badge) badge.textContent = `${monthFullName} ${sYear}`;
+
+            const totalEl = document.getElementById('drillDownSpendTotal');
+            if (totalEl) totalEl.textContent = `Total: ${formatCurrency(monthTotalSpend)}`;
+
+            const subTitle = document.getElementById('monthSubCatTitle');
+            if (subTitle) subTitle.textContent = `${monthFullName} ${sYear}`;
+
+            // Stepper Buttons
+            const currIdx = months.indexOf(selectedMonth);
+            const prevBtn = document.getElementById('prevMonthBtn');
+            const nextBtn = document.getElementById('nextMonthBtn');
+            if (prevBtn) prevBtn.disabled = (currIdx <= 0);
+            if (nextBtn) nextBtn.disabled = (currIdx < 0 || currIdx >= months.length - 1);
+
+            // Month Chips
+            const chipsContainer = document.getElementById('monthChipsContainer');
+            if (chipsContainer) {
+                chipsContainer.innerHTML = '';
+                months.forEach(m => {
+                    const mNum = parseInt(m.substring(5), 10);
+                    const chip = document.createElement('button');
+                    chip.className = `month-chip ${m === selectedMonth ? 'active' : ''}`;
+                    chip.textContent = MONTH_SHORT_NAMES[mNum] || m;
+                    chip.onclick = () => selectDrillDownMonth(m);
+                    chipsContainer.appendChild(chip);
+                });
+            }
+
+            // Determine Previous Month Data for M/M Comparison
+            let prevMonthKey = null;
+            let prevShortName = '';
+            let prevMonthGroups = {};
+            let hasPrevMonth = false;
+
+            if (sMonth > 1) {
+                prevMonthKey = `${sYear}-${String(sMonth - 1).padStart(2, '0')}`;
+                prevShortName = MONTH_SHORT_NAMES[sMonth - 1];
+                if (reportData.monthly_category_groups && reportData.monthly_category_groups[prevMonthKey]) {
+                    prevMonthGroups = reportData.monthly_category_groups[prevMonthKey];
+                    hasPrevMonth = true;
+                } else if (reportData.monthly_spending && reportData.monthly_spending[prevMonthKey] !== undefined) {
+                    hasPrevMonth = true;
+                }
+            } else if (sMonth === 1) {
+                // January: compare to December of previous year
+                prevMonthKey = `${sYear - 1}-12`;
+                prevShortName = `Dec ${sYear - 1}`;
+                if (cachedPrevYearData && cachedPrevYearData.monthly_category_groups && cachedPrevYearData.monthly_category_groups[prevMonthKey]) {
+                    prevMonthGroups = cachedPrevYearData.monthly_category_groups[prevMonthKey];
+                    hasPrevMonth = true;
+                } else if (cachedPrevYearData && cachedPrevYearData.monthly_spending && cachedPrevYearData.monthly_spending[prevMonthKey] !== undefined) {
+                    hasPrevMonth = true;
+                }
+            }
+
+            // Category Groups for Selected Month
+            const currMonthGroups = (reportData.monthly_category_groups && reportData.monthly_category_groups[selectedMonth]) || {};
+            const sortedMonthGroups = Object.entries(currMonthGroups).sort((a, b) => b[1] - a[1]);
+
+            const groupListContainer = document.getElementById('monthGroupListContainer');
+            if (groupListContainer) {
+                groupListContainer.innerHTML = '';
+                if (sortedMonthGroups.length === 0) {
+                    groupListContainer.innerHTML = '<div style="color:var(--text-muted); font-size:0.9rem; padding:1rem 0;">No category group spending recorded for this month.</div>';
+                } else {
+                    sortedMonthGroups.forEach(([name, amt], idx) => {
+                        const pct = monthTotalSpend > 0 ? (amt / monthTotalSpend) * 100 : 0;
+                        const color = GROUP_COLORS[idx % GROUP_COLORS.length];
+
+                        let mmBadge = '';
+                        if (hasPrevMonth) {
+                            const prevAmt = prevMonthGroups[name] || 0;
+                            const delta = amt - prevAmt;
+
+                            if (Math.abs(delta) < 0.005) {
+                                mmBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} ($0.00 change)">$0.00 vs ${prevShortName}</span>`;
+                            } else if (delta > 0) {
+                                mmBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (+${formatCurrency(delta)} vs ${prevShortName})">▲ +${formatCurrency(delta)} vs ${prevShortName}</span>`;
+                            } else {
+                                mmBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (-${formatCurrency(Math.abs(delta))} vs ${prevShortName})">🔻-${formatCurrency(Math.abs(delta))} vs ${prevShortName}</span>`;
+                            }
+                        }
+
+                        const item = document.createElement('div');
+                        item.className = 'group-item';
+                        item.innerHTML = `
+                            <div class="group-header">
+                                <span class="group-name">
+                                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
+                                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
+                                </span>
+                                <div class="group-amount-wrap">
+                                    <span class="group-amount-val">${formatCurrency(amt)}</span>
+                                    <span class="group-amount-pct">(${pct.toFixed(1)}%${mmBadge})</span>
+                                </div>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: ${Math.min(pct, 100)}%; background: ${color};"></div>
+                            </div>
+                        `;
+                        groupListContainer.appendChild(item);
+                    });
+                }
+            }
+
+            // Monthly Donut Chart
+            renderMonthGroupDonutChart(sortedMonthGroups, prevMonthGroups, prevShortName, hasPrevMonth, monthTotalSpend);
+
+            // Monthly Sub-categories Table
+            const currMonthCats = (reportData.monthly_categories && reportData.monthly_categories[selectedMonth]) || {};
+            const filterQuery = document.getElementById('monthCategorySearch')?.value || '';
+            renderMonthCategoryTable(currMonthCats, monthTotalSpend, filterQuery);
+        }
+
+        // Render Month Donut Chart
+        function renderMonthGroupDonutChart(sortedGroups, prevMonthGroups, prevShortName, hasPrevMonth, totalExpense) {
+            const chartDom = document.getElementById('monthGroupDonutChart');
+            if (!chartDom) return;
+            if (monthGroupChart) monthGroupChart.dispose();
+            monthGroupChart = echarts.init(chartDom);
+
+            const data = sortedGroups.map(([name, value], idx) => ({
+                name,
+                value,
+                itemStyle: { color: GROUP_COLORS[idx % GROUP_COLORS.length] }
+            }));
+
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: (p) => {
+                        let res = `<b>${p.name}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
+                        if (hasPrevMonth) {
+                            const prevAmt = prevMonthGroups[p.name] || 0;
+                            const delta = p.value - prevAmt;
+                            if (delta > 0.005) {
+                                res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${formatCurrency(delta)} vs ${prevShortName} (${formatCurrency(prevAmt)})</span>`;
+                            } else if (delta < -0.005) {
+                                res += `<br/><span style="color:#f43f5e; font-size:0.85em;">🔻-${formatCurrency(Math.abs(delta))} vs ${prevShortName} (${formatCurrency(prevAmt)})</span>`;
+                            } else {
+                                res += `<br/><span style="color:var(--text-muted); font-size:0.85em;">$0.00 vs ${prevShortName}</span>`;
+                            }
+                        }
+                        return res;
+                    }
+                },
+                series: [{
+                    name: 'Month Category Group',
+                    type: 'pie',
+                    radius: ['45%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: {
+                        borderRadius: 6,
+                        borderColor: '#0f0f1a',
+                        borderWidth: 2
+                    },
+                    label: { show: false },
+                    data: data
+                }]
+            };
+            monthGroupChart.setOption(option);
+        }
+
+        // Render Month Ranked Categories Table
+        function renderMonthCategoryTable(cats, monthTotalSpend, filterQuery = '') {
+            const tbody = document.getElementById('monthCategoryTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            let sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+            if (filterQuery.trim()) {
+                const q = filterQuery.toLowerCase();
+                sorted = sorted.filter(([name]) => name.toLowerCase().includes(q));
+            }
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:1.5rem;">No matching categories found for this month</td></tr>`;
+                return;
+            }
+
+            sorted.forEach(([name, amt], idx) => {
+                const pct = monthTotalSpend > 0 ? (amt / monthTotalSpend) * 100 : 0;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="rank">${idx + 1}</td>
+                    <td class="name">${name}</td>
+                    <td class="amount">${formatCurrency(amt)}</td>
+                    <td class="pct">${pct.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterMonthCategories() {
+            if (!reportData || !selectedMonth) return;
+            const query = document.getElementById('monthCategorySearch').value;
+            const monthlySpending = reportData.monthly_spending || {};
+            const monthTotalSpend = monthlySpending[selectedMonth] || 0;
+            const currMonthCats = (reportData.monthly_categories && reportData.monthly_categories[selectedMonth]) || {};
+            renderMonthCategoryTable(currMonthCats, monthTotalSpend, query);
+        }
+
+        function selectDrillDownMonth(monthKey) {
+            if (!monthKey || monthKey === selectedMonth) return;
+            selectedMonth = monthKey;
+            renderMonthlyDrillDown();
+            updateMonthlyChartSelection();
+        }
+
+        function stepMonth(direction) {
+            if (!reportData) return;
+            const months = Object.keys(reportData.monthly_spending || {}).sort();
+            const idx = months.indexOf(selectedMonth);
+            if (idx === -1) return;
+            const targetIdx = idx + direction;
+            if (targetIdx >= 0 && targetIdx < months.length) {
+                selectDrillDownMonth(months[targetIdx]);
+            }
+        }
+
+        function updateMonthlyChartSelection() {
+            if (!monthlyChart || !reportData) return;
+            const monthly = reportData.monthly_spending || {};
+            const months = Object.keys(monthly).sort();
+            const barData = months.map(m => {
+                const isSelected = (m === selectedMonth);
+                return {
+                    value: monthly[m],
+                    itemStyle: isSelected ? {
+                        borderRadius: [6, 6, 0, 0],
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#ec4899' },
+                            { offset: 1, color: '#f43f5e' }
+                        ]),
+                        borderColor: '#fda4af',
+                        borderWidth: 2,
+                        shadowColor: 'rgba(244, 63, 94, 0.4)',
+                        shadowBlur: 8
+                    } : {
+                        borderRadius: [6, 6, 0, 0],
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#818cf8' },
+                            { offset: 1, color: '#4f46e5' }
+                        ])
+                    }
+                };
+            });
+            monthlyChart.setOption({
+                series: [{
+                    name: 'Spending',
+                    data: barData
+                }]
+            });
+        }
+
+        // Render Ranked Category Table (Annual)
         function renderCategoryTable(cats, totalExpense, filterQuery = '') {
             const tbody = document.getElementById('categoryTableBody');
             if (!tbody) return;
@@ -1285,7 +1755,6 @@
             monthlyChart = echarts.init(chartDom);
 
             const months = Object.keys(monthly).sort();
-            const values = months.map(m => monthly[m]);
 
             // Calculate completed months
             const now = new Date();
@@ -1330,18 +1799,35 @@
                 }
             }
 
+            const barData = months.map(m => {
+                const isSelected = (m === selectedMonth);
+                return {
+                    value: monthly[m],
+                    itemStyle: isSelected ? {
+                        borderRadius: [6, 6, 0, 0],
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#ec4899' },
+                            { offset: 1, color: '#f43f5e' }
+                        ]),
+                        borderColor: '#fda4af',
+                        borderWidth: 2,
+                        shadowColor: 'rgba(244, 63, 94, 0.4)',
+                        shadowBlur: 8
+                    } : {
+                        borderRadius: [6, 6, 0, 0],
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#818cf8' },
+                            { offset: 1, color: '#4f46e5' }
+                        ])
+                    }
+                };
+            });
+
             const seriesObj = {
                 name: 'Spending',
                 type: 'bar',
                 barWidth: '45%',
-                data: values,
-                itemStyle: {
-                    borderRadius: [6, 6, 0, 0],
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                        { offset: 0, color: '#818cf8' },
-                        { offset: 1, color: '#4f46e5' }
-                    ])
-                }
+                data: barData
             };
 
             if (avgSpend !== null) {
@@ -1386,6 +1872,7 @@
                                 res += `Spend: ${formatCurrency(p.value)}`;
                             }
                         });
+                        res += `<br/><span style="color:#a5b4fc; font-size:0.75rem;">👆 Click to view monthly drill-down</span>`;
                         return res;
                     }
                 },
@@ -1408,7 +1895,17 @@
                 series: [seriesObj]
             };
             monthlyChart.setOption(option);
-            window.addEventListener('resize', () => monthlyChart.resize());
+            monthlyChart.off('click');
+            monthlyChart.on('click', (params) => {
+                const clickedMonth = months[params.dataIndex] || params.name;
+                if (clickedMonth) {
+                    selectDrillDownMonth(clickedMonth);
+                    const drillDownEl = document.getElementById('monthlyDrillDownCard');
+                    if (drillDownEl && window.innerWidth <= 768) {
+                        drillDownEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            });
         }
 
         // Render Group Donut Chart with Y/Y Comparison Tooltip
@@ -1460,7 +1957,6 @@
                 }]
             };
             groupChart.setOption(option);
-            window.addEventListener('resize', () => groupChart.resize());
         }
 
         // Trigger Refresh from Hamburger Menu
