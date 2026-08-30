@@ -666,71 +666,62 @@
             margin-bottom: 1.5rem;
         }
 
-        /* Responsive */
-        @media (max-width: 640px) {
-            .container {
-                padding: 1.25rem 1rem 3rem;
-            }
-
-            .controls-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .action-group {
-                justify-content: space-between;
-                width: 100%;
-            }
-
-            .kpi-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 10px;
-                margin-bottom: 1.5rem;
-            }
-
-            .kpi-card {
-                padding: 0.85rem 0.75rem 0.85rem 0.95rem;
-            }
-
-            .kpi-label {
-                font-size: 0.75rem;
-                line-height: 1.25;
-                margin-bottom: 4px;
-            }
-
-            .kpi-value {
-                font-size: clamp(1.05rem, 4.2vw, 1.35rem);
-                line-height: 1.2;
-                letter-spacing: -0.3px;
-            }
-
-            .kpi-sub {
-                font-size: 0.7rem;
-                line-height: 1.2;
-                margin-top: 3px;
-            }
-
-            .chart-container {
-                height: 250px;
-            }
-
-            .group-header {
-                align-items: flex-start;
-            }
-
-            .group-amount-wrap {
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 2px;
-            }
-
-            .group-amount-pct {
-                font-size: 0.74rem;
-                line-height: 1.2;
-            }
+        /* Drill-Down Header Styles */
+        .drilldown-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 1.15rem;
         }
 
-        /* Month Chips & Drill-Down */
+        .drilldown-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex-wrap: wrap;
+        }
+
+        .drilldown-title-full {
+            display: inline;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .drilldown-title-short {
+            display: none;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .drilldown-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+
+        .drilldown-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .drilldown-total-spend {
+            font-size: 0.95rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .drilldown-total-spend .total-prefix {
+            display: inline;
+        }
+
         .month-active-badge {
             font-size: 0.82rem;
             font-weight: 700;
@@ -739,6 +730,15 @@
             border: 1px solid rgba(99, 102, 241, 0.35);
             padding: 3px 10px;
             border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .month-active-badge .badge-short {
+            display: none;
+        }
+
+        .month-active-badge .badge-full {
+            display: inline;
         }
 
         .month-chips-wrapper {
@@ -854,6 +854,173 @@
 
         .toast.error {
             background-color: #9f1239;
+        }
+
+        /* Responsive Overrides */
+        @media (max-width: 640px) {
+            .container {
+                padding: 1.25rem 1rem 3rem;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .action-group {
+                justify-content: space-between;
+                width: 100%;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                margin-bottom: 1.5rem;
+            }
+
+            .kpi-card {
+                padding: 0.85rem 0.75rem 0.85rem 0.95rem;
+            }
+
+            .kpi-label {
+                font-size: 0.75rem;
+                line-height: 1.25;
+                margin-bottom: 4px;
+            }
+
+            .kpi-value {
+                font-size: clamp(1.05rem, 4.2vw, 1.35rem);
+                line-height: 1.2;
+                letter-spacing: -0.3px;
+            }
+
+            .kpi-sub {
+                font-size: 0.7rem;
+                line-height: 1.2;
+                margin-top: 3px;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+
+            .group-header {
+                align-items: flex-start;
+            }
+
+            .group-amount-wrap {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 2px;
+            }
+
+            .group-amount-pct {
+                font-size: 0.74rem;
+                line-height: 1.2;
+            }
+
+            .drilldown-header {
+                flex-wrap: nowrap;
+                gap: 8px;
+                margin-bottom: 0.85rem;
+            }
+
+            .drilldown-header-left {
+                flex-wrap: nowrap;
+                gap: 6px;
+                overflow: hidden;
+            }
+
+            .drilldown-title-full {
+                font-size: 0.92rem;
+            }
+
+            .drilldown-subtitle {
+                display: none !important;
+            }
+
+            .month-active-badge {
+                font-size: 0.75rem;
+                padding: 2px 7px;
+            }
+
+            .drilldown-header-right {
+                gap: 4px;
+            }
+
+            .drilldown-total-spend {
+                font-size: 0.85rem;
+            }
+
+            .drilldown-total-spend .total-prefix {
+                display: none !important;
+            }
+
+            .nav-month-btn {
+                width: 25px;
+                height: 25px;
+                font-size: 0.95rem;
+            }
+
+            .month-chips-wrapper {
+                margin-bottom: 0.85rem;
+                padding-bottom: 2px;
+            }
+
+            .month-chip {
+                padding: 4px 10px;
+                font-size: 0.78rem;
+            }
+
+            .table-filter-bar {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .table-filter-bar .search-input {
+                max-width: 140px !important;
+                font-size: 0.78rem;
+                padding: 4px 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .drilldown-title-full {
+                display: none !important;
+            }
+
+            .drilldown-title-short {
+                display: inline !important;
+                font-size: 0.88rem;
+            }
+
+            .month-active-badge {
+                font-size: 0.72rem;
+                padding: 2px 6px;
+            }
+
+            .month-active-badge .badge-full {
+                display: none !important;
+            }
+
+            .month-active-badge .badge-short {
+                display: inline !important;
+            }
+
+            .drilldown-total-spend {
+                font-size: 0.8rem;
+            }
+
+            .table-filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .table-filter-bar .search-input {
+                max-width: 100% !important;
+            }
         }
     </style>
 </head>
@@ -1293,14 +1460,15 @@
 
                 <!-- Monthly Drill-Down Section -->
                 <div class="section-card" id="monthlyDrillDownCard">
-                    <div class="section-title">
-                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                            <span>🔍 Monthly Drill-Down</span>
+                    <div class="drilldown-header">
+                        <div class="drilldown-header-left">
+                            <span class="drilldown-title-full">🔍 Monthly Drill-Down</span>
+                            <span class="drilldown-title-short">🔍 Monthly</span>
                             <span id="drillDownMonthBadge" class="month-active-badge"></span>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
+                        <div class="drilldown-header-right">
                             <button class="nav-month-btn" id="prevMonthBtn" onclick="stepMonth(-1)" title="Previous Month">‹</button>
-                            <span id="drillDownSpendTotal" style="font-size:0.95rem; font-weight:700; color:#fda4af;"></span>
+                            <span id="drillDownSpendTotal" class="drilldown-total-spend" style="color:#fda4af;"></span>
                             <button class="nav-month-btn" id="nextMonthBtn" onclick="stepMonth(1)" title="Next Month">›</button>
                         </div>
                     </div>
@@ -1342,15 +1510,16 @@
 
                 <!-- Annual Spending Breakdown & Ranked Categories Section -->
                 <div class="section-card" id="annualCategoryGroupCard">
-                    <div class="section-title">
-                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                            <span>🔍 Annual Drill-Down</span>
+                    <div class="drilldown-header">
+                        <div class="drilldown-header-left">
+                            <span class="drilldown-title-full">🏷️ Annual Drill-Down</span>
+                            <span class="drilldown-title-short">🏷️ Annual</span>
                             <span id="annualYearBadge" class="month-active-badge">${annualSectionYear}</span>
-                            <span id="annualCatGroupSubtitle" style="font-size:0.78rem; color:var(--text-muted); font-weight:normal;"></span>
+                            <span id="annualCatGroupSubtitle" class="drilldown-subtitle"></span>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
+                        <div class="drilldown-header-right">
                             <button class="nav-month-btn" id="prevYearBtn" onclick="stepAnnualYear(-1)" title="Previous Year">‹</button>
-                            <span id="annualSpendTotal" style="font-size:0.95rem; font-weight:700; color:#a5b4fc;"></span>
+                            <span id="annualSpendTotal" class="drilldown-total-spend" style="color:#a5b4fc;"></span>
                             <button class="nav-month-btn" id="nextYearBtn" onclick="stepAnnualYear(1)" title="Next Year">›</button>
                         </div>
                     </div>
@@ -1421,10 +1590,12 @@
 
             // Header & Total
             const badge = document.getElementById('drillDownMonthBadge');
-            if (badge) badge.textContent = `${monthFullName} ${sYear}`;
+            if (badge) {
+                badge.innerHTML = `<span class="badge-full">${monthFullName} ${sYear}</span><span class="badge-short">${monthShortName} '${String(sYear).slice(-2)}</span>`;
+            }
 
             const totalEl = document.getElementById('drillDownSpendTotal');
-            if (totalEl) totalEl.textContent = `Total: ${formatCurrency(monthTotalSpend)}`;
+            if (totalEl) totalEl.innerHTML = `<span class="total-prefix">Total: </span>${formatCurrency(monthTotalSpend)}`;
 
             const subTitle = document.getElementById('monthSubCatTitle');
             if (subTitle) subTitle.textContent = `${monthFullName} ${sYear}`;
@@ -1740,7 +1911,7 @@
 
             if (!data || data.status === 'not_found' || !data.summary) {
                 if (subTitleEl) subTitleEl.textContent = '';
-                if (totalEl) totalEl.textContent = 'Total: $0.00';
+                if (totalEl) totalEl.innerHTML = `<span class="total-prefix">Total: </span>$0.00`;
                 if (groupContainer) groupContainer.innerHTML = '<div style="color:var(--text-muted); padding:1rem;">No category data for this year</div>';
                 renderCategoryTable({}, 0);
                 if (groupChart) groupChart.clear();
@@ -1753,7 +1924,7 @@
             const cats = data.categories || {};
             const hasPrevYear = prevData && (prevData.summary?.total_expense || 0) > 0;
 
-            if (totalEl) totalEl.textContent = `Total: ${formatCurrency(totalExpense)}`;
+            if (totalEl) totalEl.innerHTML = `<span class="total-prefix">Total: </span>${formatCurrency(totalExpense)}`;
             if (subTitleEl) {
                 subTitleEl.textContent = hasPrevYear ? `Y/Y vs ${prevTargetYear} (% of total spend)` : '';
             }
