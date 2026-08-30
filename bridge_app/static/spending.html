@@ -930,6 +930,8 @@
         let reportData = null;
         let cachedPrevYearData = null;
         let selectedMonth = null;
+        let annualSectionYear = 2026;
+        let cachedAnnualReports = {};
         let isSyncing = false;
         let pollTimer = null;
         let monthlyChart = null;
@@ -1166,6 +1168,8 @@
                 }
 
                 reportData = data;
+                cachedAnnualReports[year] = data;
+                annualSectionYear = year;
                 const freshness = getFreshnessDetails(data.updated_at, year);
                 document.getElementById('freshnessContainer').innerHTML = freshness.pillHtml;
 
@@ -1184,6 +1188,7 @@
                         const pData = await prevRes.json();
                         if (pData.status === 'ok') {
                             prevYearData = pData;
+                            cachedAnnualReports[year - 1] = pData;
                         }
                     }
                 } catch (e) {
@@ -1191,7 +1196,7 @@
                 }
 
                 cachedPrevYearData = prevYearData;
-                renderDashboard(data, prevYearData);
+                await renderDashboard(data, prevYearData);
 
             } catch (err) {
                 contentArea.innerHTML = `
@@ -1222,7 +1227,7 @@
         }
 
         // Render Full Dashboard
-        function renderDashboard(data, prevYearData = null) {
+        async function renderDashboard(data, prevYearData = null) {
             const sum = data.summary || {};
             const catGroups = data.category_groups || {};
             const cats = data.categories || {};
@@ -1317,7 +1322,7 @@
                             <span style="font-size:0.92rem; font-weight:600; color:var(--text-primary);">
                                 🏆 Top Categories in <span id="monthSubCatTitle" style="color: #a5b4fc;"></span>
                             </span>
-                            <input type="text" id="monthCategorySearch" class="search-input" style="max-width:220px;" placeholder="Search month categories..." oninput="filterMonthCategories()">
+                            <input type="text" id="monthCategorySearch" class="search-input" style="max-width:220px;" placeholder="Search categories..." oninput="filterMonthCategories()">
                         </div>
                         <div style="overflow-x: auto; max-height: 320px;">
                             <table class="custom-table" style="font-size:0.88rem;">
@@ -1335,100 +1340,64 @@
                     </div>
                 </div>
 
-                <!-- Category Groups Breakdown (Annual) -->
-                <div class="section-card">
+                <!-- Annual Spending Breakdown & Ranked Categories Section -->
+                <div class="section-card" id="annualCategoryGroupCard">
                     <div class="section-title">
-                        <span>🏷️ Spending by Category Group (${currentYear})</span>
-                        ${hasPrevYear ? `<span style="font-size:0.78rem; color:var(--text-muted); font-weight:normal;">Y/Y vs ${prevYear} (% of total spend)</span>` : ''}
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span>🔍 Annual Drill-Down</span>
+                            <span id="annualYearBadge" class="month-active-badge">${annualSectionYear}</span>
+                            <span id="annualCatGroupSubtitle" style="font-size:0.78rem; color:var(--text-muted); font-weight:normal;"></span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button class="nav-month-btn" id="prevYearBtn" onclick="stepAnnualYear(-1)" title="Previous Year">‹</button>
+                            <span id="annualSpendTotal" style="font-size:0.95rem; font-weight:700; color:#a5b4fc;"></span>
+                            <button class="nav-month-btn" id="nextYearBtn" onclick="stepAnnualYear(1)" title="Next Year">›</button>
+                        </div>
                     </div>
+
+                    <!-- Year Chips Carousel -->
+                    <div class="month-chips-wrapper">
+                        <div class="month-chips" id="yearChipsContainer"></div>
+                    </div>
+
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items:center;">
                         <div id="groupDonutChart" style="height: 280px; width:100%;"></div>
                         <div class="group-list" id="groupListContainer"></div>
                     </div>
-                </div>
 
-                <!-- Top Categories Table (Annual) -->
-                <div class="section-card">
-                    <div class="section-title">
-                        <span>🏆 Ranked Spending Categories (${currentYear})</span>
-                    </div>
-                    <div class="table-filter-bar">
-                        <input type="text" id="categorySearch" class="search-input" placeholder="Search categories..." oninput="filterCategories()">
-                        <span style="font-size:0.8rem; color:var(--text-muted);" id="categoryCountLabel"></span>
-                    </div>
-                    <div style="overflow-x: auto;">
-                        <table class="custom-table">
-                            <thead>
-                                <tr>
-                                    <th style="width:40px;">#</th>
-                                    <th>Category</th>
-                                    <th style="text-align:right;">Spending</th>
-                                    <th style="text-align:right;">% of Total</th>
-                                </tr>
-                            </thead>
-                            <tbody id="categoryTableBody">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                    <!-- Ranked Categories for Selected Year -->
+                    <div style="margin-top: 1.75rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                        <div class="table-filter-bar" style="margin-bottom: 0.75rem;">
+                            <span style="font-size:0.92rem; font-weight:600; color:var(--text-primary);">
+                                🏆 Top Categories in <span id="annualRankedCatsTitle" style="color: #a5b4fc;">${annualSectionYear}</span>
+                            </span>
+                            <input type="text" id="categorySearch" class="search-input" style="max-width:220px;" placeholder="Search categories..." oninput="filterCategories()">
+                        </div>
+                        <div style="overflow-x: auto; max-height: 420px;">
+                            <table class="custom-table" style="font-size:0.88rem;">
+                                <thead>
+                                    <tr>
+                                        <th style="width:40px;">#</th>
+                                        <th>Category</th>
+                                        <th style="text-align:right;">Spending</th>
+                                        <th style="text-align:right;">% of Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="categoryTableBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             `;
 
-            // Populate Category Groups List with Y/Y comparison
-            const groupContainer = document.getElementById('groupListContainer');
-            const sortedGroups = Object.entries(catGroups).sort((a, b) => b[1] - a[1]);
-
-            const prevTotalExpense = prevYearData?.summary?.total_expense || 0;
-            const prevCatGroups = prevYearData?.category_groups || {};
-
-            sortedGroups.forEach(([name, amt], idx) => {
-                const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
-                const color = GROUP_COLORS[idx % GROUP_COLORS.length];
-
-                let yyBadge = '';
-                if (hasPrevYear) {
-                    const prevAmt = prevCatGroups[name] || 0;
-                    const prevPct = (prevAmt / prevTotalExpense) * 100;
-                    const delta = pct - prevPct;
-
-                    if (Math.abs(delta) < 0.05) {
-                        yyBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;" title="${prevYear}: ${prevPct.toFixed(1)}% (0.0% change)">0.0%</span>`;
-                    } else if (delta > 0) {
-                        yyBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;" title="${prevYear}: ${prevPct.toFixed(1)}% (increased +${delta.toFixed(1)}% of spending)">▲ +${delta.toFixed(1)}%</span>`;
-                    } else {
-                        yyBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;" title="${prevYear}: ${prevPct.toFixed(1)}% (decreased -${Math.abs(delta).toFixed(1)}% of spending)">🔻${Math.abs(delta).toFixed(1)}%</span>`;
-                    }
-                }
-
-                const item = document.createElement('div');
-                item.className = 'group-item';
-                item.innerHTML = `
-                    <div class="group-header">
-                        <span class="group-name">
-                            <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
-                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
-                        </span>
-                        <div class="group-amount-wrap">
-                            <span class="group-amount-val">${formatCurrency(amt)}</span>
-                            <span class="group-amount-pct">(${pct.toFixed(1)}%${yyBadge})</span>
-                        </div>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width: ${Math.min(pct, 100)}%; background: ${color};"></div>
-                    </div>
-                `;
-                groupContainer.appendChild(item);
-            });
-
-            // Populate Annual Categories Table
-            renderCategoryTable(cats, totalExpense);
-
-            // Render Charts
+            // Render Charts & Monthly Drill-Down
             renderMonthlyChart(monthly, currentYear);
-            renderGroupDonutChart(sortedGroups, prevYearData, totalExpense);
-
-            // Render Monthly Drill-Down Card
             renderMonthlyDrillDown();
+
+            // Render Annual Category Group & Ranked Categories in-place
+            await renderAnnualSection(annualSectionYear);
         }
 
         // Render Monthly Drill-Down
@@ -1468,16 +1437,31 @@
             if (nextBtn) nextBtn.disabled = (currIdx < 0 || currIdx >= months.length - 1);
 
             // Month Chips
+            // Render Month Chips
             const chipsContainer = document.getElementById('monthChipsContainer');
             if (chipsContainer) {
                 chipsContainer.innerHTML = '';
                 months.forEach(m => {
                     const mNum = parseInt(m.substring(5), 10);
+                    const isSelected = (m === selectedMonth);
                     const chip = document.createElement('button');
-                    chip.className = `month-chip ${m === selectedMonth ? 'active' : ''}`;
+                    chip.className = `month-chip ${isSelected ? 'active' : ''}`;
                     chip.textContent = MONTH_SHORT_NAMES[mNum] || m;
                     chip.onclick = () => selectDrillDownMonth(m);
                     chipsContainer.appendChild(chip);
+
+                    if (isSelected && chipsContainer.parentElement) {
+                        const wrapper = chipsContainer.parentElement;
+                        requestAnimationFrame(() => {
+                            const chipLeft = chip.offsetLeft;
+                            const chipWidth = chip.offsetWidth;
+                            const wrapperWidth = wrapper.clientWidth;
+                            wrapper.scrollTo({
+                                left: chipLeft - (wrapperWidth / 2) + (chipWidth / 2),
+                                behavior: 'smooth'
+                            });
+                        });
+                    }
                 });
             }
 
@@ -1528,11 +1512,11 @@
                             const delta = amt - prevAmt;
 
                             if (Math.abs(delta) < 0.005) {
-                                mmBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} ($0.00 change)">$0.00 vs ${prevShortName}</span>`;
+                                mmBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} ($0.00 change)">$0.00</span>`;
                             } else if (delta > 0) {
-                                mmBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (+${formatCurrency(delta)} vs ${prevShortName})">▲ +${formatCurrency(delta)} vs ${prevShortName}</span>`;
+                                mmBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (+${formatCurrency(delta)} vs ${prevShortName})">▲ +${formatCurrency(delta)}</span>`;
                             } else {
-                                mmBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (-${formatCurrency(Math.abs(delta))} vs ${prevShortName})">🔻-${formatCurrency(Math.abs(delta))} vs ${prevShortName}</span>`;
+                                mmBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (-${formatCurrency(Math.abs(delta))} vs ${prevShortName})">🔻-${formatCurrency(Math.abs(delta))}</span>`;
                             }
                         }
 
@@ -1673,6 +1657,182 @@
             }
         }
 
+        // Render Annual Category Group and Ranked Categories in-place
+        async function renderAnnualSection(targetYear) {
+            annualSectionYear = targetYear;
+            updateAnnualYearNavButtons();
+
+            const yearBadgeEl = document.getElementById('annualYearBadge');
+            const subTitleEl = document.getElementById('annualCatGroupSubtitle');
+            const totalEl = document.getElementById('annualSpendTotal');
+            const rankedTitleEl = document.getElementById('annualRankedCatsTitle');
+            const groupContainer = document.getElementById('groupListContainer');
+            const yearChipsContainer = document.getElementById('yearChipsContainer');
+
+            if (yearBadgeEl) yearBadgeEl.textContent = `${targetYear}`;
+            if (rankedTitleEl) rankedTitleEl.textContent = `${targetYear}`;
+
+            // Render Year Chips
+            if (yearChipsContainer) {
+                yearChipsContainer.innerHTML = '';
+                const sortedYears = [...availableYears].sort((a, b) => b - a);
+                sortedYears.forEach(y => {
+                    const isSelected = (y === targetYear);
+                    const chip = document.createElement('button');
+                    chip.className = `month-chip ${isSelected ? 'active' : ''}`;
+                    chip.textContent = y;
+                    chip.title = `View ${y} spending by category`;
+                    chip.onclick = () => renderAnnualSection(y);
+                    yearChipsContainer.appendChild(chip);
+
+                    if (isSelected && yearChipsContainer.parentElement) {
+                        const wrapper = yearChipsContainer.parentElement;
+                        requestAnimationFrame(() => {
+                            const chipLeft = chip.offsetLeft;
+                            const chipWidth = chip.offsetWidth;
+                            const wrapperWidth = wrapper.clientWidth;
+                            wrapper.scrollTo({
+                                left: chipLeft - (wrapperWidth / 2) + (chipWidth / 2),
+                                behavior: 'smooth'
+                            });
+                        });
+                    }
+                });
+            }
+
+            // Check if year data is cached in memory
+            let data = cachedAnnualReports[targetYear];
+            if (!data) {
+                try {
+                    const res = await fetch(`/api/spending?year=${targetYear}`);
+                    if (res.ok) {
+                        data = await res.json();
+                        if (data.status === 'ok') {
+                            cachedAnnualReports[targetYear] = data;
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`Could not fetch data for year ${targetYear}`, e);
+                }
+            }
+
+            // Ensure prior year data is fetched for Y/Y comparison
+            const prevTargetYear = targetYear - 1;
+            let prevData = cachedAnnualReports[prevTargetYear];
+            if (prevData === undefined && targetYear > 2000) {
+                try {
+                    const prevRes = await fetch(`/api/spending?year=${prevTargetYear}`);
+                    if (prevRes.ok) {
+                        const pData = await prevRes.json();
+                        if (pData.status === 'ok') {
+                            prevData = pData;
+                            cachedAnnualReports[prevTargetYear] = pData;
+                        } else {
+                            cachedAnnualReports[prevTargetYear] = null;
+                        }
+                    } else {
+                        cachedAnnualReports[prevTargetYear] = null;
+                    }
+                } catch (e) {
+                    cachedAnnualReports[prevTargetYear] = null;
+                }
+            }
+
+            if (!data || data.status === 'not_found' || !data.summary) {
+                if (subTitleEl) subTitleEl.textContent = '';
+                if (totalEl) totalEl.textContent = 'Total: $0.00';
+                if (groupContainer) groupContainer.innerHTML = '<div style="color:var(--text-muted); padding:1rem;">No category data for this year</div>';
+                renderCategoryTable({}, 0);
+                if (groupChart) groupChart.clear();
+                return;
+            }
+
+            const sum = data.summary || {};
+            const totalExpense = sum.total_expense || 0;
+            const catGroups = data.category_groups || {};
+            const cats = data.categories || {};
+            const hasPrevYear = prevData && (prevData.summary?.total_expense || 0) > 0;
+
+            if (totalEl) totalEl.textContent = `Total: ${formatCurrency(totalExpense)}`;
+            if (subTitleEl) {
+                subTitleEl.textContent = hasPrevYear ? `Y/Y vs ${prevTargetYear} (% of total spend)` : '';
+            }
+
+            // Populate Category Groups List with Y/Y comparison
+            if (groupContainer) {
+                groupContainer.innerHTML = '';
+                const sortedGroups = Object.entries(catGroups).sort((a, b) => b[1] - a[1]);
+                const prevTotalExpense = prevData?.summary?.total_expense || 0;
+                const prevCatGroups = prevData?.category_groups || {};
+
+                sortedGroups.forEach(([name, amt], idx) => {
+                    const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
+                    const color = GROUP_COLORS[idx % GROUP_COLORS.length];
+
+                    let yyBadge = '';
+                    if (hasPrevYear) {
+                        const prevAmt = prevCatGroups[name] || 0;
+                        const prevPct = (prevAmt / prevTotalExpense) * 100;
+                        const delta = pct - prevPct;
+
+                        if (Math.abs(delta) < 0.05) {
+                            yyBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (0.0% change)">0.0%</span>`;
+                        } else if (delta > 0) {
+                            yyBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (increased +${delta.toFixed(1)}% of spending)">▲ +${delta.toFixed(1)}%</span>`;
+                        } else {
+                            yyBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (decreased -${Math.abs(delta).toFixed(1)}% of spending)">🔻${Math.abs(delta).toFixed(1)}%</span>`;
+                        }
+                    }
+
+                    const item = document.createElement('div');
+                    item.className = 'group-item';
+                    item.innerHTML = `
+                        <div class="group-header">
+                            <span class="group-name">
+                                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
+                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
+                            </span>
+                            <div class="group-amount-wrap">
+                                <span class="group-amount-val">${formatCurrency(amt)}</span>
+                                <span class="group-amount-pct">(${pct.toFixed(1)}%${yyBadge})</span>
+                            </div>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: ${Math.min(pct, 100)}%; background: ${color};"></div>
+                        </div>
+                    `;
+                    groupContainer.appendChild(item);
+                });
+
+                // Render Donut Chart with correct Y/Y target year
+                renderGroupDonutChart(sortedGroups, prevData, totalExpense, targetYear);
+            }
+
+            // Populate Annual Categories Table
+            const searchInput = document.getElementById('categorySearch');
+            const query = searchInput ? searchInput.value : '';
+            renderCategoryTable(cats, totalExpense, query);
+        }
+
+        function stepAnnualYear(direction) {
+            const sorted = [...availableYears].sort((a, b) => a - b);
+            const idx = sorted.indexOf(annualSectionYear);
+            if (idx === -1) return;
+            const targetIdx = idx + direction;
+            if (targetIdx >= 0 && targetIdx < sorted.length) {
+                renderAnnualSection(sorted[targetIdx]);
+            }
+        }
+
+        function updateAnnualYearNavButtons() {
+            const sorted = [...availableYears].sort((a, b) => a - b);
+            const idx = sorted.indexOf(annualSectionYear);
+            const prevBtn = document.getElementById('prevYearBtn');
+            const nextBtn = document.getElementById('nextYearBtn');
+            if (prevBtn) prevBtn.disabled = (idx <= 0);
+            if (nextBtn) nextBtn.disabled = (idx >= sorted.length - 1);
+        }
+
         function updateMonthlyChartSelection() {
             if (!monthlyChart || !reportData) return;
             const monthly = reportData.monthly_spending || {};
@@ -1720,8 +1880,6 @@
                 sorted = sorted.filter(([name]) => name.toLowerCase().includes(q));
             }
 
-            document.getElementById('categoryCountLabel').textContent = `Showing ${sorted.length} categories`;
-
             if (sorted.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:2rem;">No matching categories found</td></tr>`;
                 return;
@@ -1741,10 +1899,11 @@
         }
 
         function filterCategories() {
-            if (!reportData) return;
+            const data = cachedAnnualReports[annualSectionYear] || reportData;
+            if (!data) return;
             const query = document.getElementById('categorySearch').value;
-            const sum = reportData.summary || {};
-            renderCategoryTable(reportData.categories || {}, sum.total_expense || 0, query);
+            const sum = data.summary || {};
+            renderCategoryTable(data.categories || {}, sum.total_expense || 0, query);
         }
 
         // Render Monthly Bar Chart with Average Line for Completed Months
@@ -1872,7 +2031,6 @@
                                 res += `Spend: ${formatCurrency(p.value)}`;
                             }
                         });
-                        res += `<br/><span style="color:#a5b4fc; font-size:0.75rem;">👆 Click to view monthly drill-down</span>`;
                         return res;
                     }
                 },
@@ -1909,7 +2067,7 @@
         }
 
         // Render Group Donut Chart with Y/Y Comparison Tooltip
-        function renderGroupDonutChart(sortedGroups, prevYearData = null, totalExpense = 0) {
+        function renderGroupDonutChart(sortedGroups, prevYearData = null, totalExpense = 0, targetYear = annualSectionYear) {
             const chartDom = document.getElementById('groupDonutChart');
             if (!chartDom) return;
             if (groupChart) groupChart.dispose();
@@ -1934,9 +2092,9 @@
                             const prevPct = (prevAmt / prevTotalExpense) * 100;
                             const delta = p.percent - prevPct;
                             if (delta > 0.05) {
-                                res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${delta.toFixed(1)}% vs ${currentYear - 1} (${prevPct.toFixed(1)}%)</span>`;
+                                res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${delta.toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
                             } else if (delta < -0.05) {
-                                res += `<br/><span style="color:#f43f5e; font-size:0.85em;">🔻${Math.abs(delta).toFixed(1)}% vs ${currentYear - 1} (${prevPct.toFixed(1)}%)</span>`;
+                                res += `<br/><span style="color:#f43f5e; font-size:0.85em;">🔻${Math.abs(delta).toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
                             }
                         }
                         return res;
