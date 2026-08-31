@@ -1289,9 +1289,15 @@
         // Race condition guard for async year switching
         let activeLoadId = 0;
 
+        // Global flag to enable hovers in tables (default: false)
+        // Enable table hovers by passing URL param ?h=1 (or ?hover=1)
+        const urlParams = new URLSearchParams(window.location.search);
+        let ENABLE_TABLE_HOVERS = urlParams.get('h') === '1' || urlParams.get('hover') === '1' ? true : false;
+
         // Custom Floating Tooltip System
         let customTooltipEl = null;
         function showCustomTooltip(targetEl, htmlContent) {
+            if (!ENABLE_TABLE_HOVERS) return;
             if (!customTooltipEl) {
                 customTooltipEl = document.getElementById('appCustomTooltip');
             }
@@ -1329,6 +1335,7 @@
 
         // Global Event Delegation for data-tooltip
         document.addEventListener('mouseover', (e) => {
+            if (!ENABLE_TABLE_HOVERS) return;
             const el = e.target.closest('[data-tooltip]');
             if (!el) return;
             const text = el.getAttribute('data-tooltip');
@@ -1336,11 +1343,13 @@
         });
 
         document.addEventListener('mouseout', (e) => {
+            if (!ENABLE_TABLE_HOVERS) return;
             const el = e.target.closest('[data-tooltip]');
             if (el) hideCustomTooltip();
         });
 
         document.addEventListener('touchstart', (e) => {
+            if (!ENABLE_TABLE_HOVERS) return;
             const el = e.target.closest('[data-tooltip]');
             if (el) {
                 const text = el.getAttribute('data-tooltip');
@@ -1965,7 +1974,7 @@
                                     <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
                                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(name)}</span>
                                 </span>
-                                <div class="group-amount-wrap" ${groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
+                                <div class="group-amount-wrap" ${ENABLE_TABLE_HOVERS && groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
                                     <span class="group-amount-val">${formatCurrency(amt)}</span>
                                     <span class="group-amount-pct">(${pct.toFixed(1)}%${mmBadge})</span>
                                 </div>
@@ -2091,14 +2100,14 @@
                             ${groupName ? `<span class="cat-group-name">${escHtml(groupName)}</span>` : ''}
                         </div>
                     </td>
-                    <td class="amount" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
+                    <td class="amount" ${ENABLE_TABLE_HOVERS && cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
                         <div class="cat-amount-cell">
                             <span class="cat-amount-val">${formatCurrency(amt)}</span>
                             <span class="cat-amount-sub-mobile">(${pct.toFixed(1)}%, ${mmHtml})</span>
                         </div>
                     </td>
                     <td class="pct col-pct">${pct.toFixed(1)}%</td>
-                    <td class="delta col-delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${mmHtml}</td>
+                    <td class="delta col-delta" ${ENABLE_TABLE_HOVERS && cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${mmHtml}</td>
                 `;
                 frag.appendChild(tr);
             });
@@ -2280,7 +2289,7 @@
                                 <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
                                 <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(name)}</span>
                             </span>
-                            <div class="group-amount-wrap" ${groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
+                            <div class="group-amount-wrap" ${ENABLE_TABLE_HOVERS && groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
                                 <span class="group-amount-val">${formatCurrency(amt)}</span>
                                 <span class="group-amount-pct">(${pct.toFixed(1)}%${yyBadge})</span>
                             </div>
@@ -2414,14 +2423,14 @@
                             ${groupName ? `<span class="cat-group-name">${escHtml(groupName)}</span>` : ''}
                         </div>
                     </td>
-                    <td class="amount" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
+                    <td class="amount" ${ENABLE_TABLE_HOVERS && cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
                         <div class="cat-amount-cell">
                             <span class="cat-amount-val">${formatCurrency(amt)}</span>
                             <span class="cat-amount-sub-mobile">(${pct.toFixed(1)}%, ${yyHtml})</span>
                         </div>
                     </td>
                     <td class="pct col-pct">${pct.toFixed(1)}%</td>
-                    <td class="delta col-delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${yyHtml}</td>
+                    <td class="delta col-delta" ${ENABLE_TABLE_HOVERS && cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${yyHtml}</td>
                 `;
                 frag.appendChild(tr);
             });
