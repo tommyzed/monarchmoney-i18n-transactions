@@ -655,6 +655,39 @@
             white-space: nowrap;
         }
 
+        [data-tooltip] {
+            cursor: help;
+        }
+
+        .app-custom-tooltip {
+            position: fixed;
+            z-index: 99999;
+            pointer-events: none;
+            background: rgba(15, 23, 42, 0.96);
+            color: #f8fafc;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            line-height: 1.45;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(4px);
+            transition: opacity 0.12s ease, transform 0.12s ease;
+            white-space: nowrap;
+            max-width: 320px;
+        }
+
+        .app-custom-tooltip.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
         /* Empty State */
         .empty-state {
             text-align: center;
@@ -1044,6 +1077,9 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
 
+    <!-- Custom Floating Tooltip -->
+    <div id="appCustomTooltip" class="app-custom-tooltip"></div>
+
     <!-- Sticky Header -->
     <header class="header">
         <div class="header-container">
@@ -1152,6 +1188,70 @@
             if (val === undefined || val === null || isNaN(val)) return '$0.00';
             return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
+
+        // Custom Floating Tooltip System
+        let customTooltipEl = null;
+        function showCustomTooltip(targetEl, htmlContent) {
+            if (!customTooltipEl) {
+                customTooltipEl = document.getElementById('appCustomTooltip');
+            }
+            if (!customTooltipEl || !htmlContent) return;
+
+            customTooltipEl.innerHTML = htmlContent;
+            customTooltipEl.classList.add('show');
+
+            const targetRect = targetEl.getBoundingClientRect();
+            const tipRect = customTooltipEl.getBoundingClientRect();
+
+            let top = targetRect.top - tipRect.height - 8;
+            let left = targetRect.left + (targetRect.width / 2) - (tipRect.width / 2);
+
+            // If overflowing top, place below
+            if (top < 10) {
+                top = targetRect.bottom + 8;
+            }
+            // Horizontal bounds
+            if (left < 10) {
+                left = 10;
+            } else if (left + tipRect.width > window.innerWidth - 10) {
+                left = window.innerWidth - tipRect.width - 10;
+            }
+
+            customTooltipEl.style.top = `${Math.round(top)}px`;
+            customTooltipEl.style.left = `${Math.round(left)}px`;
+        }
+
+        function hideCustomTooltip() {
+            if (customTooltipEl) {
+                customTooltipEl.classList.remove('show');
+            }
+        }
+
+        // Global Event Delegation for data-tooltip
+        document.addEventListener('mouseover', (e) => {
+            const el = e.target.closest('[data-tooltip]');
+            if (!el) return;
+            const text = el.getAttribute('data-tooltip');
+            if (text) showCustomTooltip(el, text);
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const el = e.target.closest('[data-tooltip]');
+            if (el) hideCustomTooltip();
+        });
+
+        document.addEventListener('touchstart', (e) => {
+            const el = e.target.closest('[data-tooltip]');
+            if (el) {
+                const text = el.getAttribute('data-tooltip');
+                if (text) {
+                    showCustomTooltip(el, text);
+                    setTimeout(hideCustomTooltip, 3500);
+                }
+            } else {
+                hideCustomTooltip();
+            }
+        }, { passive: true });
 
         // Get Freshness Details & Pill HTML
         function getFreshnessDetails(isoStr, year) {
@@ -1726,16 +1826,20 @@
                         const color = GROUP_COLORS[idx % GROUP_COLORS.length];
 
                         let mmBadge = '';
+                        let groupTip = '';
                         if (hasPrevMonth) {
                             const prevAmt = prevMonthGroups[name] || 0;
                             const delta = amt - prevAmt;
 
                             if (Math.abs(delta) < 0.005) {
-                                mmBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} ($0.00 change)">$0.00</span>`;
+                                groupTip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevShortName}</span>: ${formatCurrency(prevAmt)} ($0.00 change)`;
+                                mmBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;">$0.00</span>`;
                             } else if (delta > 0) {
-                                mmBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (+${formatCurrency(delta)} vs ${prevShortName})">▲ +${formatCurrency(delta)}</span>`;
+                                groupTip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevShortName}</span>: ${formatCurrency(prevAmt)}<br/><span style="color:#10b981;">▲ +${formatCurrency(delta)} vs ${prevShortName}</span>`;
+                                mmBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;">▲ +${formatCurrency(delta)}</span>`;
                             } else {
-                                mmBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (-${formatCurrency(Math.abs(delta))} vs ${prevShortName})">🔻-${formatCurrency(Math.abs(delta))}</span>`;
+                                groupTip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevShortName}</span>: ${formatCurrency(prevAmt)}<br/><span style="color:#f43f5e;">🔻-${formatCurrency(Math.abs(delta))} vs ${prevShortName}</span>`;
+                                mmBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;">🔻-${formatCurrency(Math.abs(delta))}</span>`;
                             }
                         }
 
@@ -1747,7 +1851,7 @@
                                     <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
                                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
                                 </span>
-                                <div class="group-amount-wrap">
+                                <div class="group-amount-wrap" ${groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
                                     <span class="group-amount-val">${formatCurrency(amt)}</span>
                                     <span class="group-amount-pct">(${pct.toFixed(1)}%${mmBadge})</span>
                                 </div>
@@ -1846,16 +1950,20 @@
                 const groupName = categoryToGroupMap[name] || '';
 
                 let mmHtml = `<span style="color:var(--text-muted); font-size:0.82rem;">-</span>`;
+                let cellTooltip = '';
                 if (hasPrevMonth) {
                     const prevAmt = prevMonthCats[name] || 0;
                     const delta = amt - prevAmt;
 
                     if (Math.abs(delta) < 0.005) {
-                        mmHtml = `<span style="color:var(--text-muted); font-size:0.82rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} ($0.00 change)">$0.00</span>`;
+                        cellTooltip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevShortName}</span>: ${formatCurrency(prevAmt)} ($0.00 change)`;
+                        mmHtml = `<span style="color:var(--text-muted); font-size:0.82rem;">$0.00</span>`;
                     } else if (delta > 0) {
-                        mmHtml = `<span style="color:#10b981; font-weight:600; font-size:0.82rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (+${formatCurrency(delta)} vs ${prevShortName})">▲ +${formatCurrency(delta)}</span>`;
+                        cellTooltip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevShortName}</span>: ${formatCurrency(prevAmt)}<br/><span style="color:#10b981;">▲ +${formatCurrency(delta)} vs ${prevShortName}</span>`;
+                        mmHtml = `<span style="color:#10b981; font-weight:600; font-size:0.82rem;">▲ +${formatCurrency(delta)}</span>`;
                     } else {
-                        mmHtml = `<span style="color:#f43f5e; font-weight:600; font-size:0.82rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (-${formatCurrency(Math.abs(delta))} vs ${prevShortName})">🔻-${formatCurrency(Math.abs(delta))}</span>`;
+                        cellTooltip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevShortName}</span>: ${formatCurrency(prevAmt)}<br/><span style="color:#f43f5e;">🔻-${formatCurrency(Math.abs(delta))} vs ${prevShortName}</span>`;
+                        mmHtml = `<span style="color:#f43f5e; font-weight:600; font-size:0.82rem;">🔻-${formatCurrency(Math.abs(delta))}</span>`;
                     }
                 }
 
@@ -1868,7 +1976,7 @@
                     </td>
                     <td class="amount">${formatCurrency(amt)}</td>
                     <td class="pct">${pct.toFixed(1)}%</td>
-                    <td class="delta">${mmHtml}</td>
+                    <td class="delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${mmHtml}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2020,17 +2128,21 @@
                     const color = GROUP_COLORS[idx % GROUP_COLORS.length];
 
                     let yyBadge = '';
+                    let groupTip = '';
                     if (hasPrevYear) {
                         const prevAmt = prevCatGroups[name] || 0;
                         const prevPct = (prevAmt / prevTotalExpense) * 100;
                         const delta = pct - prevPct;
 
                         if (Math.abs(delta) < 0.05) {
-                            yyBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (0.0% change)">0.0%</span>`;
+                            groupTip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevTargetYear}</span>: ${prevPct.toFixed(1)}% (0.0% change)`;
+                            yyBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;">0.0%</span>`;
                         } else if (delta > 0) {
-                            yyBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (increased +${delta.toFixed(1)}% of spending)">▲ +${delta.toFixed(1)}%</span>`;
+                            groupTip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevTargetYear}</span>: ${prevPct.toFixed(1)}%<br/><span style="color:#10b981;">▲ +${delta.toFixed(1)}% vs ${prevTargetYear}</span>`;
+                            yyBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;">▲ +${delta.toFixed(1)}%</span>`;
                         } else {
-                            yyBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (decreased -${Math.abs(delta).toFixed(1)}% of spending)">🔻${Math.abs(delta).toFixed(1)}%</span>`;
+                            groupTip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevTargetYear}</span>: ${prevPct.toFixed(1)}%<br/><span style="color:#f43f5e;">🔻${Math.abs(delta).toFixed(1)}% vs ${prevTargetYear}</span>`;
+                            yyBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;">🔻${Math.abs(delta).toFixed(1)}%</span>`;
                         }
                     }
 
@@ -2042,7 +2154,7 @@
                                 <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
                                 <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
                             </span>
-                            <div class="group-amount-wrap">
+                            <div class="group-amount-wrap" ${groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
                                 <span class="group-amount-val">${formatCurrency(amt)}</span>
                                 <span class="group-amount-pct">(${pct.toFixed(1)}%${yyBadge})</span>
                             </div>
@@ -2149,17 +2261,21 @@
                 const groupName = categoryToGroupMap[name] || '';
 
                 let yyHtml = `<span style="color:var(--text-muted); font-size:0.82rem;">-</span>`;
+                let cellTooltip = '';
                 if (hasPrevYear) {
                     const prevAmt = prevCats[name] || 0;
                     const prevPct = (prevAmt / prevTotalExpense) * 100;
                     const delta = pct - prevPct;
 
                     if (Math.abs(delta) < 0.05) {
-                        yyHtml = `<span style="color:var(--text-muted); font-size:0.82rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (0.0% change)">0.0%</span>`;
+                        cellTooltip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevTargetYear}</span>: ${prevPct.toFixed(1)}% (0.0% change)`;
+                        yyHtml = `<span style="color:var(--text-muted); font-size:0.82rem;">0.0%</span>`;
                     } else if (delta > 0) {
-                        yyHtml = `<span style="color:#10b981; font-weight:600; font-size:0.82rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (increased +${delta.toFixed(1)}% of spending)">▲ +${delta.toFixed(1)}%</span>`;
+                        cellTooltip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevTargetYear}</span>: ${prevPct.toFixed(1)}%<br/><span style="color:#10b981;">▲ +${delta.toFixed(1)}% vs ${prevTargetYear}</span>`;
+                        yyHtml = `<span style="color:#10b981; font-weight:600; font-size:0.82rem;">▲ +${delta.toFixed(1)}%</span>`;
                     } else {
-                        yyHtml = `<span style="color:#f43f5e; font-weight:600; font-size:0.82rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (decreased -${Math.abs(delta).toFixed(1)}% of spending)">🔻${Math.abs(delta).toFixed(1)}%</span>`;
+                        cellTooltip = `<b>${name}</b><br/><span style="color:#a5b4fc;">${prevTargetYear}</span>: ${prevPct.toFixed(1)}%<br/><span style="color:#f43f5e;">🔻${Math.abs(delta).toFixed(1)}% vs ${prevTargetYear}</span>`;
+                        yyHtml = `<span style="color:#f43f5e; font-weight:600; font-size:0.82rem;">🔻${Math.abs(delta).toFixed(1)}%</span>`;
                     }
                 }
 
@@ -2172,7 +2288,7 @@
                     </td>
                     <td class="amount">${formatCurrency(amt)}</td>
                     <td class="pct">${pct.toFixed(1)}%</td>
-                    <td class="delta">${yyHtml}</td>
+                    <td class="delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${yyHtml}</td>
                 `;
                 tbody.appendChild(tr);
             });
