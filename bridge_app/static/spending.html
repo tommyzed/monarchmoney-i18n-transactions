@@ -628,9 +628,21 @@
             color: var(--text-primary);
         }
 
+        .cat-name-cell {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .cat-name-primary {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
         .cat-group-name {
             font-style: italic;
-            color: #bdac41;
+            color: #dfcb52;
             font-weight: 500;
             font-size: 0.68rem;
             margin-left: 6px;
@@ -641,6 +653,21 @@
             text-align: right;
             font-weight: 700;
             color: var(--text-primary);
+        }
+
+        .cat-amount-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .cat-amount-val {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .cat-amount-sub-mobile {
+            display: none;
         }
 
         .custom-table td.pct {
@@ -1031,6 +1058,71 @@
                 max-width: 140px !important;
                 font-size: 0.78rem;
                 padding: 4px 8px;
+            }
+
+            /* Responsive Top Categories Tables */
+            .custom-table th.col-pct,
+            .custom-table td.col-pct,
+            .custom-table th.col-delta,
+            .custom-table td.col-delta {
+                display: none !important;
+            }
+
+            .custom-table th,
+            .custom-table td {
+                padding: 0.55rem 0.45rem;
+            }
+
+            .custom-table td.rank {
+                width: 26px;
+                padding-right: 2px;
+                font-size: 0.78rem;
+            }
+
+            .cat-name-cell {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1px;
+            }
+
+            .cat-name-primary {
+                font-size: 0.84rem;
+                line-height: 1.25;
+                word-break: break-word;
+            }
+
+            .cat-group-name {
+                margin-left: 0;
+                font-size: 0.68rem;
+                line-height: 1.2;
+            }
+
+            .cat-amount-cell {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 1px;
+            }
+
+            .cat-amount-val {
+                font-size: 0.85rem;
+                font-weight: 700;
+                line-height: 1.25;
+            }
+
+            .cat-amount-sub-mobile {
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+                font-size: 0.75rem;
+                color: var(--text-muted);
+                line-height: 1.25;
+                white-space: nowrap;
+            }
+
+            .cat-amount-sub-mobile span {
+                font-size: 0.75rem !important;
             }
         }
 
@@ -1621,8 +1713,8 @@
                                         <th style="width:40px;">#</th>
                                         <th>Category</th>
                                         <th style="text-align:right;">Spending</th>
-                                        <th style="text-align:right; width:90px;">% of Month</th>
-                                        <th style="text-align:right; width:110px;">M/M</th>
+                                        <th class="col-pct" style="text-align:right; width:90px;">% of Month</th>
+                                        <th class="col-delta" style="text-align:right; width:110px;">M/M</th>
                                     </tr>
                                 </thead>
                                 <tbody id="monthCategoryTableBody"></tbody>
@@ -1672,8 +1764,8 @@
                                         <th style="width:40px;">#</th>
                                         <th>Category</th>
                                         <th style="text-align:right;">Spending</th>
-                                        <th style="text-align:right; width:90px;">% of Total</th>
-                                        <th style="text-align:right; width:100px;">Y/Y</th>
+                                        <th class="col-pct" style="text-align:right; width:90px;">% of Total</th>
+                                        <th class="col-delta" style="text-align:right; width:100px;">Y/Y</th>
                                     </tr>
                                 </thead>
                                 <tbody id="categoryTableBody">
@@ -1971,12 +2063,19 @@
                 tr.innerHTML = `
                     <td class="rank">${idx + 1}</td>
                     <td class="name">
-                        <span>${name}</span>
-                        ${groupName ? `<span class="cat-group-name">${groupName}</span>` : ''}
+                        <div class="cat-name-cell">
+                            <span class="cat-name-primary">${name}</span>
+                            ${groupName ? `<span class="cat-group-name">${groupName}</span>` : ''}
+                        </div>
                     </td>
-                    <td class="amount">${formatCurrency(amt)}</td>
-                    <td class="pct">${pct.toFixed(1)}%</td>
-                    <td class="delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${mmHtml}</td>
+                    <td class="amount" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
+                        <div class="cat-amount-cell">
+                            <span class="cat-amount-val">${formatCurrency(amt)}</span>
+                            <span class="cat-amount-sub-mobile">(${pct.toFixed(1)}%, ${mmHtml})</span>
+                        </div>
+                    </td>
+                    <td class="pct col-pct">${pct.toFixed(1)}%</td>
+                    <td class="delta col-delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${mmHtml}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2283,12 +2382,19 @@
                 tr.innerHTML = `
                     <td class="rank">${idx + 1}</td>
                     <td class="name">
-                        <span>${name}</span>
-                        ${groupName ? `<span class="cat-group-name">${groupName}</span>` : ''}
+                        <div class="cat-name-cell">
+                            <span class="cat-name-primary">${name}</span>
+                            ${groupName ? `<span class="cat-group-name">${groupName}</span>` : ''}
+                        </div>
                     </td>
-                    <td class="amount">${formatCurrency(amt)}</td>
-                    <td class="pct">${pct.toFixed(1)}%</td>
-                    <td class="delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${yyHtml}</td>
+                    <td class="amount" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
+                        <div class="cat-amount-cell">
+                            <span class="cat-amount-val">${formatCurrency(amt)}</span>
+                            <span class="cat-amount-sub-mobile">(${pct.toFixed(1)}%, ${yyHtml})</span>
+                        </div>
+                    </td>
+                    <td class="pct col-pct">${pct.toFixed(1)}%</td>
+                    <td class="delta col-delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${yyHtml}</td>
                 `;
                 tbody.appendChild(tr);
             });
