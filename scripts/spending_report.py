@@ -164,7 +164,17 @@ async def fetch_spending_report(
 
         categorized_breakdown = {}
         category_group_breakdown = {}
+        category_to_group_map = {}
         monthly_breakdown = {}
+        monthly_category_group_breakdown = {}
+        monthly_categorized_breakdown = {}
+
+        # Pre-populate category -> group mapping from categories dictionary
+        for c in categories_data.get("categories", []):
+            c_name = c.get("name")
+            g_name = c.get("group", {}).get("name")
+            if c_name and g_name:
+                category_to_group_map[c_name] = g_name
 
         for tx in all_txs:
             amount = tx.get("amount", 0.0)
@@ -179,6 +189,9 @@ async def fetch_spending_report(
             group_name = group.get("name") or "Other"
             group_type = group.get("type", "unknown")
 
+            if cat_name and group_name:
+                category_to_group_map[cat_name] = group_name
+
             if group_type == "expense" or (group_type not in ("income", "transfer") and amount < 0):
                 expense_val = -amount
                 itemized_expense_total += expense_val
@@ -190,6 +203,16 @@ async def fetch_spending_report(
                 )
                 monthly_breakdown[month_key] = (
                     monthly_breakdown.get(month_key, 0.0) + expense_val
+                )
+                if month_key not in monthly_category_group_breakdown:
+                    monthly_category_group_breakdown[month_key] = {}
+                monthly_category_group_breakdown[month_key][group_name] = (
+                    monthly_category_group_breakdown[month_key].get(group_name, 0.0) + expense_val
+                )
+                if month_key not in monthly_categorized_breakdown:
+                    monthly_categorized_breakdown[month_key] = {}
+                monthly_categorized_breakdown[month_key][cat_name] = (
+                    monthly_categorized_breakdown[month_key].get(cat_name, 0.0) + expense_val
                 )
             elif group_type == "income" or (group_type not in ("expense", "transfer") and amount >= 0):
                 itemized_income_total += amount
@@ -231,7 +254,10 @@ async def fetch_spending_report(
                 }
                 db_report.category_groups = category_group_breakdown
                 db_report.categories = categorized_breakdown
+                db_report.category_to_group = category_to_group_map
                 db_report.monthly_spending = monthly_breakdown
+                db_report.monthly_category_groups = monthly_category_group_breakdown
+                db_report.monthly_categories = monthly_categorized_breakdown
                 db_report.sync_status = "ready"
                 db_report.error_message = None
                 await session.commit()
