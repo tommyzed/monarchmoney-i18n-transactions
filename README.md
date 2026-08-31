@@ -66,6 +66,14 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
         -   **← Back to Batch Navigation**: Return cleanly to the batch dashboard with all edits updated in real time.
     -   **Resilient Error Recovery**: Any failed receipts are automatically persisted to the `FailedTransaction` database store, with one-click "🔄 Retry Failed" support.
     -   **100% Backward Compatible**: Single-file uploads seamlessly continue to use the classic upload and review pathway.
+*   **🔍 v2.6: Deep Monthly & Annual Spending Drill-Downs**:
+    -   **Interactive Monthly Drill-Down**: Deep-dive into individual months with dedicated category group donut charts, animated progress bars, and itemized sub-category rankings.
+    -   **Multi-Modal Period Navigation**: Seamlessly switch months using the swipeable chip carousel, `‹` / `›` stepper buttons, or by directly clicking any bar on the monthly spend chart.
+    -   **Month-over-Month (M/M) Tracking**: View exact dollar and percentage deltas against preceding months for every category and group (with January seamlessly comparing against December of the prior year).
+    -   **Annual Drill-Down & Year Carousel**: Dedicated annual analysis module with fast year-switching carousel, in-memory caching, and Year-over-Year (YoY) `▲ +%` / `🔻-%` shift indicators against prior year spending share.
+    -   **Parent Category Group Context**: Automatically stores and maps sub-categories to their parent category groups with group badges across all report tables.
+    -   **Mobile-Optimized Tables & Tooltips**: Compact table layout for mobile screens with consolidated metadata rows, custom floating tooltips, and URL toggle (`?h=1`) for table hovers.
+    -   **Performance & Reliability Hardening**: Race condition guards for rapid year switching, passive DOM scroll listeners, and full XSS sanitization for user-defined category/group names.
 
 ## 🖼 Demos / Screenshots
 
@@ -76,7 +84,7 @@ Single Mode and Batch Mode (v2.5+)
   <img width="324" height="720" alt="mm_batch_mode_demo_delete-compressed-ezgif com-video-to-gif-converter (1)" src="https://github.com/user-attachments/assets/0c82b65c-2b59-4730-b550-847143fcf94f" />
 </p>
 
-Spending Reports (v2.0+)
+Spending Reports (v2.6+)
 <p align="center">
 <img width="764" height="615" alt="Spending Report 1" src="https://github.com/user-attachments/assets/23b2c28b-ff75-43ea-bc27-2ca1d7b4c2dd" />
 <img width="786" height="500" alt="Spending Report 2" src="https://github.com/user-attachments/assets/06b23dde-b0e8-49bf-8357-995cbbbdf1c3" />
