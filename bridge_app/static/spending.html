@@ -646,7 +646,13 @@
         .custom-table td.pct {
             text-align: right;
             color: var(--text-muted);
-            width: 80px;
+            width: 85px;
+        }
+
+        .custom-table td.delta {
+            text-align: right;
+            width: 105px;
+            white-space: nowrap;
         }
 
         /* Empty State */
@@ -1515,7 +1521,8 @@
                                         <th style="width:40px;">#</th>
                                         <th>Category</th>
                                         <th style="text-align:right;">Spending</th>
-                                        <th style="text-align:right;">% of Month</th>
+                                        <th style="text-align:right; width:90px;">% of Month</th>
+                                        <th style="text-align:right; width:110px;">M/M</th>
                                     </tr>
                                 </thead>
                                 <tbody id="monthCategoryTableBody"></tbody>
@@ -1565,7 +1572,8 @@
                                         <th style="width:40px;">#</th>
                                         <th>Category</th>
                                         <th style="text-align:right;">Spending</th>
-                                        <th style="text-align:right;">% of Total</th>
+                                        <th style="text-align:right; width:90px;">% of Total</th>
+                                        <th style="text-align:right; width:100px;">Y/Y</th>
                                     </tr>
                                 </thead>
                                 <tbody id="categoryTableBody">
@@ -1585,24 +1593,73 @@
             await renderAnnualSection(annualSectionYear);
         }
 
+        // Helper to retrieve Previous Month data for M/M Comparison
+        function getPrevMonthInfo(selectedMonthKey) {
+            if (!selectedMonthKey || !reportData) {
+                return { prevMonthKey: null, prevShortName: '', prevMonthGroups: {}, prevMonthCats: {}, hasPrevMonth: false };
+            }
+            const [sYearStr, sMonthStr] = selectedMonthKey.split('-');
+            const sYear = parseInt(sYearStr, 10);
+            const sMonth = parseInt(sMonthStr, 10);
+
+            let prevMonthKey = null;
+            let prevShortName = '';
+            let prevMonthGroups = {};
+            let prevMonthCats = {};
+            let hasPrevMonth = false;
+
+            if (sMonth > 1) {
+                prevMonthKey = `${sYear}-${String(sMonth - 1).padStart(2, '0')}`;
+                prevShortName = MONTH_SHORT_NAMES[sMonth - 1];
+                if (reportData.monthly_category_groups && reportData.monthly_category_groups[prevMonthKey]) {
+                    prevMonthGroups = reportData.monthly_category_groups[prevMonthKey];
+                    hasPrevMonth = true;
+                } else if (reportData.monthly_spending && reportData.monthly_spending[prevMonthKey] !== undefined) {
+                    hasPrevMonth = true;
+                }
+                if (reportData.monthly_categories && reportData.monthly_categories[prevMonthKey]) {
+                    prevMonthCats = reportData.monthly_categories[prevMonthKey];
+                }
+            } else if (sMonth === 1) {
+                // January: compare to December of previous year
+                prevMonthKey = `${sYear - 1}-12`;
+                prevShortName = `Dec ${sYear - 1}`;
+                if (cachedPrevYearData && cachedPrevYearData.monthly_category_groups && cachedPrevYearData.monthly_category_groups[prevMonthKey]) {
+                    prevMonthGroups = cachedPrevYearData.monthly_category_groups[prevMonthKey];
+                    hasPrevMonth = true;
+                } else if (cachedPrevYearData && cachedPrevYearData.monthly_spending && cachedPrevYearData.monthly_spending[prevMonthKey] !== undefined) {
+                    hasPrevMonth = true;
+                }
+                if (cachedPrevYearData && cachedPrevYearData.monthly_categories && cachedPrevYearData.monthly_categories[prevMonthKey]) {
+                    prevMonthCats = cachedPrevYearData.monthly_categories[prevMonthKey];
+                }
+            }
+            return { prevMonthKey, prevShortName, prevMonthGroups, prevMonthCats, hasPrevMonth };
+        }
+
         // Render Monthly Drill-Down
         function renderMonthlyDrillDown() {
             if (!reportData) return;
             const monthlySpending = reportData.monthly_spending || {};
             const months = Object.keys(monthlySpending).sort();
-            const card = document.getElementById('monthlyDrillDownCard');
-            if (!card) return;
+            if (months.length === 0) return;
 
-            if (months.length === 0 || !selectedMonth) {
-                card.style.display = 'none';
-                return;
+            if (!selectedMonth || !monthlySpending[selectedMonth]) {
+                const now = new Date();
+                const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                if (monthlySpending[curMonthKey]) {
+                    selectedMonth = curMonthKey;
+                } else {
+                    selectedMonth = months[months.length - 1];
+                }
             }
-            card.style.display = 'block';
 
-            const [sYear, sMonth] = selectedMonth.split('-').map(Number);
-            const monthFullName = MONTH_FULL_NAMES[sMonth] || `Month ${sMonth}`;
-            const monthShortName = MONTH_SHORT_NAMES[sMonth] || `M${sMonth}`;
             const monthTotalSpend = monthlySpending[selectedMonth] || 0;
+            const [sYearStr, sMonthStr] = selectedMonth.split('-');
+            const sYear = parseInt(sYearStr, 10);
+            const sMonth = parseInt(sMonthStr, 10);
+            const monthFullName = MONTH_FULL_NAMES[sMonth] || selectedMonth;
+            const monthShortName = MONTH_SHORT_NAMES[sMonth] || selectedMonth;
 
             // Header & Total
             const badge = document.getElementById('drillDownMonthBadge');
@@ -1616,15 +1673,14 @@
             const subTitle = document.getElementById('monthSubCatTitle');
             if (subTitle) subTitle.textContent = `${monthFullName} ${sYear}`;
 
-            // Stepper Buttons
-            const currIdx = months.indexOf(selectedMonth);
+            // Stepper button disabled states
+            const curIdx = months.indexOf(selectedMonth);
             const prevBtn = document.getElementById('prevMonthBtn');
             const nextBtn = document.getElementById('nextMonthBtn');
-            if (prevBtn) prevBtn.disabled = (currIdx <= 0);
-            if (nextBtn) nextBtn.disabled = (currIdx < 0 || currIdx >= months.length - 1);
+            if (prevBtn) prevBtn.disabled = (curIdx <= 0);
+            if (nextBtn) nextBtn.disabled = (curIdx >= months.length - 1);
 
-            // Month Chips
-            // Render Month Chips
+            // Month Chips Carousel
             const chipsContainer = document.getElementById('monthChipsContainer');
             if (chipsContainer) {
                 chipsContainer.innerHTML = '';
@@ -1653,31 +1709,7 @@
             }
 
             // Determine Previous Month Data for M/M Comparison
-            let prevMonthKey = null;
-            let prevShortName = '';
-            let prevMonthGroups = {};
-            let hasPrevMonth = false;
-
-            if (sMonth > 1) {
-                prevMonthKey = `${sYear}-${String(sMonth - 1).padStart(2, '0')}`;
-                prevShortName = MONTH_SHORT_NAMES[sMonth - 1];
-                if (reportData.monthly_category_groups && reportData.monthly_category_groups[prevMonthKey]) {
-                    prevMonthGroups = reportData.monthly_category_groups[prevMonthKey];
-                    hasPrevMonth = true;
-                } else if (reportData.monthly_spending && reportData.monthly_spending[prevMonthKey] !== undefined) {
-                    hasPrevMonth = true;
-                }
-            } else if (sMonth === 1) {
-                // January: compare to December of previous year
-                prevMonthKey = `${sYear - 1}-12`;
-                prevShortName = `Dec ${sYear - 1}`;
-                if (cachedPrevYearData && cachedPrevYearData.monthly_category_groups && cachedPrevYearData.monthly_category_groups[prevMonthKey]) {
-                    prevMonthGroups = cachedPrevYearData.monthly_category_groups[prevMonthKey];
-                    hasPrevMonth = true;
-                } else if (cachedPrevYearData && cachedPrevYearData.monthly_spending && cachedPrevYearData.monthly_spending[prevMonthKey] !== undefined) {
-                    hasPrevMonth = true;
-                }
-            }
+            const { prevMonthKey, prevShortName, prevMonthGroups, prevMonthCats, hasPrevMonth } = getPrevMonthInfo(selectedMonth);
 
             // Category Groups for Selected Month
             const currMonthGroups = (reportData.monthly_category_groups && reportData.monthly_category_groups[selectedMonth]) || {};
@@ -1803,13 +1835,30 @@
             }
 
             if (sorted.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:1.5rem;">No matching categories found for this month</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:1.5rem;">No matching categories found for this month</td></tr>`;
                 return;
             }
+
+            const { prevMonthCats, prevShortName, hasPrevMonth } = getPrevMonthInfo(selectedMonth);
 
             sorted.forEach(([name, amt], idx) => {
                 const pct = monthTotalSpend > 0 ? (amt / monthTotalSpend) * 100 : 0;
                 const groupName = categoryToGroupMap[name] || '';
+
+                let mmHtml = `<span style="color:var(--text-muted); font-size:0.82rem;">-</span>`;
+                if (hasPrevMonth) {
+                    const prevAmt = prevMonthCats[name] || 0;
+                    const delta = amt - prevAmt;
+
+                    if (Math.abs(delta) < 0.005) {
+                        mmHtml = `<span style="color:var(--text-muted); font-size:0.82rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} ($0.00 change)">$0.00</span>`;
+                    } else if (delta > 0) {
+                        mmHtml = `<span style="color:#10b981; font-weight:600; font-size:0.82rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (+${formatCurrency(delta)} vs ${prevShortName})">▲ +${formatCurrency(delta)}</span>`;
+                    } else {
+                        mmHtml = `<span style="color:#f43f5e; font-weight:600; font-size:0.82rem;" title="${prevShortName}: ${formatCurrency(prevAmt)} (-${formatCurrency(Math.abs(delta))} vs ${prevShortName})">🔻-${formatCurrency(Math.abs(delta))}</span>`;
+                    }
+                }
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="rank">${idx + 1}</td>
@@ -1819,6 +1868,7 @@
                     </td>
                     <td class="amount">${formatCurrency(amt)}</td>
                     <td class="pct">${pct.toFixed(1)}%</td>
+                    <td class="delta">${mmHtml}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2084,13 +2134,35 @@
             }
 
             if (sorted.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:2rem;">No matching categories found</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:2rem;">No matching categories found</td></tr>`;
                 return;
             }
+
+            const prevTargetYear = annualSectionYear - 1;
+            const prevData = cachedAnnualReports[prevTargetYear] || null;
+            const prevTotalExpense = prevData?.summary?.total_expense || 0;
+            const prevCats = prevData?.categories || {};
+            const hasPrevYear = prevData && prevTotalExpense > 0;
 
             sorted.forEach(([name, amt], idx) => {
                 const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
                 const groupName = categoryToGroupMap[name] || '';
+
+                let yyHtml = `<span style="color:var(--text-muted); font-size:0.82rem;">-</span>`;
+                if (hasPrevYear) {
+                    const prevAmt = prevCats[name] || 0;
+                    const prevPct = (prevAmt / prevTotalExpense) * 100;
+                    const delta = pct - prevPct;
+
+                    if (Math.abs(delta) < 0.05) {
+                        yyHtml = `<span style="color:var(--text-muted); font-size:0.82rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (0.0% change)">0.0%</span>`;
+                    } else if (delta > 0) {
+                        yyHtml = `<span style="color:#10b981; font-weight:600; font-size:0.82rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (increased +${delta.toFixed(1)}% of spending)">▲ +${delta.toFixed(1)}%</span>`;
+                    } else {
+                        yyHtml = `<span style="color:#f43f5e; font-weight:600; font-size:0.82rem;" title="${prevTargetYear}: ${prevPct.toFixed(1)}% (decreased -${Math.abs(delta).toFixed(1)}% of spending)">🔻${Math.abs(delta).toFixed(1)}%</span>`;
+                    }
+                }
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="rank">${idx + 1}</td>
@@ -2100,6 +2172,7 @@
                     </td>
                     <td class="amount">${formatCurrency(amt)}</td>
                     <td class="pct">${pct.toFixed(1)}%</td>
+                    <td class="delta">${yyHtml}</td>
                 `;
                 tbody.appendChild(tr);
             });
