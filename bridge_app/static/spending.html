@@ -628,6 +628,15 @@
             color: var(--text-primary);
         }
 
+        .cat-group-name {
+            font-style: italic;
+            color: #bdac41;
+            font-weight: 500;
+            font-size: 0.68rem;
+            margin-left: 6px;
+            white-space: nowrap;
+        }
+
         .custom-table td.amount {
             text-align: right;
             font-weight: 700;
@@ -1099,6 +1108,7 @@
         let selectedMonth = null;
         let annualSectionYear = 2026;
         let cachedAnnualReports = {};
+        let categoryToGroupMap = {};
         let isSyncing = false;
         let pollTimer = null;
         let monthlyChart = null;
@@ -1336,6 +1346,9 @@
 
                 reportData = data;
                 cachedAnnualReports[year] = data;
+                if (data.category_to_group) {
+                    categoryToGroupMap = Object.assign({}, categoryToGroupMap, data.category_to_group);
+                }
                 annualSectionYear = year;
                 const freshness = getFreshnessDetails(data.updated_at, year);
                 document.getElementById('freshnessContainer').innerHTML = freshness.pillHtml;
@@ -1356,6 +1369,9 @@
                         if (pData.status === 'ok') {
                             prevYearData = pData;
                             cachedAnnualReports[year - 1] = pData;
+                            if (pData.category_to_group) {
+                                categoryToGroupMap = Object.assign({}, categoryToGroupMap, pData.category_to_group);
+                            }
                         }
                     }
                 } catch (e) {
@@ -1780,7 +1796,10 @@
             let sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
             if (filterQuery.trim()) {
                 const q = filterQuery.toLowerCase();
-                sorted = sorted.filter(([name]) => name.toLowerCase().includes(q));
+                sorted = sorted.filter(([name]) => {
+                    const grp = (categoryToGroupMap[name] || '').toLowerCase();
+                    return name.toLowerCase().includes(q) || grp.includes(q);
+                });
             }
 
             if (sorted.length === 0) {
@@ -1790,10 +1809,14 @@
 
             sorted.forEach(([name, amt], idx) => {
                 const pct = monthTotalSpend > 0 ? (amt / monthTotalSpend) * 100 : 0;
+                const groupName = categoryToGroupMap[name] || '';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="rank">${idx + 1}</td>
-                    <td class="name">${name}</td>
+                    <td class="name">
+                        <span>${name}</span>
+                        ${groupName ? `<span class="cat-group-name">${groupName}</span>` : ''}
+                    </td>
                     <td class="amount">${formatCurrency(amt)}</td>
                     <td class="pct">${pct.toFixed(1)}%</td>
                 `;
@@ -1880,6 +1903,9 @@
                         data = await res.json();
                         if (data.status === 'ok') {
                             cachedAnnualReports[targetYear] = data;
+                            if (data.category_to_group) {
+                                categoryToGroupMap = Object.assign({}, categoryToGroupMap, data.category_to_group);
+                            }
                         }
                     }
                 } catch (e) {
@@ -1898,6 +1924,9 @@
                         if (pData.status === 'ok') {
                             prevData = pData;
                             cachedAnnualReports[prevTargetYear] = pData;
+                            if (pData.category_to_group) {
+                                categoryToGroupMap = Object.assign({}, categoryToGroupMap, pData.category_to_group);
+                            }
                         } else {
                             cachedAnnualReports[prevTargetYear] = null;
                         }
@@ -2048,7 +2077,10 @@
             let sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
             if (filterQuery.trim()) {
                 const q = filterQuery.toLowerCase();
-                sorted = sorted.filter(([name]) => name.toLowerCase().includes(q));
+                sorted = sorted.filter(([name]) => {
+                    const grp = (categoryToGroupMap[name] || '').toLowerCase();
+                    return name.toLowerCase().includes(q) || grp.includes(q);
+                });
             }
 
             if (sorted.length === 0) {
@@ -2058,10 +2090,14 @@
 
             sorted.forEach(([name, amt], idx) => {
                 const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
+                const groupName = categoryToGroupMap[name] || '';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="rank">${idx + 1}</td>
-                    <td class="name">${name}</td>
+                    <td class="name">
+                        <span>${name}</span>
+                        ${groupName ? `<span class="cat-group-name">${groupName}</span>` : ''}
+                    </td>
                     <td class="amount">${formatCurrency(amt)}</td>
                     <td class="pct">${pct.toFixed(1)}%</td>
                 `;

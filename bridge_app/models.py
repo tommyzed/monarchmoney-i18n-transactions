@@ -98,6 +98,7 @@ class SpendingReport(Base):
     summary = Column(JSON, nullable=True)
     category_groups = Column(JSON, nullable=True)
     categories = Column(JSON, nullable=True)
+    category_to_group = Column(JSON, nullable=True)
     monthly_spending = Column(JSON, nullable=True)
     monthly_category_groups = Column(JSON, nullable=True)
     monthly_categories = Column(JSON, nullable=True)

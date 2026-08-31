@@ -139,9 +139,17 @@ async def calculate_and_save_spending_report(
 
             categorized_breakdown = {}
             category_group_breakdown = {}
+            category_to_group_map = {}
             monthly_breakdown = {}
             monthly_category_group_breakdown = {}
             monthly_categorized_breakdown = {}
+
+            # Pre-populate category -> group mapping from categories dictionary
+            for c in cat_res.get("categories", []):
+                c_name = c.get("name")
+                g_name = c.get("group", {}).get("name")
+                if c_name and g_name:
+                    category_to_group_map[c_name] = g_name
 
             for tx in all_txs:
                 amount = tx.get("amount", 0.0)
@@ -155,6 +163,9 @@ async def calculate_and_save_spending_report(
                 group = full_cat.get("group") or {}
                 group_name = group.get("name") or "Other"
                 group_type = group.get("type", "unknown")
+
+                if cat_name and group_name:
+                    category_to_group_map[cat_name] = group_name
 
                 if group_type == "expense":
                     expense_val = -amount
@@ -221,6 +232,7 @@ async def calculate_and_save_spending_report(
             }
             report.category_groups = category_group_breakdown
             report.categories = categorized_breakdown
+            report.category_to_group = category_to_group_map
             report.monthly_spending = monthly_breakdown
             report.monthly_category_groups = monthly_category_group_breakdown
             report.monthly_categories = monthly_categorized_breakdown
