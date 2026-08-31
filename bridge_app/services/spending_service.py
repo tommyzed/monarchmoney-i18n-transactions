@@ -9,6 +9,7 @@ from ..models import Credentials, SpendingReport
 from .monarch import get_monarch_client, get_latest_credentials
 
 logger = logging.getLogger("spending_service")
+UNCATEGORIZED = "Uncategorized"
 
 
 async def get_or_create_spending_report(
@@ -101,7 +102,7 @@ async def calculate_and_save_spending_report(
                 g_sum = item.get("summary", {}).get("sum", 0.0)
                 server_group_aggregates.append(
                     {
-                        "name": group.get("name") or "Uncategorized",
+                        "name": group.get("name") or UNCATEGORIZED,
                         "type": group.get("type") or "other",
                         "amount": abs(g_sum) if (group.get("type") == "expense" and g_sum < 0) else g_sum,
                         "raw_sum": g_sum,
@@ -109,28 +110,37 @@ async def calculate_and_save_spending_report(
                 )
 
             # 5. Read Itemized Transactions (READ-ONLY)
-            all_txs = []
-            offset = 0
             limit = 100
             hidden_filter = None if include_hidden else False
 
-            while True:
-                tx_res = await _retry_monarch_call(
-                    mm.get_transactions,
-                    start_date=start_date,
-                    end_date=end_date,
-                    hidden_from_reports=hidden_filter,
-                    limit=limit,
-                    offset=offset,
-                )
-                data = tx_res.get("allTransactions", {})
-                total_count = data.get("totalCount", 0)
-                results = data.get("results", [])
-                all_txs.extend(results)
+            first_res = await _retry_monarch_call(
+                mm.get_transactions,
+                start_date=start_date,
+                end_date=end_date,
+                hidden_from_reports=hidden_filter,
+                limit=limit,
+                offset=0,
+            )
+            first_data = first_res.get("allTransactions", {})
+            total_count = first_data.get("totalCount", 0)
+            all_txs = list(first_data.get("results", []))
 
-                if len(all_txs) >= total_count or len(results) == 0:
-                    break
-                offset += limit
+            if total_count > limit:
+                remaining_offsets = range(limit, total_count, limit)
+                tasks = [
+                    _retry_monarch_call(
+                        mm.get_transactions,
+                        start_date=start_date,
+                        end_date=end_date,
+                        hidden_from_reports=hidden_filter,
+                        limit=limit,
+                        offset=off,
+                    )
+                    for off in remaining_offsets
+                ]
+                pages = await asyncio.gather(*tasks)
+                for page in pages:
+                    all_txs.extend(page.get("allTransactions", {}).get("results", []))
 
             # 6. Aggregate Calculations
             itemized_expense_total = 0.0
@@ -159,7 +169,7 @@ async def calculate_and_save_spending_report(
                 cat_id = cat_info.get("id")
 
                 full_cat = categories_map.get(cat_id, {})
-                cat_name = full_cat.get("name") or cat_info.get("name") or "Uncategorized"
+                cat_name = full_cat.get("name") or cat_info.get("name") or UNCATEGORIZED
                 group = full_cat.get("group") or {}
                 group_name = group.get("name") or "Other"
                 group_type = group.get("type", "unknown")
@@ -167,7 +177,7 @@ async def calculate_and_save_spending_report(
                 if cat_name and group_name:
                     category_to_group_map[cat_name] = group_name
 
-                if group_type == "expense":
+                if group_type == "expense" or (group_type not in ("income", "transfer") and amount < 0):
                     expense_val = -amount
                     itemized_expense_total += expense_val
                     categorized_breakdown[cat_name] = (
@@ -189,42 +199,22 @@ async def calculate_and_save_spending_report(
                     monthly_categorized_breakdown[month_key][cat_name] = (
                         monthly_categorized_breakdown[month_key].get(cat_name, 0.0) + expense_val
                     )
-                elif group_type == "income":
+                elif group_type == "income" or (group_type not in ("expense", "transfer") and amount >= 0):
                     itemized_income_total += amount
                 elif group_type == "transfer":
                     itemized_transfers_total += amount
-                else:
-                    if amount < 0:
-                        expense_val = -amount
-                        itemized_expense_total += expense_val
-                        categorized_breakdown[cat_name] = (
-                            categorized_breakdown.get(cat_name, 0.0) + expense_val
-                        )
-                        category_group_breakdown[group_name] = (
-                            category_group_breakdown.get(group_name, 0.0) + expense_val
-                        )
-                        monthly_breakdown[month_key] = (
-                            monthly_breakdown.get(month_key, 0.0) + expense_val
-                        )
-                        if month_key not in monthly_category_group_breakdown:
-                            monthly_category_group_breakdown[month_key] = {}
-                        monthly_category_group_breakdown[month_key][group_name] = (
-                            monthly_category_group_breakdown[month_key].get(group_name, 0.0) + expense_val
-                        )
-                        if month_key not in monthly_categorized_breakdown:
-                            monthly_categorized_breakdown[month_key] = {}
-                        monthly_categorized_breakdown[month_key][cat_name] = (
-                            monthly_categorized_breakdown[month_key].get(cat_name, 0.0) + expense_val
-                        )
-                    else:
-                        itemized_income_total += amount
+
+            sum_expense = abs(server_sum.get("sumExpense") or 0.0)
+            sum_income = server_sum.get("sumIncome") or 0.0
+            sum_savings = server_sum.get("savings") or 0.0
+            sum_savings_rate = server_sum.get("savingsRate") or 0.0
 
             # 7. Update and Commit Report Record
             report.summary = {
-                "total_expense": abs(server_sum.get("sumExpense", 0.0)),
-                "total_income": server_sum.get("sumIncome", 0.0),
-                "net_savings": server_sum.get("savings", 0.0),
-                "savings_rate": server_sum.get("savingsRate", 0.0),
+                "total_expense": sum_expense,
+                "total_income": sum_income,
+                "net_savings": sum_savings,
+                "savings_rate": sum_savings_rate,
                 "itemized_expense": itemized_expense_total,
                 "itemized_income": itemized_income_total,
                 "itemized_transfers": itemized_transfers_total,

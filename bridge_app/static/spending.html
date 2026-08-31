@@ -705,7 +705,7 @@
             visibility: hidden;
             transform: translateY(4px);
             transition: opacity 0.12s ease, transform 0.12s ease;
-            white-space: nowrap;
+            white-space: normal;
             max-width: 320px;
         }
 
@@ -1243,7 +1243,6 @@
         let annualSectionYear = 2026;
         let cachedAnnualReports = {};
         let categoryToGroupMap = {};
-        let isSyncing = false;
         let pollTimer = null;
         let monthlyChart = null;
         let groupChart = null;
@@ -1280,6 +1279,15 @@
             if (val === undefined || val === null || isNaN(val)) return '$0.00';
             return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
+
+        // HTML Escape Helper (prevents XSS from user-defined category/group names)
+        function escHtml(s) {
+            if (!s) return '';
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Race condition guard for async year switching
+        let activeLoadId = 0;
 
         // Custom Floating Tooltip System
         let customTooltipEl = null;
@@ -1505,13 +1513,15 @@
         function renderYearSelector() {
             const container = document.getElementById('yearSelector');
             container.innerHTML = '';
+            const frag = document.createDocumentFragment();
             availableYears.forEach(year => {
                 const btn = document.createElement('button');
                 btn.className = `year-btn ${year === currentYear ? 'active' : ''}`;
                 btn.textContent = year;
                 btn.onclick = () => switchYear(year);
-                container.appendChild(btn);
+                frag.appendChild(btn);
             });
+            container.appendChild(frag);
         }
 
         async function switchYear(year) {
@@ -1523,6 +1533,7 @@
 
         // Load Report for Year
         async function loadReport(year) {
+            const thisLoadId = ++activeLoadId;
             const contentArea = document.getElementById('contentArea');
             contentArea.innerHTML = `
                 <div class="empty-state">
@@ -1535,6 +1546,8 @@
                 const res = await fetch(`/api/spending?year=${year}`);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
+
+                if (thisLoadId !== activeLoadId) return;
 
                 if (data.status === 'not_found') {
                     renderEmptyState(year);
@@ -1553,7 +1566,7 @@
 
                 if (data.sync_status === 'syncing') {
                     setSyncingState(true);
-                    startPolling();
+                    startPolling(year);
                 } else {
                     setSyncingState(false);
                 }
@@ -1576,15 +1589,18 @@
                     console.warn('Could not fetch previous year for Y/Y comparison', e);
                 }
 
+                if (thisLoadId !== activeLoadId) return;
+
                 cachedPrevYearData = prevYearData;
                 await renderDashboard(data, prevYearData);
 
             } catch (err) {
+                if (thisLoadId !== activeLoadId) return;
                 contentArea.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">⚠️</div>
                         <div class="empty-title">Error Loading Report</div>
-                        <div class="empty-desc">${err.message}</div>
+                        <div class="empty-desc">${escHtml(err.message)}</div>
                         <button class="recalc-btn" style="margin:0 auto;" onclick="loadReport(${year})">Try Again</button>
                     </div>
                 `;
@@ -1599,7 +1615,7 @@
                     <div class="empty-icon">📊</div>
                     <div class="empty-title">No Report Calculated for ${year}</div>
                     <div class="empty-desc">Click below to fetch and analyze your transactions from Monarch Money in read-only mode.</div>
-                    <button class="recalc-btn" style="margin: 0 auto; font-size:1rem; padding: 12px 24px;" onclick="triggerRecalculate()">
+                    <button id="emptyRecalcBtn" class="recalc-btn" style="margin: 0 auto; font-size:1rem; padding: 12px 24px;" onclick="triggerRecalculate()">
                         <span>🔄</span>
                         <span>Calculate ${year} Spending</span>
                     </button>
@@ -1610,8 +1626,6 @@
         // Render Full Dashboard
         async function renderDashboard(data, prevYearData = null) {
             const sum = data.summary || {};
-            const catGroups = data.category_groups || {};
-            const cats = data.categories || {};
             const monthly = data.monthly_spending || {};
 
             const totalExpense = sum.total_expense || 0;
@@ -1619,9 +1633,6 @@
             const netSavings = sum.net_savings || 0;
             const savingsRate = (sum.savings_rate || 0) * 100;
             const txCount = sum.total_transactions || 0;
-
-            const prevYear = currentYear - 1;
-            const hasPrevYear = prevYearData && (prevYearData.summary?.total_expense || 0) > 0;
 
             // Determine default selectedMonth
             const months = Object.keys(monthly).sort();
@@ -1883,6 +1894,8 @@
             const chipsContainer = document.getElementById('monthChipsContainer');
             if (chipsContainer) {
                 chipsContainer.innerHTML = '';
+                const frag = document.createDocumentFragment();
+                let activeChip = null;
                 months.forEach(m => {
                     const mNum = parseInt(m.substring(5), 10);
                     const isSelected = (m === selectedMonth);
@@ -1890,21 +1903,23 @@
                     chip.className = `month-chip ${isSelected ? 'active' : ''}`;
                     chip.textContent = MONTH_SHORT_NAMES[mNum] || m;
                     chip.onclick = () => selectDrillDownMonth(m);
-                    chipsContainer.appendChild(chip);
-
-                    if (isSelected && chipsContainer.parentElement) {
-                        const wrapper = chipsContainer.parentElement;
-                        requestAnimationFrame(() => {
-                            const chipLeft = chip.offsetLeft;
-                            const chipWidth = chip.offsetWidth;
-                            const wrapperWidth = wrapper.clientWidth;
-                            wrapper.scrollTo({
-                                left: chipLeft - (wrapperWidth / 2) + (chipWidth / 2),
-                                behavior: 'smooth'
-                            });
-                        });
-                    }
+                    frag.appendChild(chip);
+                    if (isSelected) activeChip = chip;
                 });
+                chipsContainer.appendChild(frag);
+
+                if (activeChip && chipsContainer.parentElement) {
+                    const wrapper = chipsContainer.parentElement;
+                    requestAnimationFrame(() => {
+                        const chipLeft = activeChip.offsetLeft;
+                        const chipWidth = activeChip.offsetWidth;
+                        const wrapperWidth = wrapper.clientWidth;
+                        wrapper.scrollTo({
+                            left: chipLeft - (wrapperWidth / 2) + (chipWidth / 2),
+                            behavior: 'smooth'
+                        });
+                    });
+                }
             }
 
             // Determine Previous Month Data for M/M Comparison
@@ -1920,6 +1935,7 @@
                 if (sortedMonthGroups.length === 0) {
                     groupListContainer.innerHTML = '<div style="color:var(--text-muted); font-size:0.9rem; padding:1rem 0;">No category group spending recorded for this month.</div>';
                 } else {
+                    const frag = document.createDocumentFragment();
                     sortedMonthGroups.forEach(([name, amt], idx) => {
                         const pct = monthTotalSpend > 0 ? (amt / monthTotalSpend) * 100 : 0;
                         const color = GROUP_COLORS[idx % GROUP_COLORS.length];
@@ -1929,7 +1945,7 @@
                         if (hasPrevMonth) {
                             const prevAmt = prevMonthGroups[name] || 0;
                             const prevPct = prevMonthTotalSpend > 0 ? (prevAmt / prevMonthTotalSpend) * 100 : 0;
-                            groupTip = `<span style="color:#a5b4fc; font-weight:600;">${prevShortName}:</span> ${formatCurrency(prevAmt)} <span style="color:#94a3b8;">(${prevPct.toFixed(1)}%)</span>`;
+                            groupTip = `<span style="color:#a5b4fc; font-weight:600;">${escHtml(prevShortName)}:</span> ${formatCurrency(prevAmt)} <span style="color:#94a3b8;">(${prevPct.toFixed(1)}%)</span>`;
 
                             const delta = amt - prevAmt;
                             if (Math.abs(delta) < 0.005) {
@@ -1947,7 +1963,7 @@
                             <div class="group-header">
                                 <span class="group-name">
                                     <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
-                                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
+                                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(name)}</span>
                                 </span>
                                 <div class="group-amount-wrap" ${groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
                                     <span class="group-amount-val">${formatCurrency(amt)}</span>
@@ -1958,8 +1974,9 @@
                                 <div class="progress-fill" style="width: ${Math.min(pct, 100)}%; background: ${color};"></div>
                             </div>
                         `;
-                        groupListContainer.appendChild(item);
+                        frag.appendChild(item);
                     });
+                    groupListContainer.appendChild(frag);
                 }
             }
 
@@ -1989,16 +2006,16 @@
                 tooltip: {
                     trigger: 'item',
                     formatter: (p) => {
-                        let res = `<b>${p.name}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
+                        let res = `<b>${escHtml(p.name)}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
                         if (hasPrevMonth) {
                             const prevAmt = prevMonthGroups[p.name] || 0;
                             const delta = p.value - prevAmt;
                             if (delta > 0.005) {
-                                res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${formatCurrency(delta)} vs ${prevShortName} (${formatCurrency(prevAmt)})</span>`;
+                                res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${formatCurrency(delta)} vs ${escHtml(prevShortName)} (${formatCurrency(prevAmt)})</span>`;
                             } else if (delta < -0.005) {
-                                res += `<br/><span style="color:#f43f5e; font-size:0.85em;">🔻-${formatCurrency(Math.abs(delta))} vs ${prevShortName} (${formatCurrency(prevAmt)})</span>`;
+                                res += `<br/><span style="color:#f43f5e; font-size:0.85em;">🔻-${formatCurrency(Math.abs(delta))} vs ${escHtml(prevShortName)} (${formatCurrency(prevAmt)})</span>`;
                             } else {
-                                res += `<br/><span style="color:var(--text-muted); font-size:0.85em;">$0.00 vs ${prevShortName}</span>`;
+                                res += `<br/><span style="color:var(--text-muted); font-size:0.85em;">$0.00 vs ${escHtml(prevShortName)}</span>`;
                             }
                         }
                         return res;
@@ -2043,6 +2060,7 @@
 
             const { prevMonthCats, prevShortName, prevMonthTotalSpend, hasPrevMonth } = getPrevMonthInfo(selectedMonth);
 
+            const frag = document.createDocumentFragment();
             sorted.forEach(([name, amt], idx) => {
                 const pct = monthTotalSpend > 0 ? (amt / monthTotalSpend) * 100 : 0;
                 const groupName = categoryToGroupMap[name] || '';
@@ -2052,7 +2070,7 @@
                 if (hasPrevMonth) {
                     const prevAmt = prevMonthCats[name] || 0;
                     const prevPct = prevMonthTotalSpend > 0 ? (prevAmt / prevMonthTotalSpend) * 100 : 0;
-                    cellTooltip = `<span style="color:#a5b4fc; font-weight:600;">${prevShortName}:</span> ${formatCurrency(prevAmt)} <span style="color:#94a3b8;">(${prevPct.toFixed(1)}%)</span>`;
+                    cellTooltip = `<span style="color:#a5b4fc; font-weight:600;">${escHtml(prevShortName)}:</span> ${formatCurrency(prevAmt)} <span style="color:#94a3b8;">(${prevPct.toFixed(1)}%)</span>`;
 
                     const delta = amt - prevAmt;
                     if (Math.abs(delta) < 0.005) {
@@ -2069,8 +2087,8 @@
                     <td class="rank">${idx + 1}</td>
                     <td class="name">
                         <div class="cat-name-cell">
-                            <span class="cat-name-primary">${name}</span>
-                            ${groupName ? `<span class="cat-group-name">${groupName}</span>` : ''}
+                            <span class="cat-name-primary">${escHtml(name)}</span>
+                            ${groupName ? `<span class="cat-group-name">${escHtml(groupName)}</span>` : ''}
                         </div>
                     </td>
                     <td class="amount" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
@@ -2082,8 +2100,9 @@
                     <td class="pct col-pct">${pct.toFixed(1)}%</td>
                     <td class="delta col-delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${mmHtml}</td>
                 `;
-                tbody.appendChild(tr);
+                frag.appendChild(tr);
             });
+            tbody.appendChild(frag);
         }
 
         function filterMonthCategories() {
@@ -2132,6 +2151,8 @@
             if (yearChipsContainer) {
                 yearChipsContainer.innerHTML = '';
                 const sortedYears = [...availableYears].sort((a, b) => b - a);
+                const frag = document.createDocumentFragment();
+                let activeChip = null;
                 sortedYears.forEach(y => {
                     const isSelected = (y === targetYear);
                     const chip = document.createElement('button');
@@ -2139,21 +2160,23 @@
                     chip.textContent = y;
                     chip.title = `View ${y} spending by category`;
                     chip.onclick = () => renderAnnualSection(y);
-                    yearChipsContainer.appendChild(chip);
-
-                    if (isSelected && yearChipsContainer.parentElement) {
-                        const wrapper = yearChipsContainer.parentElement;
-                        requestAnimationFrame(() => {
-                            const chipLeft = chip.offsetLeft;
-                            const chipWidth = chip.offsetWidth;
-                            const wrapperWidth = wrapper.clientWidth;
-                            wrapper.scrollTo({
-                                left: chipLeft - (wrapperWidth / 2) + (chipWidth / 2),
-                                behavior: 'smooth'
-                            });
-                        });
-                    }
+                    frag.appendChild(chip);
+                    if (isSelected) activeChip = chip;
                 });
+                yearChipsContainer.appendChild(frag);
+
+                if (activeChip && yearChipsContainer.parentElement) {
+                    const wrapper = yearChipsContainer.parentElement;
+                    requestAnimationFrame(() => {
+                        const chipLeft = activeChip.offsetLeft;
+                        const chipWidth = activeChip.offsetWidth;
+                        const wrapperWidth = wrapper.clientWidth;
+                        wrapper.scrollTo({
+                            left: chipLeft - (wrapperWidth / 2) + (chipWidth / 2),
+                            behavior: 'smooth'
+                        });
+                    });
+                }
             }
 
             // Check if year data is cached in memory
@@ -2227,6 +2250,7 @@
                 const prevTotalExpense = prevData?.summary?.total_expense || 0;
                 const prevCatGroups = prevData?.category_groups || {};
 
+                const frag = document.createDocumentFragment();
                 sortedGroups.forEach(([name, amt], idx) => {
                     const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
                     const color = GROUP_COLORS[idx % GROUP_COLORS.length];
@@ -2254,7 +2278,7 @@
                         <div class="group-header">
                             <span class="group-name">
                                 <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
-                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</span>
+                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(name)}</span>
                             </span>
                             <div class="group-amount-wrap" ${groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
                                 <span class="group-amount-val">${formatCurrency(amt)}</span>
@@ -2265,8 +2289,9 @@
                             <div class="progress-fill" style="width: ${Math.min(pct, 100)}%; background: ${color};"></div>
                         </div>
                     `;
-                    groupContainer.appendChild(item);
+                    frag.appendChild(item);
                 });
+                groupContainer.appendChild(frag);
 
                 // Render Donut Chart with correct Y/Y target year
                 renderGroupDonutChart(sortedGroups, prevData, totalExpense, targetYear);
@@ -2358,6 +2383,7 @@
             const prevCats = prevData?.categories || {};
             const hasPrevYear = prevData && prevTotalExpense > 0;
 
+            const frag = document.createDocumentFragment();
             sorted.forEach(([name, amt], idx) => {
                 const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
                 const groupName = categoryToGroupMap[name] || '';
@@ -2384,8 +2410,8 @@
                     <td class="rank">${idx + 1}</td>
                     <td class="name">
                         <div class="cat-name-cell">
-                            <span class="cat-name-primary">${name}</span>
-                            ${groupName ? `<span class="cat-group-name">${groupName}</span>` : ''}
+                            <span class="cat-name-primary">${escHtml(name)}</span>
+                            ${groupName ? `<span class="cat-group-name">${escHtml(groupName)}</span>` : ''}
                         </div>
                     </td>
                     <td class="amount" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
@@ -2397,8 +2423,9 @@
                     <td class="pct col-pct">${pct.toFixed(1)}%</td>
                     <td class="delta col-delta" ${cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>${yyHtml}</td>
                 `;
-                tbody.appendChild(tr);
+                frag.appendChild(tr);
             });
+            tbody.appendChild(frag);
         }
 
         function filterCategories() {
@@ -2589,7 +2616,7 @@
                 tooltip: {
                     trigger: 'item',
                     formatter: (p) => {
-                        let res = `<b>${p.name}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
+                        let res = `<b>${escHtml(p.name)}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
                         if (prevYearData && prevTotalExpense > 0) {
                             const prevAmt = prevCatGroups[p.name] || 0;
                             const prevPct = (prevAmt / prevTotalExpense) * 100;
@@ -2631,10 +2658,11 @@
         // Trigger Recalculate / Background Sync
         async function triggerRecalculate() {
             setSyncingState(true);
+            const syncYear = currentYear;
             try {
-                const res = await fetch(`/api/spending/recalculate?year=${currentYear}`, { method: 'POST' });
+                const res = await fetch(`/api/spending/recalculate?year=${syncYear}`, { method: 'POST' });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                startPolling();
+                startPolling(syncYear);
             } catch (err) {
                 alert(`Could not start refresh: ${err.message}`);
                 setSyncingState(false);
@@ -2642,11 +2670,13 @@
         }
 
         function setSyncingState(syncing) {
-            isSyncing = syncing;
             const menuBtn = document.getElementById('menuRefreshBtn');
             const menuIcon = document.getElementById('menuRefreshIcon');
             const menuText = document.getElementById('menuRefreshText');
+            const emptyBtn = document.getElementById('emptyRecalcBtn');
             const fContainer = document.getElementById('freshnessContainer');
+
+            if (emptyBtn) emptyBtn.disabled = syncing;
 
             if (syncing) {
                 if (menuBtn) menuBtn.disabled = true;
@@ -2671,23 +2701,29 @@
             }
         }
 
-        function startPolling() {
+        function startPolling(targetYear = currentYear) {
             if (pollTimer) clearInterval(pollTimer);
             pollTimer = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/spending/status?year=${currentYear}`);
+                    const res = await fetch(`/api/spending/status?year=${targetYear}`);
                     if (!res.ok) return;
                     const statusData = await res.json();
 
                     if (statusData.sync_status === 'ready') {
                         clearInterval(pollTimer);
                         pollTimer = null;
-                        await loadReport(currentYear);
+                        if (currentYear === targetYear) {
+                            await loadReport(targetYear);
+                        } else {
+                            delete cachedAnnualReports[targetYear];
+                        }
                     } else if (statusData.sync_status === 'error') {
                         clearInterval(pollTimer);
                         pollTimer = null;
-                        setSyncingState(false);
-                        alert(`Recalculation error: ${statusData.error_message || 'Unknown error'}`);
+                        if (currentYear === targetYear) {
+                            setSyncingState(false);
+                        }
+                        alert(`Recalculation error for ${targetYear}: ${statusData.error_message || 'Unknown error'}`);
                     }
                 } catch (e) {
                     console.error('Polling status error', e);
