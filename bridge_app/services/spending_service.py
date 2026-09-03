@@ -11,6 +11,98 @@ from .monarch import get_monarch_client, get_latest_credentials
 logger = logging.getLogger("spending_service")
 UNCATEGORIZED = "Uncategorized"
 
+TAXABLE_EARNINGS_CATEGORIES = {
+    "interest",
+    "dividends",
+    "dividend",
+    "capital gains",
+    "capital gain",
+    "paychecks",
+    "paycheck",
+    "bonus",
+    "bonuses",
+}
+
+TAX_SHELTERED_SUBTYPES = {
+    # US Defined Contribution & Retirement
+    "st_401k",
+    "st_401a",
+    "st_403b",
+    "st_457b",
+    "roth_401k",
+    "ira",
+    "roth",
+    "sep_ira",
+    "simple_ira",
+    "sarsep_pension",
+    "keogh_plan",
+    "pension",
+    "retirement",
+    "profit_sharing_plan",
+    "thrift_savings_plan",
+    "sipp",
+    # Canadian Registered Retirement Accounts
+    "rrsp",
+    "rrif",
+    "lif",
+    "lira",
+    "lrif",
+    "lrsp",
+    "prif",
+    "rlif",
+    # Tax-Free / Non-taxable
+    "non_taxable_brokerage_account",
+    "tfsa",
+    # Health & Education Tax-Advantaged
+    "health_savings_account",
+    "health_reimbursement_arrangement",
+    "st_529",
+    "education_savings_account",
+}
+
+TAX_SHELTERED_KEYWORDS = [
+    "401k", "401(k)", "403b", "403(b)", "457", "roth", "sep ira", "simple ira",
+    "traditional ira", "rollover ira", "pension", "retirement", "superannuation",
+    "rrsp", "rrif", "lira", "lif", "tfsa", "hsa", "529", "health savings",
+]
+
+
+def is_taxable_earnings_account(account: Optional[Dict[str, Any]]) -> bool:
+    """
+    Determine if an account is eligible for taxable earnings.
+    Excludes credit accounts, retirement accounts, and tax-sheltered accounts (HSA/529).
+    """
+    if not account:
+        return True
+
+    type_info = account.get("type") or {}
+    type_name = (type_info.get("name") or "").lower()
+    type_display = (type_info.get("display") or "").lower()
+
+    # Completely ignore credit accounts
+    if type_name == "credit" or "credit card" in type_display:
+        return False
+
+    subtype_info = account.get("subtype") or {}
+    subtype_name = (subtype_info.get("name") or "").lower()
+    subtype_display = (subtype_info.get("display") or "").lower()
+    display_name = (account.get("displayName") or "").lower()
+
+    if subtype_name in TAX_SHELTERED_SUBTYPES:
+        return False
+
+    for kw in TAX_SHELTERED_KEYWORDS:
+        if kw in subtype_display:
+            return False
+
+    # Check display name for explicit tax-sheltered markers (especially for investment accounts)
+    if type_name == "brokerage":
+        import re
+        if re.search(r"\b(ira|roth|401k|401\(k\)|403b|403\(b\)|457b?|sep\s+ira|simple\s+ira|pension|hsa|529)\b", display_name):
+            return False
+
+    return True
+
 
 async def get_or_create_spending_report(
     db: AsyncSession, year: int, user_id: Optional[int] = None
@@ -91,6 +183,10 @@ async def calculate_and_save_spending_report(
             cat_res = await _retry_monarch_call(mm.get_transaction_categories)
             categories_map = {c["id"]: c for c in cat_res.get("categories", [])}
 
+            # 3b. Read Accounts (READ-ONLY)
+            accounts_res = await _retry_monarch_call(mm.get_accounts)
+            accounts_map = {acc["id"]: acc for acc in accounts_res.get("accounts", [])}
+
             # 4. Read Cash Flow Aggregates (READ-ONLY)
             cashflow_res = await _retry_monarch_call(mm.get_cashflow, start_date=start_date, end_date=end_date)
             summary_list = cashflow_res.get("summary", [])
@@ -146,6 +242,7 @@ async def calculate_and_save_spending_report(
             itemized_expense_total = 0.0
             itemized_income_total = 0.0
             itemized_transfers_total = 0.0
+            itemized_taxable_earnings_total = 0.0
 
             categorized_breakdown = {}
             category_group_breakdown = {}
@@ -176,6 +273,18 @@ async def calculate_and_save_spending_report(
 
                 if cat_name and group_name:
                     category_to_group_map[cat_name] = group_name
+
+                # Taxable Earnings calculation:
+                # Match "Interest", "Dividends", "Capital Gains", "Paychecks", or "Bonus"
+                # in non-credit, non-retirement, non-tax-sheltered accounts.
+                cat_name_clean = (cat_name or "").strip().lower()
+                tx_acc = tx.get("account") or {}
+                acc_id = tx_acc.get("id")
+                full_acc = accounts_map.get(acc_id) or tx_acc
+
+                if cat_name_clean in TAXABLE_EARNINGS_CATEGORIES and is_taxable_earnings_account(full_acc):
+                    if group_type == "income" or amount > 0:
+                        itemized_taxable_earnings_total += amount
 
                 if group_type == "expense" or (group_type not in ("income", "transfer") and amount < 0):
                     expense_val = -amount
@@ -215,11 +324,13 @@ async def calculate_and_save_spending_report(
                 "total_income": sum_income,
                 "net_savings": sum_savings,
                 "savings_rate": sum_savings_rate,
+                "taxable_earnings": round(itemized_taxable_earnings_total, 2),
                 "itemized_expense": itemized_expense_total,
                 "itemized_income": itemized_income_total,
                 "itemized_transfers": itemized_transfers_total,
                 "total_transactions": len(all_txs),
             }
+
             report.category_groups = category_group_breakdown
             report.categories = categorized_breakdown
             report.category_to_group = category_to_group_map

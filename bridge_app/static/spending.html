@@ -1641,7 +1641,8 @@
             const totalIncome = sum.total_income || 0;
             const netSavings = sum.net_savings || 0;
             const savingsRate = (sum.savings_rate || 0) * 100;
-            const txCount = sum.total_transactions || 0;
+            const hasTaxable = sum.taxable_earnings != null;
+            const taxableEarnings = hasTaxable ? sum.taxable_earnings : 0;
 
             // Determine default selectedMonth
             const months = Object.keys(monthly).sort();
@@ -1677,9 +1678,9 @@
                         <div class="kpi-sub">${savingsRate.toFixed(1)}% Savings Rate</div>
                     </div>
                     <div class="kpi-card" style="--card-accent: #8b5cf6;">
-                        <div class="kpi-label">Transactions Analyzed</div>
-                        <div class="kpi-value" style="color: #c4b5fd;">${txCount.toLocaleString()}</div>
-                        <div class="kpi-sub">Non-hidden records in ${currentYear}</div>
+                        <div class="kpi-label">Taxable Earnings</div>
+                        <div class="kpi-value" style="color: #c4b5fd;">${formatCurrency(taxableEarnings)}</div>
+                        <div class="kpi-sub">${hasTaxable ? 'Non-retirement income' : 'Needs recalculation'}</div>
                     </div>
                 </div>
 
