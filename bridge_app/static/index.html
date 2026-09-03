@@ -268,10 +268,12 @@
             }
         }
 
-        @media (min-width: 601px), (hover: hover) and (pointer: fine) {
+        @media (min-width: 601px),
+        (hover: hover) and (pointer: fine) {
             .history-header-action {
                 display: block;
             }
+
             .history-desktop-delete-btn {
                 display: inline-flex;
             }
@@ -439,6 +441,7 @@
             font-weight: bold;
             margin-left: 5px;
         }
+
         .failed-item-card {
             background: rgba(255, 255, 255, 0.92);
             border: 1px solid rgba(239, 68, 68, 0.25);
@@ -449,16 +452,19 @@
             transition: all 0.2s ease;
             text-align: left;
         }
+
         .failed-item-card:hover {
             background: #ffffff;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
         }
+
         .failed-item-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 4px;
         }
+
         .failed-item-merchant {
             font-weight: bold;
             color: #1f2937;
@@ -467,11 +473,13 @@
             align-items: center;
             gap: 6px;
         }
+
         .failed-item-amount {
             font-weight: bold;
             color: #b91c1c;
             font-size: 0.95rem;
         }
+
         .failed-error-banner {
             background: #fee2e2;
             color: #991b1b;
@@ -482,20 +490,24 @@
             line-height: 1.3;
             word-break: break-word;
         }
+
         .failed-item-actions {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-top: 8px;
         }
+
         .failed-meta {
             font-size: 0.75rem;
             color: #6b7280;
         }
+
         .failed-btn-group {
             display: flex;
             gap: 6px;
         }
+
         .btn-failed-retry {
             background: #4f46e5;
             color: white;
@@ -507,7 +519,11 @@
             font-weight: bold;
             transition: background 0.15s;
         }
-        .btn-failed-retry:hover { background: #4338ca; }
+
+        .btn-failed-retry:hover {
+            background: #4338ca;
+        }
+
         .btn-failed-edit {
             background: #f3f4f6;
             color: #374151;
@@ -517,7 +533,11 @@
             font-size: 0.8rem;
             cursor: pointer;
         }
-        .btn-failed-edit:hover { background: #e5e7eb; }
+
+        .btn-failed-edit:hover {
+            background: #e5e7eb;
+        }
+
         .btn-failed-del {
             background: #fee2e2;
             color: #991b1b;
@@ -527,7 +547,10 @@
             font-size: 0.8rem;
             cursor: pointer;
         }
-        .btn-failed-del:hover { background: #fca5a5; }
+
+        .btn-failed-del:hover {
+            background: #fca5a5;
+        }
     </style>
 
     <style>
@@ -540,6 +563,7 @@
             border-radius: 12px;
             background: rgba(255, 255, 255, 0.5);
         }
+
         .batch-thumbs {
             display: flex;
             gap: 8px;
@@ -547,6 +571,7 @@
             padding: 4px 0;
             -webkit-overflow-scrolling: touch;
         }
+
         .batch-thumb {
             position: relative;
             flex-shrink: 0;
@@ -556,11 +581,13 @@
             overflow: hidden;
             border: 2px solid #d1d5db;
         }
+
         .batch-thumb img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
+
         .batch-thumb-remove {
             position: absolute;
             top: -4px;
@@ -580,6 +607,7 @@
             padding: 0;
             z-index: 2;
         }
+
         .batch-thumb-add {
             display: flex;
             align-items: center;
@@ -594,12 +622,14 @@
             box-sizing: border-box;
             user-select: none;
         }
+
         .batch-thumb-add:hover {
             background: #e0e7ff;
             border-color: #4f46e5;
             color: #4f46e5;
             transform: scale(1.05);
         }
+
         .batch-thumb-add:active {
             transform: scale(0.95);
         }
@@ -608,25 +638,31 @@
         .batch-dashboard {
             display: none;
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 1100;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             overflow-y: auto;
             padding: 1.5rem;
             box-sizing: border-box;
         }
+
         .batch-dashboard-inner {
             max-width: 500px;
             margin: 0 auto;
         }
+
         .batch-progress-bar-container {
             width: 100%;
             height: 12px;
-            background: rgba(255,255,255,0.25);
+            background: rgba(255, 255, 255, 0.25);
             border-radius: 6px;
             margin: 1rem 0;
             overflow: hidden;
         }
+
         .batch-progress-bar-fill {
             height: 100%;
             background: linear-gradient(to right, #48bb78, #38a169);
@@ -634,8 +670,9 @@
             transition: width 0.4s ease;
             width: 0%;
         }
+
         .batch-item-card {
-            background: rgba(255,255,255,0.92);
+            background: rgba(255, 255, 255, 0.92);
             border-radius: 12px;
             padding: 0.75rem 1rem;
             margin-bottom: 0.6rem;
@@ -643,19 +680,22 @@
             align-items: center;
             gap: 10px;
             font-size: 0.9rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
         }
+
         .batch-item-icon {
             font-size: 1.3rem;
             flex-shrink: 0;
             width: 28px;
             text-align: center;
         }
+
         .batch-item-info {
             flex: 1;
             min-width: 0;
         }
+
         .batch-item-name {
             font-weight: 600;
             color: #374151;
@@ -663,11 +703,13 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
         .batch-item-detail {
             font-size: 0.8rem;
             color: #6b7280;
             margin-top: 2px;
         }
+
         .batch-item-status {
             font-size: 0.78rem;
             font-weight: 600;
@@ -675,18 +717,39 @@
             padding: 3px 8px;
             border-radius: 999px;
         }
-        .batch-item-status.queued { background: #e5e7eb; color: #6b7280; }
-        .batch-item-status.processing { background: #dbeafe; color: #2563eb; }
-        .batch-item-status.completed { background: #d1fae5; color: #065f46; }
-        .batch-item-status.duplicate { background: #fef3c7; color: #92400e; }
-        .batch-item-status.failed { background: #fee2e2; color: #991b1b; }
+
+        .batch-item-status.queued {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .batch-item-status.processing {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .batch-item-status.completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .batch-item-status.duplicate {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .batch-item-status.failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
 
         .batch-item-card.interactive {
             cursor: pointer;
         }
+
         .batch-item-card.interactive:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
             background: #ffffff;
         }
 
@@ -703,8 +766,16 @@
             transition: color 0.2s, border-color 0.2s;
             user-select: none;
         }
-        .date-pill:hover { color: #764ba2; border-color: #764ba2; }
-        .date-pill.updating { opacity: 0.5; pointer-events: none; }
+
+        .date-pill:hover {
+            color: #764ba2;
+            border-color: #764ba2;
+        }
+
+        .date-pill.updating {
+            opacity: 0.5;
+            pointer-events: none;
+        }
 
         .category-pill {
             font-weight: 600;
@@ -718,34 +789,46 @@
             transition: color 0.2s, border-color 0.2s;
             user-select: none;
         }
-        .category-pill:hover { color: #764ba2; border-color: #764ba2; }
-        .category-pill.updating { opacity: 0.5; pointer-events: none; }
+
+        .category-pill:hover {
+            color: #764ba2;
+            border-color: #764ba2;
+        }
+
+        .category-pill.updating {
+            opacity: 0.5;
+            pointer-events: none;
+        }
 
         /* Batch Summary (post-processing) */
         .batch-summary-card {
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 14px;
             padding: 1rem 1.2rem;
             margin-bottom: 0.7rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
+
         .batch-summary-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 8px;
         }
+
         .batch-summary-merchant {
             font-weight: 700;
             color: #1f2937;
             font-size: 1rem;
         }
+
         .batch-summary-amount {
             font-weight: 700;
             color: #065f46;
             font-size: 1rem;
             white-space: nowrap;
         }
+
         .batch-summary-meta {
             display: flex;
             gap: 8px;
@@ -753,6 +836,7 @@
             margin-top: 6px;
             flex-wrap: wrap;
         }
+
         .batch-pill {
             display: inline-block;
             padding: 2px 10px;
@@ -763,13 +847,26 @@
             transition: all 0.15s ease;
             border: 1px solid transparent;
         }
+
         .batch-pill:hover {
             filter: brightness(0.95);
             transform: scale(1.03);
         }
-        .batch-pill.date { background: #ede9fe; color: #5b21b6; }
-        .batch-pill.category { background: #dbeafe; color: #1e40af; }
-        .batch-pill.cash { background: #d1fae5; color: #065f46; }
+
+        .batch-pill.date {
+            background: #ede9fe;
+            color: #5b21b6;
+        }
+
+        .batch-pill.category {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .batch-pill.cash {
+            background: #d1fae5;
+            color: #065f46;
+        }
     </style>
 </head>
 
@@ -795,7 +892,8 @@
                 <a href="#" id="failedTxnsLink" class="deep-link-item" onclick="openFailedModal(event)">
                     <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⚠️</span>
                     <span style="flex: 1;">Failed Txns</span>
-                    <span id="failedBadge" style="display:none; background:#ef4444; color:white; border-radius:999px; font-size:0.75rem; padding:2px 7px; font-weight:bold; margin-left:5px;">0</span>
+                    <span id="failedBadge"
+                        style="display:none; background:#ef4444; color:white; border-radius:999px; font-size:0.75rem; padding:2px 7px; font-weight:bold; margin-left:5px;">0</span>
                 </a>
                 <div class="menu-divider"></div>
                 <a href="/spending" class="deep-link-item">
@@ -968,7 +1066,9 @@
                 </script>
 
                 <button type="submit" id="singleSubmitBtn" class="btn">🚀 Process Receipt</button>
-                <button type="button" id="batchSubmitBtn" class="btn" style="display:none; background: linear-gradient(to right, #f59e0b, #d97706);" onclick="startBatchUpload()">⚡ Process Receipts</button>
+                <button type="button" id="batchSubmitBtn" class="btn"
+                    style="display:none; background: linear-gradient(to right, #f59e0b, #d97706);"
+                    onclick="startBatchUpload()">⚡ Process Receipts</button>
             </form>
 
             <!-- Manual Entry Link -->
@@ -1011,7 +1111,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260903.1345 ©2025-26 ego/DEV/null</span>
+        <span style="font-style: italic;">20260903.1345 ©2025-26 EGO /dev/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -1053,15 +1153,20 @@
             style="position:relative; margin: 1rem; max-width: 650px; width: 95%; background: linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%); border-radius: 20px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
             <span id="closeFailedModal"
                 style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #aaa;">&times;</span>
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1rem; flex-wrap:wrap; gap:10px;">
-                <h2 style="color: #4a4a4a; margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1.6rem; font-family: 'Sriracha', cursive;">
-                    ⚠️ Failed Transactions <span id="failedModalCount" style="font-size: 0.9rem; background: #e53e3e; color: white; border-radius: 999px; padding: 2px 8px; font-family: sans-serif;">0</span>
+            <div
+                style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1rem; flex-wrap:wrap; gap:10px;">
+                <h2
+                    style="color: #4a4a4a; margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1.6rem; font-family: 'Sriracha', cursive;">
+                    ⚠️ Failed Transactions <span id="failedModalCount"
+                        style="font-size: 0.9rem; background: #e53e3e; color: white; border-radius: 999px; padding: 2px 8px; font-family: sans-serif;">0</span>
                 </h2>
                 <div style="display: flex; gap: 8px; margin-right: 28px;">
-                    <button id="retryAllFailedBtn" onclick="retryAllFailedTxns()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-family: inherit; display: flex; align-items: center; gap: 4px;">
+                    <button id="retryAllFailedBtn" onclick="retryAllFailedTxns()"
+                        style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-family: inherit; display: flex; align-items: center; gap: 4px;">
                         <span>🔄 Retry All</span>
                     </button>
-                    <button id="clearAllFailedBtn" onclick="clearAllFailedTxns()" style="background: rgba(239, 68, 68, 0.15); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-family: inherit;">
+                    <button id="clearAllFailedBtn" onclick="clearAllFailedTxns()"
+                        style="background: rgba(239, 68, 68, 0.15); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-family: inherit;">
                         <span>🗑️ Clear All</span>
                     </button>
                 </div>
@@ -1083,24 +1188,31 @@
     </div>
 
     <!-- Edit Failed Transaction Modal -->
-    <div id="editFailedModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div class="card" style="display: flex; width: 90%; max-width: 400px; padding: 1.5rem; background: #fff; border-radius: 16px; box-sizing: border-box;">
+    <div id="editFailedModal"
+        style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="card"
+            style="display: flex; width: 90%; max-width: 400px; padding: 1.5rem; background: #fff; border-radius: 16px; box-sizing: border-box;">
             <h3 style="margin-top: 0; color: #374151; font-family: 'Sriracha', cursive;">✏️ Edit Failed Transaction</h3>
             <input type="hidden" id="editFailedId">
-            
+
             <div style="width: 100%; text-align: left; margin-bottom: 0.8rem;">
-                <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Merchant Name</label>
-                <input type="text" id="editFailedMerchant" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Merchant
+                    Name</label>
+                <input type="text" id="editFailedMerchant"
+                    style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
             </div>
 
             <div style="width: 100%; display: flex; gap: 10px; margin-bottom: 0.8rem;">
                 <div style="flex: 1; text-align: left;">
                     <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Amount</label>
-                    <input type="number" step="0.01" id="editFailedAmount" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                    <input type="number" step="0.01" id="editFailedAmount"
+                        style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
                 </div>
                 <div style="width: 100px; text-align: left;">
-                    <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Currency</label>
-                    <select id="editFailedCurrency" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; box-sizing: border-box;">
+                    <label
+                        style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Currency</label>
+                    <select id="editFailedCurrency"
+                        style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; box-sizing: border-box;">
                         <option value="EUR">EUR</option>
                         <option value="USD">USD</option>
                         <option value="GBP">GBP</option>
@@ -1113,28 +1225,35 @@
 
             <div style="width: 100%; text-align: left; margin-bottom: 0.8rem;">
                 <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Date</label>
-                <input type="date" id="editFailedDate" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                <input type="date" id="editFailedDate"
+                    style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
             </div>
 
             <div style="width: 100%; text-align: left; margin-bottom: 0.8rem;">
                 <label style="font-size: 0.8rem; color: #6b7280; display: block; margin-bottom: 3px;">Category</label>
-                <select id="editFailedCategory" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; box-sizing: border-box;">
+                <select id="editFailedCategory"
+                    style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: white; box-sizing: border-box;">
                     <option value="">Select Category (Optional)</option>
                 </select>
             </div>
 
             <div style="width: 100%; display: flex; gap: 1rem; margin-bottom: 1.2rem; align-items: center;">
-                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: #4b5563; cursor: pointer;">
+                <label
+                    style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: #4b5563; cursor: pointer;">
                     <input type="checkbox" id="editFailedIsCredit"> Is Credit?
                 </label>
-                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: #4b5563; cursor: pointer;">
+                <label
+                    style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: #4b5563; cursor: pointer;">
                     <input type="checkbox" id="editFailedIsCash"> Is Cash?
                 </label>
             </div>
 
             <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;">
-                <button onclick="closeEditFailedModal()" style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; color: #374151;">Cancel</button>
-                <button onclick="saveAndRetryFailedTx()" style="padding: 8px 16px; border: none; background: #4f46e5; color: white; border-radius: 6px; cursor: pointer;">Save & Retry 🚀</button>
+                <button onclick="closeEditFailedModal()"
+                    style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; color: #374151;">Cancel</button>
+                <button onclick="saveAndRetryFailedTx()"
+                    style="padding: 8px 16px; border: none; background: #4f46e5; color: white; border-radius: 6px; cursor: pointer;">Save
+                    & Retry 🚀</button>
             </div>
         </div>
     </div>
@@ -1149,7 +1268,8 @@
 
             <form action="/manual" method="post" id="manualForm">
                 <div style="text-align: left; margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
                         <label style="color: #666; font-size: 0.9rem; font-weight: bold; margin: 0;">Merchant</label>
                         <a href="#" id="starredMerchantsLink" onclick="openSelectStarredModal(event)"
                             style="color: #667eea; font-size: 0.9rem; font-weight: bold; text-decoration: none; display: flex; align-items: center; gap: 4px; cursor: pointer;">
@@ -1193,15 +1313,19 @@
                                 margin-top: 5px;
                             ">
                                 <div class="manual-currency-option" data-value="EUR"
-                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💶 EUR (Euro)
+                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💶 EUR
+                                    (Euro)
                                 </div>
                                 <div class="manual-currency-option" data-value="USD"
-                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💵 USD (US $)</div>
+                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💵 USD (US
+                                    $)</div>
                                 <div class="manual-currency-option" data-value="GBP"
-                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💷 GBP (Pound)
+                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💷 GBP
+                                    (Pound)
                                 </div>
                                 <div class="manual-currency-option" data-value="JPY"
-                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💴 JPY (Yen)
+                                    style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">💴 JPY
+                                    (Yen)
                                 </div>
                                 <div class="manual-currency-option" data-value="CZK"
                                     style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">🇨🇿 CZK
@@ -1250,59 +1374,80 @@
     </div>
 
     <!-- Select Starred Merchant Modal (for Manual Entry) -->
-    <div id="selectStarredModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2500; justify-content: center; align-items: center;">
-        <div style="position:relative; margin: 1rem; max-width: 420px; width: 90%; background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
-            <span id="closeSelectStarredModal" onclick="closeSelectStarredModal()" style="position:absolute; top: 12px; right: 16px; font-size: 1.5rem; cursor: pointer; color: #4c1d95; font-weight: bold;">&times;</span>
-            <h3 style="color: #4c1d95; margin-top: 0; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 8px; font-size: 1.4rem; font-family: 'Sriracha', cursive;">
+    <div id="selectStarredModal"
+        style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2500; justify-content: center; align-items: center;">
+        <div
+            style="position:relative; margin: 1rem; max-width: 420px; width: 90%; background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+            <span id="closeSelectStarredModal" onclick="closeSelectStarredModal()"
+                style="position:absolute; top: 12px; right: 16px; font-size: 1.5rem; cursor: pointer; color: #4c1d95; font-weight: bold;">&times;</span>
+            <h3
+                style="color: #4c1d95; margin-top: 0; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 8px; font-size: 1.4rem; font-family: 'Sriracha', cursive;">
                 ⭐ Select Starred Merchant
             </h3>
             <p style="font-size: 0.85rem; color: #5b21b6; margin-top: 0; margin-bottom: 0.8rem;">
                 Click any merchant to populate into manual entry:
             </p>
 
-            <div id="selectStarredList" style="max-height: 260px; overflow-y: auto; background: rgba(255,255,255,0.95); border-radius: 10px; padding: 0.4rem; border: 1px solid rgba(124, 58, 237, 0.25);">
+            <div id="selectStarredList"
+                style="max-height: 260px; overflow-y: auto; background: rgba(255,255,255,0.95); border-radius: 10px; padding: 0.4rem; border: 1px solid rgba(124, 58, 237, 0.25);">
                 <!-- Loaded dynamically -->
             </div>
-            <div id="selectStarredLoading" style="text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
+            <div id="selectStarredLoading"
+                style="text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
                 Loading starred merchants... ⏳
             </div>
-            <div id="selectStarredEmpty" style="display: none; text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
+            <div id="selectStarredEmpty"
+                style="display: none; text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
                 No starred merchants yet! ⭐<br>
-                <button type="button" onclick="closeSelectStarredModal(); openManageStarredModal(event);" style="margin-top: 10px; background: #7c3aed; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">Manage Starred Merchants ⚙️</button>
+                <button type="button" onclick="closeSelectStarredModal(); openManageStarredModal(event);"
+                    style="margin-top: 10px; background: #7c3aed; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">Manage
+                    Starred Merchants ⚙️</button>
             </div>
         </div>
     </div>
 
     <!-- Manage Starred Merchants Modal -->
-    <div id="manageStarredModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2600; justify-content: center; align-items: center;">
-        <div style="position:relative; margin: 1rem; max-width: 500px; width: 92%; background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
-            <span id="closeManageStarredModal" onclick="closeManageStarredModal()" style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #4c1d95; font-weight: bold;">&times;</span>
-            <h2 style="color: #4c1d95; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-family: 'Sriracha', cursive; justify-content: center;">
+    <div id="manageStarredModal"
+        style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2600; justify-content: center; align-items: center;">
+        <div
+            style="position:relative; margin: 1rem; max-width: 500px; width: 92%; background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 20px; padding: 1.8rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); box-sizing: border-box;">
+            <span id="closeManageStarredModal" onclick="closeManageStarredModal()"
+                style="position:absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #4c1d95; font-weight: bold;">&times;</span>
+            <h2
+                style="color: #4c1d95; margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-family: 'Sriracha', cursive; justify-content: center;">
                 ⭐ Starred Merchants
             </h2>
 
             <!-- Add Merchant Input -->
             <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
-                <input type="text" id="newMerchantInput" placeholder="New merchant name..." style="flex: 1; height: 42px; padding: 0.5rem 0.8rem; border: 1px solid #8b5cf6; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;" onkeydown="if(event.key==='Enter') addNewStarredMerchant()">
-                <button type="button" onclick="addNewStarredMerchant()" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; border: none; padding: 0 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: bold; height: 42px; display: flex; align-items: center; gap: 4px;">
+                <input type="text" id="newMerchantInput" placeholder="New merchant name..."
+                    style="flex: 1; height: 42px; padding: 0.5rem 0.8rem; border: 1px solid #8b5cf6; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; background: white;"
+                    onkeydown="if(event.key==='Enter') addNewStarredMerchant()">
+                <button type="button" onclick="addNewStarredMerchant()"
+                    style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; border: none; padding: 0 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: bold; height: 42px; display: flex; align-items: center; gap: 4px;">
                     <span>Add ⭐</span>
                 </button>
             </div>
 
             <!-- Search / Filter Input -->
             <div style="margin-bottom: 0.8rem;">
-                <input type="text" id="searchMerchantsInput" oninput="filterMerchantsList()" placeholder="🔍 Filter merchants..." style="width: 100%; height: 38px; padding: 0.4rem 0.8rem; border: 1px solid rgba(124, 58, 237, 0.4); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; background: rgba(255,255,255,0.95);">
+                <input type="text" id="searchMerchantsInput" oninput="filterMerchantsList()"
+                    placeholder="🔍 Filter merchants..."
+                    style="width: 100%; height: 38px; padding: 0.4rem 0.8rem; border: 1px solid rgba(124, 58, 237, 0.4); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; background: rgba(255,255,255,0.95);">
             </div>
 
             <!-- Merchants List -->
-            <div id="merchantsListContainer" style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 0.5rem; border: 1px solid rgba(124, 58, 237, 0.25);">
+            <div id="merchantsListContainer"
+                style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.95); border-radius: 12px; padding: 0.5rem; border: 1px solid rgba(124, 58, 237, 0.25);">
                 <div id="merchantsListBody">
                     <!-- Loaded dynamically -->
                 </div>
-                <div id="merchantsLoading" style="text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
+                <div id="merchantsLoading"
+                    style="text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
                     Loading merchants... ⏳
                 </div>
-                <div id="merchantsNoData" style="display: none; text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
+                <div id="merchantsNoData"
+                    style="display: none; text-align: center; padding: 1.5rem 0; color: #4c1d95; font-size: 0.9rem;">
                     No merchants found. Add one above! ⭐
                 </div>
             </div>
@@ -1763,17 +1908,17 @@
                 card.id = `failed-card-${tx.id}`;
 
                 const sourceIcon = tx.source_type === "manual" ? "✍️ Manual" : "🧾 Receipt";
-                const amountDisplay = tx.amount !== null && tx.amount !== undefined 
-                    ? `${parseFloat(tx.amount).toFixed(2)} ${tx.currency}` 
+                const amountDisplay = tx.amount !== null && tx.amount !== undefined
+                    ? `${parseFloat(tx.amount).toFixed(2)} ${tx.currency}`
                     : (tx.source_type === "receipt" ? "Amount Pending" : "0.00");
-                
+
                 const dateDisplay = tx.date || (tx.created_at ? tx.created_at.split("T")[0] : "");
-                const imageBtn = tx.has_image 
-                    ? `<a href="/api/failed-transactions/${tx.id}/image" target="_blank" style="text-decoration:none; font-size:1rem;" title="View Receipt Image">🖼️</a>` 
+                const imageBtn = tx.has_image
+                    ? `<a href="/api/failed-transactions/${tx.id}/image" target="_blank" style="text-decoration:none; font-size:1rem;" title="View Receipt Image">🖼️</a>`
                     : "";
 
-                const retryCountBadge = tx.retry_count > 0 
-                    ? `<span style="font-size:0.75rem; color:#b91c1c; margin-left:6px;">(Retried ${tx.retry_count}x)</span>` 
+                const retryCountBadge = tx.retry_count > 0
+                    ? `<span style="font-size:0.75rem; color:#b91c1c; margin-left:6px;">(Retried ${tx.retry_count}x)</span>`
                     : "";
 
                 card.innerHTML = `
@@ -2045,7 +2190,8 @@
             <h2 id="batchTitle" style="color: white; text-align: center; margin-top: 0; font-size: 1.5rem;">
                 🧙‍♂️ AI Elves Processing Batch
             </h2>
-            <p id="batchSubtitle" style="color: rgba(255,255,255,0.8); text-align: center; margin-top: -0.5rem; font-size: 0.9rem;">
+            <p id="batchSubtitle"
+                style="color: rgba(255,255,255,0.8); text-align: center; margin-top: -0.5rem; font-size: 0.9rem;">
                 0 of 0 completed
             </p>
 
@@ -2060,45 +2206,65 @@
             <!-- Actions (shown when batch completes) -->
             <div id="batchActions" style="display: none; text-align: center; margin-top: 1.5rem;">
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button id="batchRetryBtn" class="btn" style="display:none; flex: 1; min-width: 120px; background: linear-gradient(to right, #4f46e5, #7c3aed); margin-top: 0; padding: 0.75rem 1rem; font-size: 0.95rem;" onclick="retryBatchFailed()">🔄 Retry Failed</button>
-                    <a href="/" class="btn" style="flex: 1; min-width: 100px; margin-top: 0; padding: 0.75rem 1rem; font-size: 0.95rem; text-align: center;">🏡 Done</a>
+                    <button id="batchRetryBtn" class="btn"
+                        style="display:none; flex: 1; min-width: 120px; background: linear-gradient(to right, #4f46e5, #7c3aed); margin-top: 0; padding: 0.75rem 1rem; font-size: 0.95rem;"
+                        onclick="retryBatchFailed()">🔄 Retry Failed</button>
+                    <a href="/" class="btn"
+                        style="flex: 1; min-width: 100px; margin-top: 0; padding: 0.75rem 1rem; font-size: 0.95rem; text-align: center;">🏡
+                        Done</a>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Batch Item Detail / Manual Edit Modal -->
-    <div id="batchDetailModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.65); z-index:2200; justify-content:center; align-items:center; overflow-y:auto; padding:1rem; box-sizing:border-box;">
-        <div style="position:relative; width:95%; max-width:440px; background:linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%); border-radius:20px; padding:1.75rem; box-shadow:0 10px 30px rgba(0,0,0,0.3); box-sizing:border-box; margin:auto;">
-            <span onclick="closeBatchDetailModal()" style="position:absolute; top:12px; right:16px; font-size:1.6rem; cursor:pointer; color:#718096; font-weight:bold;">&times;</span>
-            
+    <div id="batchDetailModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.65); z-index:2200; justify-content:center; align-items:center; overflow-y:auto; padding:1rem; box-sizing:border-box;">
+        <div
+            style="position:relative; width:95%; max-width:440px; background:linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%); border-radius:20px; padding:1.75rem; box-shadow:0 10px 30px rgba(0,0,0,0.3); box-sizing:border-box; margin:auto;">
+            <span onclick="closeBatchDetailModal()"
+                style="position:absolute; top:12px; right:16px; font-size:1.6rem; cursor:pointer; color:#718096; font-weight:bold;">&times;</span>
+
             <div id="batchDetailCardIcon" style="font-size:2.8rem; margin-bottom:0.2rem; text-align:center;">🎉</div>
-            <p id="batchDetailCardTitle" style="font-size:1.3rem; font-weight:bold; color:#4a4a4a; margin-top:0; margin-bottom:1rem; text-align:center; font-family:'Sriracha', cursive;">Transaction Processed</p>
-            
-            <div id="batchDetailRows" style="text-align:left; background:rgba(255,255,255,0.75); border-radius:12px; padding:0.75rem 1rem; margin-bottom:1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0;">
+            <p id="batchDetailCardTitle"
+                style="font-size:1.3rem; font-weight:bold; color:#4a4a4a; margin-top:0; margin-bottom:1rem; text-align:center; font-family:'Sriracha', cursive;">
+                Transaction Processed</p>
+
+            <div id="batchDetailRows"
+                style="text-align:left; background:rgba(255,255,255,0.75); border-radius:12px; padding:0.75rem 1rem; margin-bottom:1rem;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0;">
                     <span style="color:#666; font-size:0.9rem;">Merchant</span>
                     <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
-                        <button id="batchDetailStarBtn" onclick="toggleBatchDetailMerchantStar()" title="Star this merchant" style="background:none; border:none; font-size:1.3rem; cursor:pointer; padding:0; line-height:1;">☆</button>
+                        <button id="batchDetailStarBtn" onclick="toggleBatchDetailMerchantStar()"
+                            title="Star this merchant"
+                            style="background:none; border:none; font-size:1.3rem; cursor:pointer; padding:0; line-height:1;">☆</button>
                         <span id="batchDetailMerchant" style="font-weight:600; color:#1f2937;">--</span>
                     </div>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0;">
                     <span style="color:#666; font-size:0.9rem;">Amount</span>
                     <span id="batchDetailAmount" style="font-weight:600; text-align:right;">--</span>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0; position:relative;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0; position:relative;">
                     <span style="color:#666; font-size:0.9rem;">Date</span>
-                    <span id="batchDetailDate" class="date-pill" title="Tap to correct date" onclick="openBatchDetailDatePicker()">--</span>
-                    <input type="date" id="batchDetailDatePicker" style="position:absolute; opacity:0; pointer-events:none; width:0; height:0;">
+                    <span id="batchDetailDate" class="date-pill" title="Tap to correct date"
+                        onclick="openBatchDetailDatePicker()">--</span>
+                    <input type="date" id="batchDetailDatePicker"
+                        style="position:absolute; opacity:0; pointer-events:none; width:0; height:0;">
                 </div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0; position:relative;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0; position:relative;">
                     <span style="color:#666; font-size:0.9rem;">Category</span>
-                    <span id="batchDetailCategory" class="category-pill" title="Tap to change category" onclick="openBatchDetailCategorySelector()">--</span>
-                    <select id="batchDetailCategorySelect" style="display:none; font-size:0.9rem; padding:4px; border-radius:6px; border:1px solid #d1d5db; background:white; max-width:180px;"></select>
+                    <span id="batchDetailCategory" class="category-pill" title="Tap to change category"
+                        onclick="openBatchDetailCategorySelector()">--</span>
+                    <select id="batchDetailCategorySelect"
+                        style="display:none; font-size:0.9rem; padding:4px; border-radius:6px; border:1px solid #d1d5db; background:white; max-width:180px;"></select>
                 </div>
 
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
@@ -2108,49 +2274,68 @@
             </div>
 
             <!-- Historical name legend -->
-            <div id="batchDetailHistoricalLegend" style="display:none; font-size:0.75rem; color:#677ae3; font-style:italic; margin-bottom:0.75rem; text-align:center;">💜 matched from history</div>
+            <div id="batchDetailHistoricalLegend"
+                style="display:none; font-size:0.75rem; color:#677ae3; font-style:italic; margin-bottom:0.75rem; text-align:center;">
+                💜 matched from history</div>
 
             <!-- Duplicate Warning Notice -->
-            <div id="batchDetailDuplicateNotice" style="display:none; margin-bottom:1rem; padding:0.6rem; background:#fef3c7; color:#92400e; border-radius:8px; font-size:0.85rem; border:1px solid #fde68a; text-align:center;">
+            <div id="batchDetailDuplicateNotice"
+                style="display:none; margin-bottom:1rem; padding:0.6rem; background:#fef3c7; color:#92400e; border-radius:8px; font-size:0.85rem; border:1px solid #fde68a; text-align:center;">
                 ⚠️ <strong>Duplicate Detected:</strong> This receipt was already imported into Monarch.
             </div>
 
             <!-- Actions -->
             <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-                <button id="batchDetailEditMappingBtn" onclick="openBatchMappingModal()" style="flex:1; min-width:110px; background:linear-gradient(to right, #fcad03, #f76b1c); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem;">Edit Mapping</button>
-                <button id="batchDetailForceBtn" onclick="forceSubmitBatchItem()" style="display:none; flex:1; min-width:110px; background:linear-gradient(to right, #ef4444, #b91c1c); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem;">⚡ Force Sync</button>
-                <button onclick="closeBatchDetailModal()" style="flex:1; min-width:100px; background:#4b5563; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem;">← Back</button>
+                <button id="batchDetailEditMappingBtn" onclick="openBatchMappingModal()"
+                    style="flex:1; min-width:110px; background:linear-gradient(to right, #fcad03, #f76b1c); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem;">Edit
+                    Mapping</button>
+                <button id="batchDetailForceBtn" onclick="forceSubmitBatchItem()"
+                    style="display:none; flex:1; min-width:110px; background:linear-gradient(to right, #ef4444, #b91c1c); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem;">⚡
+                    Force Sync</button>
+                <button onclick="closeBatchDetailModal()"
+                    style="flex:1; min-width:100px; background:#4b5563; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem;">←
+                    Back</button>
             </div>
         </div>
     </div>
 
     <!-- Batch Mapping Modal -->
-    <div id="batchMappingModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2500; justify-content:center; align-items:center; padding:1rem; box-sizing:border-box;">
-        <div style="position:relative; width:90%; max-width:380px; background:white; border-radius:16px; padding:1.5rem; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+    <div id="batchMappingModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2500; justify-content:center; align-items:center; padding:1rem; box-sizing:border-box;">
+        <div
+            style="position:relative; width:90%; max-width:380px; background:white; border-radius:16px; padding:1.5rem; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
             <h3 style="margin-top:0; color:#374151;">Edit Mapping</h3>
-            
+
             <div style="width:100%; text-align:left; margin-bottom:1rem;">
-                <label style="font-size:0.8rem; color:#6b7280; display:block; margin-bottom:4px;">Receipt Merchant (case insensitive)</label>
-                <input type="text" id="batchMapReceiptMerchant" readonly style="width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:6px; background:#f3f4f6; color:#6b7280; box-sizing:border-box;">
+                <label style="font-size:0.8rem; color:#6b7280; display:block; margin-bottom:4px;">Receipt Merchant (case
+                    insensitive)</label>
+                <input type="text" id="batchMapReceiptMerchant" readonly
+                    style="width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:6px; background:#f3f4f6; color:#6b7280; box-sizing:border-box;">
             </div>
 
             <div style="width:100%; text-align:left; margin-bottom:1rem;">
-                <label style="font-size:0.8rem; color:#6b7280; display:block; margin-bottom:4px;">Monarch Merchant Name</label>
-                <input type="text" id="batchMapMonarchMerchant" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; box-sizing:border-box;">
+                <label style="font-size:0.8rem; color:#6b7280; display:block; margin-bottom:4px;">Monarch Merchant
+                    Name</label>
+                <input type="text" id="batchMapMonarchMerchant"
+                    style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; box-sizing:border-box;">
             </div>
 
             <div style="width:100%; text-align:left; margin-bottom:1.5rem;">
                 <label style="font-size:0.8rem; color:#6b7280; display:block; margin-bottom:4px;">Category</label>
-                <select id="batchMapCategory" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; background:white; box-sizing:border-box;">
+                <select id="batchMapCategory"
+                    style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; background:white; box-sizing:border-box;">
                     <option value="">Loading categories...</option>
                 </select>
             </div>
 
             <div style="display:flex; gap:10px; width:100%;">
-                <button onclick="deleteBatchMapping()" id="batchDeleteMappingBtn" style="padding:8px 14px; border:1px solid #fee2e2; background:#fee2e2; border-radius:6px; cursor:pointer; color:#991b1b; display:none;">Delete</button>
+                <button onclick="deleteBatchMapping()" id="batchDeleteMappingBtn"
+                    style="padding:8px 14px; border:1px solid #fee2e2; background:#fee2e2; border-radius:6px; cursor:pointer; color:#991b1b; display:none;">Delete</button>
                 <div style="display:flex; gap:8px; margin-left:auto;">
-                    <button onclick="closeBatchMappingModal()" style="padding:8px 14px; border:1px solid #d1d5db; background:white; border-radius:6px; cursor:pointer; color:#374151;">Cancel</button>
-                    <button onclick="saveBatchMapping()" id="batchSaveMappingBtn" style="padding:8px 14px; border:none; background:#4f46e5; color:white; border-radius:6px; cursor:pointer;">Save</button>
+                    <button onclick="closeBatchMappingModal()"
+                        style="padding:8px 14px; border:1px solid #d1d5db; background:white; border-radius:6px; cursor:pointer; color:#374151;">Cancel</button>
+                    <button onclick="saveBatchMapping()" id="batchSaveMappingBtn"
+                        style="padding:8px 14px; border:none; background:#4f46e5; color:white; border-radius:6px; cursor:pointer;">Save</button>
                 </div>
             </div>
         </div>
@@ -2232,7 +2417,7 @@
             staging.style.display = 'block';
             thumbStrip.innerHTML = '';
 
-            selectedFiles.forEach(function(file, idx) {
+            selectedFiles.forEach(function (file, idx) {
                 var thumb = document.createElement('div');
                 thumb.className = 'batch-thumb';
 
@@ -2244,7 +2429,7 @@
                 var removeBtn = document.createElement('button');
                 removeBtn.className = 'batch-thumb-remove';
                 removeBtn.textContent = '✕';
-                removeBtn.onclick = function(e) {
+                removeBtn.onclick = function (e) {
                     e.preventDefault();
                     e.stopPropagation();
                     selectedFiles.splice(idx, 1);
@@ -2261,7 +2446,7 @@
             addCard.title = 'Add more receipts';
             addCard.setAttribute('aria-label', 'Add more receipts');
             addCard.innerHTML = '+';
-            addCard.onclick = function(e) {
+            addCard.onclick = function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 document.getElementById('batchAddInput').click();
@@ -2295,7 +2480,7 @@
 
             // Build FormData
             var formData = new FormData();
-            selectedFiles.forEach(function(file) {
+            selectedFiles.forEach(function (file) {
                 formData.append('files', file);
             });
             formData.append('currency', currency);
@@ -2307,7 +2492,7 @@
             // Initialize item cards
             var listEl = document.getElementById('batchItemsList');
             listEl.innerHTML = '';
-            selectedFiles.forEach(function(file, idx) {
+            selectedFiles.forEach(function (file, idx) {
                 var name = file.name;
                 if (name.length > 30) name = name.substring(0, 27) + '...';
                 var card = document.createElement('div');
@@ -2316,8 +2501,8 @@
                 card.innerHTML =
                     '<div class="batch-item-icon">⏳</div>' +
                     '<div class="batch-item-info">' +
-                        '<div class="batch-item-name">' + name + '</div>' +
-                        '<div class="batch-item-detail">Queued</div>' +
+                    '<div class="batch-item-name">' + name + '</div>' +
+                    '<div class="batch-item-detail">Queued</div>' +
                     '</div>' +
                     '<span class="batch-item-status queued">Queued</span>';
                 listEl.appendChild(card);
@@ -2348,7 +2533,7 @@
 
         function pollBatchStatus() {
             if (!currentBatchId) return;
-            batchPollTimer = setTimeout(async function() {
+            batchPollTimer = setTimeout(async function () {
                 try {
                     var res = await fetch('/batch/' + currentBatchId);
                     if (!res.ok) {
@@ -2377,7 +2562,7 @@
 
             // Compute aggregate progress using partial steps of every item
             var totalProgressSum = 0;
-            items.forEach(function(item) {
+            items.forEach(function (item) {
                 if (item.status === 'completed' || item.status === 'duplicate' || item.status === 'failed') {
                     totalProgressSum += 100;
                 } else if (item.status === 'processing') {
@@ -2390,7 +2575,7 @@
             var aggregatePct = total > 0 ? Math.min(100, Math.round(totalProgressSum / total)) : 0;
             updateBatchProgress(aggregatePct, doneCount, total, data.failed, data.duplicates);
 
-            items.forEach(function(item) {
+            items.forEach(function (item) {
                 var card = document.getElementById('batch-item-' + item.index);
                 if (!card) return;
 
@@ -2441,7 +2626,7 @@
                 if (isClickable) {
                     card.classList.add('interactive');
                     card.title = 'Tap to review details, edit mapping, date, or category';
-                    card.onclick = function() {
+                    card.onclick = function () {
                         openBatchItemModal(item.index);
                     };
                 } else {
@@ -2603,7 +2788,7 @@
             else picker.click();
         }
 
-        document.getElementById('batchDetailDatePicker').addEventListener('change', async function() {
+        document.getElementById('batchDetailDatePicker').addEventListener('change', async function () {
             var newDate = this.value;
             if (!newDate) return;
             if (activeBatchItemIndex === null || !latestBatchData) return;
@@ -2677,7 +2862,7 @@
 
             select.innerHTML = '<option value="">Select Category</option>';
             if (cachedCategories) {
-                cachedCategories.forEach(function(cat) {
+                cachedCategories.forEach(function (cat) {
                     var opt = document.createElement('option');
                     opt.value = cat.name;
                     opt.textContent = (cat.emoji ? cat.emoji + ' ' : '') + cat.name;
@@ -2703,7 +2888,7 @@
             select.focus();
         }
 
-        document.getElementById('batchDetailCategorySelect').addEventListener('change', async function() {
+        document.getElementById('batchDetailCategorySelect').addEventListener('change', async function () {
             var newCategory = this.value;
             if (!newCategory) {
                 closeBatchDetailCategorySelector();
@@ -2765,7 +2950,7 @@
             }
         });
 
-        document.getElementById('batchDetailCategorySelect').addEventListener('blur', function() {
+        document.getElementById('batchDetailCategorySelect').addEventListener('blur', function () {
             closeBatchDetailCategorySelector();
         });
 
@@ -2789,7 +2974,7 @@
             var select = document.getElementById('batchMapCategory');
             select.innerHTML = '<option value="">Select Category</option>';
             if (cachedCategories) {
-                cachedCategories.forEach(function(cat) {
+                cachedCategories.forEach(function (cat) {
                     var opt = document.createElement('option');
                     opt.value = cat.name;
                     opt.textContent = (cat.emoji ? cat.emoji + ' ' : '') + cat.name;
@@ -2864,7 +3049,7 @@
 
                     var emoji = '';
                     if (cachedCategories) {
-                        var catObj = cachedCategories.find(function(c) { return c.name === payload.category_name; });
+                        var catObj = cachedCategories.find(function (c) { return c.name === payload.category_name; });
                         if (catObj && catObj.emoji) emoji = catObj.emoji + ' ';
                     }
                     document.getElementById('batchDetailCategory').textContent = emoji + payload.category_name;
@@ -3013,15 +3198,15 @@
             const modal = document.getElementById('selectStarredModal');
             if (!modal) return;
             modal.style.display = 'flex';
-            
+
             const loadingEl = document.getElementById('selectStarredLoading');
             const emptyEl = document.getElementById('selectStarredEmpty');
             const listEl = document.getElementById('selectStarredList');
-            
+
             if (loadingEl) loadingEl.style.display = 'block';
             if (emptyEl) emptyEl.style.display = 'none';
             if (listEl) listEl.innerHTML = '';
-            
+
             try {
                 const res = await fetch('/api/merchants/starred');
                 if (res.ok) {
@@ -3035,7 +3220,7 @@
                             row.style.cssText = 'padding: 10px 12px; margin-bottom: 6px; background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border: 1px solid rgba(221, 214, 254, 0.3); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.15s ease;';
                             row.onmouseover = () => { row.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'; row.style.borderColor = '#c4b5fd'; };
                             row.onmouseout = () => { row.style.background = 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'; row.style.borderColor = 'rgba(221, 214, 254, 0.3)'; };
-                            
+
                             const catBadge = m.mapped_category ? `<span style="font-size:0.8rem; color:#ede9fe; background:rgba(255, 255, 255, 0.18); padding:2px 8px; border-radius:999px; font-weight:500;">${m.mapped_category}</span>` : '';
                             row.innerHTML = `
                                 <span style="font-weight:600; color:#ffffff; display:flex; align-items:center; gap:8px;">⭐ ${m.name}</span>
@@ -3076,7 +3261,7 @@
             if (e) e.preventDefault();
             const deepLinkDropdown = document.getElementById('deepLinkDropdown');
             if (deepLinkDropdown) deepLinkDropdown.classList.remove('show');
-            
+
             document.getElementById('manageStarredModal').style.display = 'flex';
             document.getElementById('newMerchantInput').value = '';
             document.getElementById('searchMerchantsInput').value = '';
@@ -3091,11 +3276,11 @@
             const loadingEl = document.getElementById('merchantsLoading');
             const noDataEl = document.getElementById('merchantsNoData');
             const bodyEl = document.getElementById('merchantsListBody');
-            
+
             if (loadingEl) loadingEl.style.display = 'block';
             if (noDataEl) noDataEl.style.display = 'none';
             if (bodyEl) bodyEl.innerHTML = '';
-            
+
             try {
                 const res = await fetch('/api/merchants');
                 if (res.ok) {
@@ -3116,26 +3301,26 @@
             const bodyEl = document.getElementById('merchantsListBody');
             const noDataEl = document.getElementById('merchantsNoData');
             if (!bodyEl) return;
-            
+
             bodyEl.innerHTML = '';
             if (!merchants || merchants.length === 0) {
                 if (noDataEl) noDataEl.style.display = 'block';
                 return;
             }
             if (noDataEl) noDataEl.style.display = 'none';
-            
+
             merchants.forEach(m => {
                 const item = document.createElement('div');
                 item.className = 'merchant-list-item';
                 item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:9px 12px; margin-bottom:6px; background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border:1px solid rgba(221, 214, 254, 0.3); border-radius:8px; transition: background 0.15s ease;';
                 item.onmouseover = () => { item.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'; };
                 item.onmouseout = () => { item.style.background = 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)'; };
-                
+
                 const isStarred = !!m.is_starred;
                 const starIcon = isStarred ? '⭐' : '☆';
                 const starTitle = isStarred ? 'Starred (click to unstar)' : 'Unstarred (click to star)';
                 const starColor = isStarred ? '#fbbf24' : '#e0e7ff';
-                
+
                 item.innerHTML = `
                     <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
                         <button onclick="toggleMerchantItemStar('${encodeURIComponent(m.name)}', ${isStarred})" title="${starTitle}" style="background:none; border:none; font-size:1.25rem; cursor:pointer; padding:0; line-height:1; color:${starColor};">
@@ -3168,7 +3353,7 @@
                 showToast('Please enter a merchant name', 'error');
                 return;
             }
-            
+
             try {
                 const res = await fetch('/api/merchants', {
                     method: 'POST',
