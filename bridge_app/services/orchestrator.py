@@ -215,6 +215,7 @@ async def _push_to_monarch(data: dict, db: AsyncSession, report_func, mm_client=
         raise HTTPException(status_code=502, detail=f"Monarch Error: {str(e)}")
 
 _CATEGORY_EMOJI_CACHE = {}
+_MERCHANT_STARRED_CACHE = {}
 
 async def _fetch_category_emoji(data: dict, db: AsyncSession):
     try:
@@ -308,16 +309,22 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
         # 5b. Fetch Merchant Starred Status
         merchant_name = data.get("merchant")
         if merchant_name:
-            try:
-                from ..models import Merchant
-                from sqlalchemy import func
-                m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == merchant_name.strip().lower())
-                m_res = await db.execute(m_stmt)
-                is_starred_val = m_res.scalar_one_or_none()
-                data["is_starred"] = bool(is_starred_val) if is_starred_val is not None else False
-            except Exception as m_err:
-                print(f"Error fetching merchant star status: {m_err}")
-                data["is_starred"] = False
+            clean_name = merchant_name.strip().lower()
+            if clean_name in _MERCHANT_STARRED_CACHE:
+                data["is_starred"] = _MERCHANT_STARRED_CACHE[clean_name]
+            else:
+                try:
+                    from ..models import Merchant
+                    from sqlalchemy import func
+                    m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == clean_name)
+                    m_res = await db.execute(m_stmt)
+                    is_starred_val = m_res.scalar_one_or_none()
+                    star_val = bool(is_starred_val) if is_starred_val is not None else False
+                    data["is_starred"] = star_val
+                    _MERCHANT_STARRED_CACHE[clean_name] = star_val
+                except Exception as m_err:
+                    print(f"Error fetching merchant star status: {m_err}")
+                    data["is_starred"] = False
         else:
             data["is_starred"] = False
 
