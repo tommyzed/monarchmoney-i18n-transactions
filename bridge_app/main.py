@@ -2,6 +2,7 @@ import uuid
 import asyncio
 import os
 import json
+import hmac
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -75,9 +76,10 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         # Check for cookie if secret is configured
         if UNLOCK_SECRET:
             token = request.cookies.get(DEVICE_TOKEN_COOKIE)
-            if token == COOKIE_VALUE:
-                request.state.is_authenticated = True
-                return await call_next(request)
+            if token:
+                if hmac.compare_digest(token, COOKIE_VALUE):
+                    request.state.is_authenticated = True
+                    return await call_next(request)
 
         # --- Unauthenticated access rules ---
 
@@ -118,7 +120,7 @@ async def activate(request: Request, s: str):
     if not UNLOCK_SECRET:
         return Response(status_code=500, content="Security not configured on server.")
         
-    if s != UNLOCK_SECRET:
+    if not hmac.compare_digest(s, UNLOCK_SECRET):
         # Fake a 404 if secret is wrong to prevent guessing
         return Response(status_code=404, content="Not Found")
     
