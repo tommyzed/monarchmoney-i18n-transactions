@@ -1111,7 +1111,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260903.1345 ©2025-26 EGO /dev/null</span>
+        <span style="font-style: italic;">20260910.0955 ©2025-26 EGO /dev/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -1793,6 +1793,23 @@
 
         let failedTransactionsCache = [];
         let cachedCategories = null;
+        let mmAccountName = null;
+
+        async function fetchSettings() {
+            if (mmAccountName) return;
+            try {
+                const res = await fetch('/api/settings');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.account_name) {
+                        mmAccountName = data.account_name;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to fetch settings:", e);
+            }
+        }
+        fetchSettings();
 
         async function fetchCategories() {
             if (cachedCategories) return;
@@ -2269,7 +2286,7 @@
 
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
                     <span style="color:#666; font-size:0.9rem;">Added to</span>
-                    <span id="batchDetailAccount" style="font-weight:600; color:#374151;">Monarch Money</span>
+                    <span id="batchDetailAccount" style="font-weight:600; color:#374151;">--</span>
                 </div>
             </div>
 
@@ -2735,7 +2752,16 @@
             document.getElementById('batchDetailCategory').innerHTML = (isHistorical ? '💜 ' : '') + catDisplay;
 
             // Account
-            document.getElementById('batchDetailAccount').textContent = tx.is_cash ? 'Cash On Hand' : 'Monarch Money';
+            var accountName = tx.account_name || (tx.is_cash ? 'Cash On Hand' : (mmAccountName || 'Monarch Money'));
+            document.getElementById('batchDetailAccount').textContent = accountName;
+            if (!mmAccountName && !tx.account_name && !tx.is_cash) {
+                fetchSettings().then(function () {
+                    var accEl = document.getElementById('batchDetailAccount');
+                    if (accEl && (accEl.textContent === 'Monarch Money' || accEl.textContent === '--')) {
+                        accEl.textContent = tx.account_name || (tx.is_cash ? 'Cash On Hand' : (mmAccountName || 'Monarch Money'));
+                    }
+                });
+            }
 
             // Mapping button
             var hasOrig = !!tx.original_merchant_name;

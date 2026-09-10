@@ -713,6 +713,16 @@ LOADING_HTML = """
                 align-items: center;
                 position: relative;
             }
+            #resultCard {
+                background: linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%);
+                padding: 1.75rem;
+                border-radius: 20px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                max-width: 440px;
+                width: 95%;
+                box-sizing: border-box;
+                margin: auto;
+            }
             .deep-link-menu {
                 position: absolute;
                 top: 20px;
@@ -1063,14 +1073,52 @@ LOADING_HTML = """
             }
 
             #detailsContainer {
-                background: #ffffff;
-                border-radius: 16px;
-                padding: 1.5rem;
+                background: rgba(255, 255, 255, 0.75);
+                border-radius: 12px;
+                padding: 0.75rem 1rem;
                 width: 100%;
-                margin-top: 1rem;
+                margin-top: 0;
+                margin-bottom: 1rem;
                 box-sizing: border-box;
-                border: 1px solid rgba(0, 0, 0, 0.05);
-                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                text-align: left;
+                border: none;
+                box-shadow: none;
+            }
+
+            #resultCard .title {
+                font-size: 1.3rem;
+                font-weight: bold;
+                color: #4a4a4a;
+                margin-top: 0;
+                margin-bottom: 1rem;
+                text-align: center;
+                font-family: 'Sriracha', cursive;
+            }
+
+            #resultCard .detail-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #eee;
+                padding: 6px 0;
+                margin: 0;
+                width: 100%;
+                gap: 0.5rem;
+            }
+
+            #resultCard .detail-row:last-child {
+                border-bottom: none;
+            }
+
+            #resultCard .label {
+                color: #666;
+                font-size: 0.9rem;
+            }
+
+            #resultCard .value {
+                font-weight: 600;
+                text-align: right;
+                color: #1f2937;
             }
 
             /* Toast Notification */
@@ -1276,41 +1324,46 @@ LOADING_HTML = """
                     </a>
                 </div>
             </div>
-            <div id="cardIcon" style="font-size: 3rem; margin-bottom: 0.2rem;">🎉</div>
+            <div id="cardIcon" style="font-size: 2.8rem; margin-bottom: 0.2rem; text-align: center;">🎉</div>
             <p id="cardTitle" class="title">Transaction Processed</p>
             
             <div id="detailsContainer">
-                <div class="detail-row" style="align-items: center;">
+                <div class="detail-row">
                     <span class="label">Merchant</span>
-                    <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex: 1;">
-                        <button id="starMerchantBtn" onclick="toggleProcessedMerchantStar()" title="Star this merchant" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 0; line-height: 1; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">☆</button>
-                        <span id="merchantValue" class="value">--</span>
+                    <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
+                        <button id="starMerchantBtn" onclick="toggleProcessedMerchantStar()" title="Star this merchant" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 0; line-height: 1;">☆</button>
+                        <span id="merchantValue" class="value" style="color: #1f2937;">--</span>
                     </div>
                 </div>
                 <div class="detail-row">
                     <span class="label">Amount</span>
-                    <span id="amountValue" class="value">--</span>
+                    <span id="amountValue" class="value" style="text-align: right;">--</span>
                 </div>
 
                 <div class="detail-row" style="position: relative;">
                     <span class="label">Date</span>
                     <span id="dateValue" class="value date-pill" title="Tap to correct date" onclick="openDatePicker()">--</span>
-                    <input type="date" id="datePicker" aria-label="Date picker">
+                    <input type="date" id="datePicker" aria-label="Date picker" style="position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0;">
                 </div>
                 <div class="detail-row" style="position: relative;">
                     <span class="label">Category</span>
                     <span id="categoryValue" class="value category-pill" title="Tap to change category" onclick="openCategorySelector()">--</span>
-                    <select id="inlineCategorySelect" style="display: none; font-size: 0.9rem; padding: 4px; border-radius: 6px; border: 1px solid #d1d5db; background: white; max-width: 180px; z-index: 10;" aria-label="Category selector"></select>
+                    <select id="inlineCategorySelect" style="display: none; font-size: 0.9rem; padding: 4px; border-radius: 6px; border: 1px solid #d1d5db; background: white; max-width: 180px;" aria-label="Category selector"></select>
                 </div>
                 <div class="detail-row">
                     <span class="label">Added to</span>
-                    <span id="accountValue" class="value">__MM_ACCOUNT__</span>
+                    <span id="accountValue" class="value" style="color: #374151;">__MM_ACCOUNT__</span>
                 </div>
             </div>
 
             <!-- Historical name legend — shown only when used_historical_name is true -->
-            <div id="historicalLegend" style="display:none; font-size:0.75rem; color:#677ae3; font-style:italic; margin-top:0.75rem; text-align:center;">💜 matched from history</div>
+            <div id="historicalLegend" style="display:none; font-size:0.75rem; color:#677ae3; font-style:italic; margin-bottom:0.75rem; text-align:center;">💜 matched from history</div>
             
+            <!-- Duplicate Warning Notice -->
+            <div id="duplicateNotice" style="display:none; margin-bottom:1rem; padding:0.6rem; background:#fef3c7; color:#92400e; border-radius:8px; font-size:0.85rem; border:1px solid #fde68a; text-align:center; width: 100%; box-sizing: border-box;">
+                ⚠️ <strong>Duplicate Detected:</strong> This receipt was already imported into Monarch.
+            </div>
+
             <div id="errorContainer" style="display:none; text-align: center;">
                 <p id="errorMessage" style="color: #b91c1c; font-weight: bold; margin: 1rem 0; font-size: 1.05rem;"></p>
                 <div style="margin-top: 0.8rem; padding: 0.75rem; background: #fff3cd; color: #856404; border-radius: 10px; font-size: 0.88rem; border: 1px solid #ffeeba; line-height: 1.4;">
@@ -1319,18 +1372,18 @@ LOADING_HTML = """
                 </div>
             </div>
             
-            <div id="successActions" style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: nowrap;">
-                <button id="editMappingBtn" class="btn" style="flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #fcad03, #f76b1c); white-space: nowrap;" onclick="openMappingModal()">Edit Mapping</button>
-                <button id="forceSubmitBtn" class="btn" style="display:none; flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; background: linear-gradient(to right, #ef4444, #b91c1c); margin-top: 0; white-space: nowrap;" onclick="forceSubmit()">Force Submit</button>
-                <a href="/" class="btn" style="flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; white-space: nowrap;">Return 🏡</a>
+            <div id="successActions" style="display: flex; gap: 8px; width: 100%; justify-content: center; margin-top: 1rem; flex-wrap: wrap;">
+                <button id="editMappingBtn" onclick="openMappingModal()" style="flex: 1; min-width: 110px; background: linear-gradient(to right, #fcad03, #f76b1c); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">Edit Mapping</button>
+                <button id="forceSubmitBtn" onclick="forceSubmit()" style="display:none; flex: 1; min-width: 110px; background: linear-gradient(to right, #ef4444, #b91c1c); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">⚡ Force Sync</button>
+                <a href="/" style="flex: 1; min-width: 100px; background: #4b5563; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center;">Return 🏡</a>
             </div>
 
-            <div id="errorActions" style="display: none; gap: 10px; width: 100%; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
-                <button id="retryErrorBtn" class="btn" style="flex: 1; min-width: 120px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #4f46e5, #7c3aed); white-space: nowrap;" onclick="forceSubmit()">🔄 Retry Now</button>
-                <button id="viewFailedBtn" class="btn" style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: linear-gradient(to right, #e11d48, #be123c); white-space: nowrap;" onclick="openFailedModal(event)">⚠️ View Failed Txns</button>
-                <a href="/" class="btn" style="flex: 1; min-width: 100px; padding: 0.75rem 0.5rem; font-size: 0.95rem; text-align: center; margin-top: 0; background: #6b7280; white-space: nowrap;">Return 🏡</a>
+            <div id="errorActions" style="display: none; gap: 8px; width: 100%; justify-content: center; margin-top: 1rem; flex-wrap: wrap;">
+                <button id="retryErrorBtn" onclick="forceSubmit()" style="flex: 1; min-width: 120px; background: linear-gradient(to right, #4f46e5, #7c3aed); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">🔄 Retry Now</button>
+                <button id="viewFailedBtn" onclick="openFailedModal(event)" style="flex: 1; min-width: 140px; background: linear-gradient(to right, #e11d48, #be123c); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">⚠️ View Failed Txns</button>
+                <a href="/" style="flex: 1; min-width: 100px; background: #4b5563; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260829.0950 ©2025-26 EGO /dev/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260910.0955 ©2025-26 EGO /dev/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -1637,14 +1690,16 @@ LOADING_HTML = """
                 
                 if (isDuplicate) {
                     document.getElementById('cardIcon').textContent = '⚠️';
-                    document.getElementById('cardTitle').textContent = 'Already Processed';
-                    document.getElementById('cardTitle').style.color = '#856404';
+                    document.getElementById('cardTitle').textContent = 'Duplicate Receipt';
+                    document.getElementById('cardTitle').style.color = '#b45309';
+                    document.getElementById('duplicateNotice').style.display = 'block';
                     document.getElementById('forceSubmitBtn').style.display = 'inline-block';
                     document.getElementById('editMappingBtn').style.display = 'none';
                 } else {
                     document.getElementById('cardIcon').textContent = '🎉';
                     document.getElementById('cardTitle').textContent = 'Transaction Processed';
-                    document.getElementById('cardTitle').style.color = 'green';
+                    document.getElementById('cardTitle').style.color = '#4a4a4a';
+                    document.getElementById('duplicateNotice').style.display = 'none';
                     document.getElementById('forceSubmitBtn').style.display = 'none';
                     document.getElementById('editMappingBtn').style.display = 'inline-block';
 
@@ -1660,7 +1715,7 @@ LOADING_HTML = """
                 if (data.monarch_tx_id) {
                     const deepLink = `intent://transactions/${data.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${data.monarch_tx_id};end`;
                     const linkColor = data.is_credit ? "#16a34a" : "#2563eb";
-                    amountHtml = `<a href="${deepLink}" style="text-decoration:none; color:${linkColor};">${amountHtml}</a>`;
+                    amountHtml = `<a href="${deepLink}" target="_blank" style="text-decoration:none; color:${linkColor};">${amountHtml}</a>`;
                 }
                 
                 if (data.original_amount && data.original_currency) {
@@ -1668,7 +1723,7 @@ LOADING_HTML = """
                     if (data.exchange_rate) {
                         rateInfo = ` @ ${parseFloat(data.exchange_rate).toFixed(3)}`;
                     }
-                    amountHtml += `<br><span style="font-size: 0.8em; color: #352224;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
+                    amountHtml += `<br><span style="font-size:0.8em; color:#6b7280; font-weight:normal;">(${parseFloat(data.original_amount).toFixed(2)} ${data.original_currency}${rateInfo})</span>`;
                 }
                 
                 if (!isDuplicate) {
@@ -1720,7 +1775,8 @@ LOADING_HTML = """
 
                 const accountValueEl = document.getElementById('accountValue');
                 if (accountValueEl) {
-                    accountValueEl.textContent = data.is_cash ? "Cash On Hand" : "__MM_ACCOUNT__";
+                    const accName = data.account_name || (data.is_cash ? "Cash On Hand" : (mmAccountName || "__MM_ACCOUNT__"));
+                    accountValueEl.textContent = accName;
                 }
                 
                 window.currentTransactionData = data;
@@ -1820,6 +1876,23 @@ LOADING_HTML = """
             
             // --- Mapping Logic ---
             let cachedCategories = null;
+            let mmAccountName = null;
+
+            async function fetchSettings() {
+                if (mmAccountName) return;
+                try {
+                    const res = await fetch('/api/settings');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.account_name) {
+                            mmAccountName = data.account_name;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch settings:", e);
+                }
+            }
+            fetchSettings();
 
             async function fetchCategories() {
                 if (cachedCategories) return;
@@ -2972,7 +3045,7 @@ async def handle_manual_entry(
     """
     try:
         job_id = str(uuid.uuid4())
-        mm_account = os.environ.get("MM_ACCOUNT", "Default Account")
+        mm_account = os.environ.get("MM_ACCOUNT", "Euro Transactions")
         
         manual_data = {
             "amount": amount,
@@ -3008,7 +3081,7 @@ async def handle_share(
         # Read file immediately before response closes
         content = await file.read()
         job_id = str(uuid.uuid4())
-        mm_account = os.environ.get("MM_ACCOUNT", "Default Account")
+        mm_account = os.environ.get("MM_ACCOUNT", "Euro Transactions")
         
         # Start background task
         background_tasks.add_task(process_background_job, job_id, content, currency)
@@ -3019,6 +3092,16 @@ async def handle_share(
     except Exception as e:
         print(f"Error starting job: {e}")
         return HTMLResponse(content="Error starting job", status_code=500)
+
+@app.get("/api/settings")
+async def get_settings():
+    """
+    Return basic bridge configuration for frontend display.
+    """
+    return {
+        "account_name": os.environ.get("MM_ACCOUNT", "Euro Transactions"),
+        "cash_account_name": "Cash On Hand"
+    }
 
 class MerchantCreate(BaseModel):
     name: str

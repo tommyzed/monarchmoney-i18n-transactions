@@ -181,6 +181,12 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         if not target_account:
             raise ValueError(f"No account found with name '{target_name}'. Please create a new Manual account in Monarch named '{target_name}'.")
 
+    acc_name = target_account.get('displayName') if target_account else None
+    if is_cash:
+        data['account_name'] = acc_name or 'Cash On Hand'
+    else:
+        data['account_name'] = acc_name or target_name
+
     # Determine amount sign: positive for credits, negative for expenses/debits
     parsed_amount = float(data['amount'])
     is_credit = data.get('is_credit', False)
