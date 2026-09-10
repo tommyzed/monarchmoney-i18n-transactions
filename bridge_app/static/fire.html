@@ -11,8 +11,27 @@
     <link rel="icon" type="image/png" href="/icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sriracha&display=swap"
-        rel="stylesheet">
+    <script>
+        // Make scroll-blocking event listeners passive by default to eliminate Chrome [Violation] warnings and improve scroll responsiveness
+        (function () {
+            const originalAddEventListener = EventTarget.prototype.addEventListener;
+            EventTarget.prototype.addEventListener = function (type, listener, options) {
+                let newOptions = options;
+                if (['touchstart', 'touchmove', 'wheel', 'mousewheel'].includes(type)) {
+                    if (typeof options === 'boolean') {
+                        newOptions = { capture: options, passive: true };
+                    } else if (typeof options === 'object' && options !== null) {
+                        if (options.passive === undefined) {
+                            newOptions = Object.assign({}, options, { passive: true });
+                        }
+                    } else if (options === undefined) {
+                        newOptions = { passive: true };
+                    }
+                }
+                return originalAddEventListener.call(this, type, listener, newOptions);
+            };
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
     <style>
         /* ===== INIT_AUTH_STATE will be injected here ===== */

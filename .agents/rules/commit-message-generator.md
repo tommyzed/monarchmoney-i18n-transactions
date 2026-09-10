@@ -9,7 +9,7 @@ triggers:
 
 ## STEP 1: SANITIZE THE DIFF (Mandatory Pre-processing)
 Before analyzing the changes, completely strip out and discard all of the following diff lines:
-1. ANY line changing a timestamp, date, or build number (e.g., `20260824.1100`, `20260825.1201`, `Date.now()`, `v=...`, `<lastmod>`, `©2025-26 ego/DEV/null`).
+1. ANY line changing a timestamp, date, or build number (e.g., `20260824.1100`, `20260825.1201`, `Date.now()`, `v=...`, `<lastmod>`, `©2025-26 EGO /dev/null`).
 2. ANY line changing `BUILD_ID`, version numbers, or asset cache tags in HTML, Python, XML, or config files.
 3. If an entire file only contains timestamp/version footer changes (e.g., `index.html`, `main.py`, `spending.html`), DROP THAT FILE COMPLETELY from your consideration. Do not mention that file at all.
 

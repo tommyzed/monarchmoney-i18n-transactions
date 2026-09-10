@@ -9,6 +9,99 @@ from ..models import Credentials, SpendingReport
 from .monarch import get_monarch_client, get_latest_credentials
 
 logger = logging.getLogger("spending_service")
+UNCATEGORIZED = "Uncategorized"
+
+TAXABLE_EARNINGS_CATEGORIES = {
+    "interest",
+    "dividends",
+    "dividend",
+    "capital gains",
+    "capital gain",
+    "paychecks",
+    "paycheck",
+    "bonus",
+    "bonuses",
+}
+
+TAX_SHELTERED_SUBTYPES = {
+    # US Defined Contribution & Retirement
+    "st_401k",
+    "st_401a",
+    "st_403b",
+    "st_457b",
+    "roth_401k",
+    "ira",
+    "roth",
+    "sep_ira",
+    "simple_ira",
+    "sarsep_pension",
+    "keogh_plan",
+    "pension",
+    "retirement",
+    "profit_sharing_plan",
+    "thrift_savings_plan",
+    "sipp",
+    # Canadian Registered Retirement Accounts
+    "rrsp",
+    "rrif",
+    "lif",
+    "lira",
+    "lrif",
+    "lrsp",
+    "prif",
+    "rlif",
+    # Tax-Free / Non-taxable
+    "non_taxable_brokerage_account",
+    "tfsa",
+    # Health & Education Tax-Advantaged
+    "health_savings_account",
+    "health_reimbursement_arrangement",
+    "st_529",
+    "education_savings_account",
+}
+
+TAX_SHELTERED_KEYWORDS = [
+    "401k", "401(k)", "403b", "403(b)", "457", "roth", "sep ira", "simple ira",
+    "traditional ira", "rollover ira", "pension", "retirement", "superannuation",
+    "rrsp", "rrif", "lira", "lif", "tfsa", "hsa", "529", "health savings",
+]
+
+
+def is_taxable_earnings_account(account: Optional[Dict[str, Any]]) -> bool:
+    """
+    Determine if an account is eligible for taxable earnings.
+    Excludes credit accounts, retirement accounts, and tax-sheltered accounts (HSA/529).
+    """
+    if not account:
+        return True
+
+    type_info = account.get("type") or {}
+    type_name = (type_info.get("name") or "").lower()
+    type_display = (type_info.get("display") or "").lower()
+
+    # Completely ignore credit accounts
+    if type_name == "credit" or "credit card" in type_display:
+        return False
+
+    subtype_info = account.get("subtype") or {}
+    subtype_name = (subtype_info.get("name") or "").lower()
+    subtype_display = (subtype_info.get("display") or "").lower()
+    display_name = (account.get("displayName") or "").lower()
+
+    if subtype_name in TAX_SHELTERED_SUBTYPES:
+        return False
+
+    for kw in TAX_SHELTERED_KEYWORDS:
+        if kw in subtype_display:
+            return False
+
+    # Check display name for explicit tax-sheltered markers (especially for investment accounts)
+    if type_name == "brokerage":
+        import re
+        if re.search(r"\b(ira|roth|401k|401\(k\)|403b|403\(b\)|457b?|sep\s+ira|simple\s+ira|pension|hsa|529)\b", display_name):
+            return False
+
+    return True
 
 
 async def get_or_create_spending_report(
@@ -21,6 +114,22 @@ async def get_or_create_spending_report(
     query = query.order_by(SpendingReport.updated_at.desc())
     res = await db.execute(query)
     return res.scalars().first()
+
+
+async def _retry_monarch_call(func, *args, max_retries=4, initial_delay=1.5, **kwargs):
+    """Execute a Monarch API call with automatic retries on transient errors."""
+    delay = initial_delay
+    last_err = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            last_err = e
+            logger.warning(f"Monarch call {func.__name__} attempt {attempt}/{max_retries} failed: {e}. Retrying in {delay:.1f}s...")
+            if attempt < max_retries:
+                await asyncio.sleep(delay)
+                delay *= 2
+    raise last_err
 
 
 async def calculate_and_save_spending_report(
@@ -71,11 +180,15 @@ async def calculate_and_save_spending_report(
             mm = await get_monarch_client(db, resolved_user_id)
 
             # 3. Read Categories (READ-ONLY)
-            cat_res = await mm.get_transaction_categories()
+            cat_res = await _retry_monarch_call(mm.get_transaction_categories)
             categories_map = {c["id"]: c for c in cat_res.get("categories", [])}
 
+            # 3b. Read Accounts (READ-ONLY)
+            accounts_res = await _retry_monarch_call(mm.get_accounts)
+            accounts_map = {acc["id"]: acc for acc in accounts_res.get("accounts", [])}
+
             # 4. Read Cash Flow Aggregates (READ-ONLY)
-            cashflow_res = await mm.get_cashflow(start_date=start_date, end_date=end_date)
+            cashflow_res = await _retry_monarch_call(mm.get_cashflow, start_date=start_date, end_date=end_date)
             summary_list = cashflow_res.get("summary", [])
             server_sum = summary_list[0].get("summary", {}) if summary_list else {}
 
@@ -85,7 +198,7 @@ async def calculate_and_save_spending_report(
                 g_sum = item.get("summary", {}).get("sum", 0.0)
                 server_group_aggregates.append(
                     {
-                        "name": group.get("name") or "Uncategorized",
+                        "name": group.get("name") or UNCATEGORIZED,
                         "type": group.get("type") or "other",
                         "amount": abs(g_sum) if (group.get("type") == "expense" and g_sum < 0) else g_sum,
                         "raw_sum": g_sum,
@@ -93,36 +206,57 @@ async def calculate_and_save_spending_report(
                 )
 
             # 5. Read Itemized Transactions (READ-ONLY)
-            all_txs = []
-            offset = 0
             limit = 100
             hidden_filter = None if include_hidden else False
 
-            while True:
-                tx_res = await mm.get_transactions(
-                    start_date=start_date,
-                    end_date=end_date,
-                    hidden_from_reports=hidden_filter,
-                    limit=limit,
-                    offset=offset,
-                )
-                data = tx_res.get("allTransactions", {})
-                total_count = data.get("totalCount", 0)
-                results = data.get("results", [])
-                all_txs.extend(results)
+            first_res = await _retry_monarch_call(
+                mm.get_transactions,
+                start_date=start_date,
+                end_date=end_date,
+                hidden_from_reports=hidden_filter,
+                limit=limit,
+                offset=0,
+            )
+            first_data = first_res.get("allTransactions", {})
+            total_count = first_data.get("totalCount", 0)
+            all_txs = list(first_data.get("results", []))
 
-                if len(all_txs) >= total_count or len(results) == 0:
-                    break
-                offset += limit
+            if total_count > limit:
+                remaining_offsets = range(limit, total_count, limit)
+                tasks = [
+                    _retry_monarch_call(
+                        mm.get_transactions,
+                        start_date=start_date,
+                        end_date=end_date,
+                        hidden_from_reports=hidden_filter,
+                        limit=limit,
+                        offset=off,
+                    )
+                    for off in remaining_offsets
+                ]
+                pages = await asyncio.gather(*tasks)
+                for page in pages:
+                    all_txs.extend(page.get("allTransactions", {}).get("results", []))
 
             # 6. Aggregate Calculations
             itemized_expense_total = 0.0
             itemized_income_total = 0.0
             itemized_transfers_total = 0.0
+            itemized_taxable_earnings_total = 0.0
 
             categorized_breakdown = {}
             category_group_breakdown = {}
+            category_to_group_map = {}
             monthly_breakdown = {}
+            monthly_category_group_breakdown = {}
+            monthly_categorized_breakdown = {}
+
+            # Pre-populate category -> group mapping from categories dictionary
+            for c in cat_res.get("categories", []):
+                c_name = c.get("name")
+                g_name = c.get("group", {}).get("name")
+                if c_name and g_name:
+                    category_to_group_map[c_name] = g_name
 
             for tx in all_txs:
                 amount = tx.get("amount", 0.0)
@@ -132,12 +266,27 @@ async def calculate_and_save_spending_report(
                 cat_id = cat_info.get("id")
 
                 full_cat = categories_map.get(cat_id, {})
-                cat_name = full_cat.get("name") or cat_info.get("name") or "Uncategorized"
+                cat_name = full_cat.get("name") or cat_info.get("name") or UNCATEGORIZED
                 group = full_cat.get("group") or {}
                 group_name = group.get("name") or "Other"
                 group_type = group.get("type", "unknown")
 
-                if group_type == "expense":
+                if cat_name and group_name:
+                    category_to_group_map[cat_name] = group_name
+
+                # Taxable Earnings calculation:
+                # Match "Interest", "Dividends", "Capital Gains", "Paychecks", or "Bonus"
+                # in non-credit, non-retirement, non-tax-sheltered accounts.
+                cat_name_clean = (cat_name or "").strip().lower()
+                tx_acc = tx.get("account") or {}
+                acc_id = tx_acc.get("id")
+                full_acc = accounts_map.get(acc_id) or tx_acc
+
+                if cat_name_clean in TAXABLE_EARNINGS_CATEGORIES and is_taxable_earnings_account(full_acc):
+                    if group_type == "income" or amount > 0:
+                        itemized_taxable_earnings_total += amount
+
+                if group_type == "expense" or (group_type not in ("income", "transfer") and amount < 0):
                     expense_val = -amount
                     itemized_expense_total += expense_val
                     categorized_breakdown[cat_name] = (
@@ -149,40 +298,45 @@ async def calculate_and_save_spending_report(
                     monthly_breakdown[month_key] = (
                         monthly_breakdown.get(month_key, 0.0) + expense_val
                     )
-                elif group_type == "income":
+                    if month_key not in monthly_category_group_breakdown:
+                        monthly_category_group_breakdown[month_key] = {}
+                    monthly_category_group_breakdown[month_key][group_name] = (
+                        monthly_category_group_breakdown[month_key].get(group_name, 0.0) + expense_val
+                    )
+                    if month_key not in monthly_categorized_breakdown:
+                        monthly_categorized_breakdown[month_key] = {}
+                    monthly_categorized_breakdown[month_key][cat_name] = (
+                        monthly_categorized_breakdown[month_key].get(cat_name, 0.0) + expense_val
+                    )
+                elif group_type == "income" or (group_type not in ("expense", "transfer") and amount >= 0):
                     itemized_income_total += amount
                 elif group_type == "transfer":
                     itemized_transfers_total += amount
-                else:
-                    if amount < 0:
-                        expense_val = -amount
-                        itemized_expense_total += expense_val
-                        categorized_breakdown[cat_name] = (
-                            categorized_breakdown.get(cat_name, 0.0) + expense_val
-                        )
-                        category_group_breakdown[group_name] = (
-                            category_group_breakdown.get(group_name, 0.0) + expense_val
-                        )
-                        monthly_breakdown[month_key] = (
-                            monthly_breakdown.get(month_key, 0.0) + expense_val
-                        )
-                    else:
-                        itemized_income_total += amount
+
+            sum_expense = abs(server_sum.get("sumExpense") or 0.0)
+            sum_income = server_sum.get("sumIncome") or 0.0
+            sum_savings = server_sum.get("savings") or 0.0
+            sum_savings_rate = server_sum.get("savingsRate") or 0.0
 
             # 7. Update and Commit Report Record
             report.summary = {
-                "total_expense": abs(server_sum.get("sumExpense", 0.0)),
-                "total_income": server_sum.get("sumIncome", 0.0),
-                "net_savings": server_sum.get("savings", 0.0),
-                "savings_rate": server_sum.get("savingsRate", 0.0),
+                "total_expense": sum_expense,
+                "total_income": sum_income,
+                "net_savings": sum_savings,
+                "savings_rate": sum_savings_rate,
+                "taxable_earnings": round(itemized_taxable_earnings_total, 2),
                 "itemized_expense": itemized_expense_total,
                 "itemized_income": itemized_income_total,
                 "itemized_transfers": itemized_transfers_total,
                 "total_transactions": len(all_txs),
             }
+
             report.category_groups = category_group_breakdown
             report.categories = categorized_breakdown
+            report.category_to_group = category_to_group_map
             report.monthly_spending = monthly_breakdown
+            report.monthly_category_groups = monthly_category_group_breakdown
+            report.monthly_categories = monthly_categorized_breakdown
             report.sync_status = "ready"
             report.error_message = None
 

@@ -98,7 +98,10 @@ class SpendingReport(Base):
     summary = Column(JSON, nullable=True)
     category_groups = Column(JSON, nullable=True)
     categories = Column(JSON, nullable=True)
+    category_to_group = Column(JSON, nullable=True)
     monthly_spending = Column(JSON, nullable=True)
+    monthly_category_groups = Column(JSON, nullable=True)
+    monthly_categories = Column(JSON, nullable=True)
     sync_status = Column(String, default="ready", nullable=False)  # "ready", "syncing", "error"
     error_message = Column(String, nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

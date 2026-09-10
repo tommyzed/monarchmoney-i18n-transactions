@@ -41,22 +41,70 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     -   **Visual Enhancements**: Displays merchant names with a `💵` cash emoji for cash transactions, color-codes debits in red (-) and credits in green (+), and shows pre-converted foreign currency amounts.
     -   **Deep Link Integration**: Includes clickable deep links to navigate directly to each transaction within the Monarch mobile app (or desktop browser fallback).
     -   **Automatic Synchronization**: Endpoints such as transaction date/amount updates automatically keep the history log database in sync.
+*   **📊 v2.0: Spending & Cash Flow Analysis Dashboard**:
+    -   **Interactive Spending Dashboard**: Dedicated, mobile-friendly analytics dashboard (`/spending`) with responsive ECharts visualizations, KPI metrics, and dark theme design.
+    -   **Executive Cash Flow KPIs**: Instant metrics for Total Net Spending, Total Inflow Income, Net Savings, and Savings Rate % across any calendar year.
+    -   **Monthly Spend Trends**: Interactive monthly spending breakdown chart with dynamic monthly average benchmarking.
+    -   **Category Groups & Donut Charts**: Visual group distribution breakdown with percentage of total spend and Year-over-Year (YoY) percentage comparisons against the previous year.
+    -   **Ranked Category Breakdown**: Searchable, itemized category table with real-time filtering and spending totals.
+    -   **Dynamic Data Freshness**: Visual freshness pills indicating whether snapshot data is current, stale, syncing, or locked for historical years, with one-click background recalculation.
+    -   **CLI Report Generator (`scripts/spending_report.py`)**: Standalone read-only command-line script to analyze Monarch cash flows and itemized transactions with terminal tables, JSON export, and database sync options.
+    -   **Failed Transaction Queue & Retry**: Persistent database store (`failed_transactions`) for failed receipt scans and manual submissions, with a dedicated review modal, editing capabilities, and single/batch retry mechanisms.
+    -   **Starred / Favorite Merchants**: Mark and prioritize frequently used merchants for fast lookup and automated suggestions.
+*   **⚡ v2.5: Multi-Receipt Batch Upload & Processing**:
+    -   **Multi-File Selection & Drag-and-Drop**: Upload up to 20 receipt images simultaneously via the file picker or drag-and-drop.
+    -   **Interactive Thumbnail Staging Strip**: Preview selected receipt thumbnails with per-item remove buttons (`✕`), plus an interactive **"+" add card** to append additional receipts to the batch queue.
+    -   **Controlled Concurrency Worker Pool**: Processes items concurrently using `asyncio.Semaphore(2)` to balance throughput while avoiding Gemini API rate limits and database contention.
+    -   **Monarch Session Reuse**: Pre-authenticates the `MonarchMoney` client once per batch and shares it across worker tasks, eliminating redundant per-item authentication latency.
+    -   **Live Continuous Progress Dashboard**: Real-time aggregate progress bar computing weighted sub-step completion across all items with 400ms polling, live status cards (`⏳ Queued`, `🧙‍♂️ Scanning (35%)`, `✅ Synced`, `🔄 Duplicate`, `⚠️ Failed`), and detailed step descriptions.
+    -   **Post-Batch Interactive Review & Manual Editing**: Click on any completed or duplicate receipt card in the batch dashboard to open the full transaction detail modal:
+        -   **⭐ Star Merchants**: Toggle favorite merchant status directly.
+        -   **📅 Date Correction**: Adjust dates with automatic historical exchange rate recalculation and live Monarch sync.
+        -   **🏷️ Category Selection**: Change transaction categories via inline dropdown.
+        -   **⚙️ Auto-Mapping Rules**: Create or update merchant mapping rules on the fly.
+        -   **⚡ Duplicate Force Mode**: Force-sync duplicate receipts to Monarch with one click.
+        -   **← Back to Batch Navigation**: Return cleanly to the batch dashboard with all edits updated in real time.
+    -   **Resilient Error Recovery**: Any failed receipts are automatically persisted to the `FailedTransaction` database store, with one-click "🔄 Retry Failed" support.
+    -   **100% Backward Compatible**: Single-file uploads seamlessly continue to use the classic upload and review pathway.
+*   **🔍 v2.6: Deep Monthly & Annual Spending Drill-Downs**:
+    -   **Interactive Monthly Drill-Down**: Deep-dive into individual months with dedicated category group donut charts, animated progress bars, and itemized sub-category rankings.
+    -   **Multi-Modal Period Navigation**: Seamlessly switch months using the swipeable chip carousel, `‹` / `›` stepper buttons, or by directly clicking any bar on the monthly spend chart.
+    -   **Month-over-Month (M/M) Tracking**: View exact dollar and percentage deltas against preceding months for every category and group (with January seamlessly comparing against December of the prior year).
+    -   **Annual Drill-Down & Year Carousel**: Dedicated annual analysis module with fast year-switching carousel, in-memory caching, and Year-over-Year (YoY) `▲ +%` / `🔻-%` shift indicators against prior year spending share.
+    -   **Parent Category Group Context**: Automatically stores and maps sub-categories to their parent category groups with group badges across all report tables.
+    -   **Mobile-Optimized Tables & Tooltips**: Compact table layout for mobile screens with consolidated metadata rows, custom floating tooltips, and URL toggle (`?h=1`) for table hovers.
+    -   **Performance & Reliability Hardening**: Race condition guards for rapid year switching, passive DOM scroll listeners, and full XSS sanitization for user-defined category/group names.
 
-## 🖼 Demo (v1.1 only)
+## 🖼 Demos / Screenshots
 
-![LatestMMDemo-ezgif com-speed](https://github.com/user-attachments/assets/b4fefae9-ff0d-4cf5-a2b3-71befc6e29d8)
+Single Mode and Batch Mode (v2.5+)
+<p align="center">
+  <img width="324" src="https://github.com/user-attachments/assets/b4fefae9-ff0d-4cf5-a2b3-71befc6e29d8" alt="Single Mode Demo" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img width="324" height="720" alt="mm_batch_mode_demo_delete-compressed-ezgif com-video-to-gif-converter (1)" src="https://github.com/user-attachments/assets/0c82b65c-2b59-4730-b550-847143fcf94f" />
+</p>
+
+Spending Reports (v2.6+)
+<p align="center">
+<img width="764" height="615" alt="Spending Report 1" src="https://github.com/user-attachments/assets/23b2c28b-ff75-43ea-bc27-2ca1d7b4c2dd" />
+<img width="786" height="500" alt="Spending Report 2" src="https://github.com/user-attachments/assets/06b23dde-b0e8-49bf-8357-995cbbbdf1c3" />
+<img width="758" height="686" alt="Spending Report 3" src="https://github.com/user-attachments/assets/567db11e-7d72-4905-b3ae-60d35bd02842" />
+</p>
 
 ## 🏗 Architecture
 
 The system is a lightweight **FastAPI** application backed by **PostgreSQL**.
 
 ### Core Services
-1.  **Orchestrator**: The brain. Handles two flows:
-    *   **Image Flow**: Hashing -> De-duplication -> OCR -> Conversion -> Push.
+1.  **Orchestrator**: The brain. Handles three flows:
+    *   **Single Image Flow**: Hashing -> De-duplication -> OCR -> Conversion -> Push.
+    *   **Batch Image Flow**: Concurrency Semaphore(2) -> Shared Monarch Session -> Background Processing -> Streaming Status -> In-Place Review.
     *   **Manual Flow**: Form Data -> Hashing -> Conversion -> Push.
-2.  **Monarch Service**: Handles authentication (including MFA), session persistence, and GraphQL interactions.
+2.  **Monarch Service**: Handles authentication (including MFA and session cookies), session persistence, and GraphQL interactions.
 3.  **Gemini Service**: Interacts with Google's GenAI SDK for image parsing. Accepts an optional list of historical merchant names to hint the model toward canonical names.
-4.  **Currency Service**: Fetches historical forex rates.
+4.  **Currency Service**: Fetches historical forex rates (via Frankfurter API).
+5.  **FIRE Engine**: Runs Monte Carlo simulations and safe withdrawal rate analysis against live portfolio data.
+6.  **Spending Service**: Read-only cash flow and transaction aggregation engine computing annual summaries, category breakdowns, monthly trends, and database caching.
 
 ## 🚀 Getting Started
 
@@ -93,7 +141,7 @@ export FERNET_KEY="<your_generated_key>"
 
 # AI (Google Gemini)
 export GEMINI_API_KEY="<your_gemini_api_key>"
-export GEMINI_MODEL="gemini-3.5-flash"
+export GEMINI_MODEL="gemini-3.7-flash"
 
 # Monarch Settings
 export MM_EMAIL="<your_monarch_email>"
@@ -151,6 +199,8 @@ To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
 
 ## 🛠 Management Scripts
 
+*   **`python scripts/spending_report.py`**: Generates a read-only spending and cash flow report in your terminal (supports `--year`, `--start-date`, `--end-date`, `--top`, `--json`, `--save-db`, `--include-hidden`).
+*   **`python scripts/cookie_login.py`**: Authenticates and stores session cookies securely for Monarch Money access.
 *   **`python scripts/reset_transactions.py`**: Clears the local "processed" cache. Useful if you want to re-upload a receipt that was previously marked as duplicate.
 *   **`python scripts/interactive_login.py`**: Re-authenticate if your session expires.
 *   **`python scripts/sync_categories.py`**: Imports categories (and emojis) from your Monarch account to the local database for mapping.
@@ -167,13 +217,16 @@ bridge_app/
 ├── database.py          # Database connection & session info
 ├── models.py            # SQLAlchemy database models
 ├── services/            # Business logic modules
+│   ├── currency.py      # Historical forex exchange rates
 │   ├── fire_engine.py   # FIRE Monte Carlo simulation engine
-│   ├── gemini.py        # OCR logic
-│   ├── monarch.py       # Monarch API interaction
-│   └── orchestrator.py  # Pipeline coordination
+│   ├── gemini.py        # OCR logic & AI merchant hinting
+│   ├── monarch.py       # Monarch API interaction & session management
+│   ├── orchestrator.py  # Pipeline coordination
+│   └── spending_service.py # Annual spending & cash flow aggregation
 └── static/              # Frontend assets
     ├── fire.html        # 🔥 Ignite FIRE dashboard
     ├── index.html       # PWA entry point
+    ├── spending.html    # 📊 Spending & Cash Flow report dashboard
     ├── sw.js            # Service Worker (Offline & Share Target)
     └── manifest.json    # App Manifest
 ```
