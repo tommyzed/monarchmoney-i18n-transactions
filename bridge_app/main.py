@@ -158,9 +158,15 @@ async def activate(request: Request, s: str):
     )
     return response
 
+from cachetools import TTLCache
+
 # Simple in-memory job store
 # Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str, "inputs": dict, "failed_tx_id": int } }
 jobs = {}
+
+# Global memory-safe TTL cache for merchant starred status. Prevents DB lookups inside retry loop and subsequent identical merchants.
+# Holds up to 1000 merchants and expires entries after 5 minutes to allow for DB updates to propagate.
+merchant_star_cache = TTLCache(maxsize=1000, ttl=300)
 
 # Batch processing store (multi-receipt uploads)
 # Structure: { batch_id: { "created_at": datetime, "status": str, "total": int, "items": [...] } }
@@ -214,10 +220,16 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
                             target_dict = result["data"]
                     
                     if merchant_name and target_dict is not None:
-                        m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == merchant_name.strip().lower())
-                        m_res = await db.execute(m_stmt)
-                        is_starred_val = m_res.scalar_one_or_none()
-                        target_dict["is_starred"] = bool(is_starred_val) if is_starred_val is not None else False
+                        m_key = merchant_name.strip().lower()
+                        if m_key in merchant_star_cache:
+                            target_dict["is_starred"] = merchant_star_cache[m_key]
+                        else:
+                            m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == m_key)
+                            m_res = await db.execute(m_stmt)
+                            is_starred_val = m_res.scalar_one_or_none()
+                            is_starred = bool(is_starred_val) if is_starred_val is not None else False
+                            target_dict["is_starred"] = is_starred
+                            merchant_star_cache[m_key] = is_starred
                 
                 # Success
                 jobs[job_id] = {
@@ -405,7 +417,7 @@ async def retry_job(job_id: str, force: bool = False, background_tasks: Backgrou
 # Batch Upload: Multi-Receipt Processing
 # ──────────────────────────────────────────────────────────────
 
-async def _process_batch_item(batch_id: str, item_index: int, content: bytes, currency: str, semaphore: asyncio.Semaphore, mm_client=None):
+async def _process_batch_item(batch_id: str, item_index: int, content: bytes, currency: str, semaphore: asyncio.Semaphore, mm_client=None, batch_cache=None):
     """Process a single receipt within a batch, respecting the concurrency semaphore."""
     async with semaphore:
         item = batch_store[batch_id]["items"][item_index]
@@ -432,10 +444,20 @@ async def _process_batch_item(batch_id: str, item_index: int, content: bytes, cu
                     target = result.get("data", result) if result.get("status") == "duplicate" else result
                     merchant_name = target.get("merchant") if isinstance(target, dict) else None
                     if merchant_name:
-                        m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == merchant_name.strip().lower())
-                        m_res = await db.execute(m_stmt)
-                        is_starred_val = m_res.scalar_one_or_none()
-                        target["is_starred"] = bool(is_starred_val) if is_starred_val is not None else False
+                        m_key = merchant_name.strip().lower()
+                        if m_key in merchant_star_cache:
+                            target["is_starred"] = merchant_star_cache[m_key]
+                        elif batch_cache is not None and m_key in batch_cache:
+                            target["is_starred"] = batch_cache[m_key]
+                        else:
+                            m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == m_key)
+                            m_res = await db.execute(m_stmt)
+                            is_starred_val = m_res.scalar_one_or_none()
+                            is_starred = bool(is_starred_val) if is_starred_val is not None else False
+                            target["is_starred"] = is_starred
+                            merchant_star_cache[m_key] = is_starred
+                            if batch_cache is not None:
+                                batch_cache[m_key] = is_starred
 
             # Classify result
             if isinstance(result, dict) and result.get("status") == "duplicate":
@@ -504,11 +526,14 @@ async def process_batch_background(batch_id: str, items_data: list, currency: st
     except Exception as e:
         print(f"⚠️ Batch {batch_id}: Could not pre-auth Monarch client ({e}), will auth per-item")
 
+    # Shared cache across batch items to avoid hitting DB for duplicated merchants
+    batch_cache = {}
+
     # Dispatch all items concurrently (semaphore limits actual parallelism)
     tasks = []
     for i, (content, _filename) in enumerate(items_data):
         tasks.append(
-            _process_batch_item(batch_id, i, content, currency, semaphore, mm_client)
+            _process_batch_item(batch_id, i, content, currency, semaphore, mm_client, batch_cache)
         )
 
     await asyncio.gather(*tasks, return_exceptions=True)
