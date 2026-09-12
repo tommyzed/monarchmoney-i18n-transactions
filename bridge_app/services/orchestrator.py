@@ -9,49 +9,68 @@ from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, get_latest_credentials, push_transaction
 from starlette.concurrency import run_in_threadpool
 
-async def process_manual_transaction(manual_data: dict, db: AsyncSession, progress_callback=None, force_override: bool = False):
-    """
-    Process a manually entered transaction.
-    """
+
+def make_reporter(progress_callback):
     async def report(msg, percent=None):
         print(f"Progress: {msg} ({percent}%)")
         if progress_callback:
             await progress_callback(msg, percent)
-            
+
+    return report
+
+
+async def process_manual_transaction(
+    manual_data: dict,
+    db: AsyncSession,
+    progress_callback=None,
+    force_override: bool = False,
+):
+    """
+    Process a manually entered transaction.
+    """
+    report = make_reporter(progress_callback)
+
     await report("Validating manual entry...", 10)
-    
+
     # generate a synthetic hash for manual entries to prevent re-submission of the exact same form
     # We use a prefix to distinguish from file hashes
     data_string = json.dumps(manual_data, sort_keys=True)
     image_hash = "manual_" + hashlib.sha256(data_string.encode()).hexdigest()
-    
-    return await _process_transaction_data(manual_data, image_hash, db, report, force_override=force_override)
 
-async def process_transaction(content: bytes, db: AsyncSession, progress_callback=None, user_currency: str = None, force_override: bool = False, mm_client=None):
+    return await _process_transaction_data(
+        manual_data, image_hash, db, report, force_override=force_override
+    )
+
+
+async def process_transaction(
+    content: bytes,
+    db: AsyncSession,
+    progress_callback=None,
+    user_currency: str = None,
+    force_override: bool = False,
+    mm_client=None,
+):
     """
     Process a file-based transaction (OCR).
     """
-    async def report(msg, percent=None):
-        print(f"Progress: {msg} ({percent}%)") 
-        if progress_callback:
-            await progress_callback(msg, percent)
+    report = make_reporter(progress_callback)
 
     # 1. Read and Hash
     await report("Computing image hash...", 10)
     image_hash = hashlib.sha256(content).hexdigest()
-    
+
     # 2. Deduplication Check (Fast check before OCR)
     if not force_override:
         await report("Checking for duplicates...", 20)
         stmt = select(Transaction).where(Transaction.image_hash == image_hash)
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
-        
+
         if existing:
             print(f"DUPLICATE TRANSACTION DETECTED: Hash={image_hash}")
             print(f"Existing Data: {existing.parsed_data}")
             return {"status": "duplicate", "data": existing.parsed_data}
-    
+
     # 3. OCR Extraction
     await report("Scanning receipt with Gemini AI...", 30)
 
@@ -59,11 +78,11 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     hist_result = await db.execute(
         select(MerchantMapping.monarch_merchant_name).distinct()
     )
-    historical_names = sorted(
-        [r[0] for r in hist_result.fetchall() if r[0]]
-    )
+    historical_names = sorted([r[0] for r in hist_result.fetchall() if r[0]])
     if historical_names:
-        print(f"Passing {len(historical_names)} historical merchant names to Gemini as hints")
+        print(
+            f"Passing {len(historical_names)} historical merchant names to Gemini as hints"
+        )
 
     # Retry logic for overloaded Gemini API
     max_retries = 2
@@ -71,26 +90,35 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
 
     for attempt in range(max_retries + 1):
         if attempt > 0:
-             await report(f"Retrying Gemini scan (Attempt {attempt+1})...", 35)
+            await report(f"Retrying Gemini scan (Attempt {attempt+1})...", 35)
 
-        data = await run_in_threadpool(extract_transaction_data, content, historical_names)
-        
+        data = await run_in_threadpool(
+            extract_transaction_data, content, historical_names
+        )
+
         if data and "error" in data:
             err_str = str(data["error"])
             if "503" in err_str or "overloaded" in err_str.lower():
                 if attempt < max_retries:
-                    await report(f"Gemini overloaded, cooling down ({attempt+1}/{max_retries})... 🧊", 35)
+                    await report(
+                        f"Gemini overloaded, cooling down ({attempt+1}/{max_retries})... 🧊",
+                        35,
+                    )
                     await asyncio.sleep(2)
                     continue
                 else:
-                    await report("Gemini is too busy. Please wait a minute and try again.", 35)
+                    await report(
+                        "Gemini is too busy. Please wait a minute and try again.", 35
+                    )
             else:
                 break
         else:
             break
-            
+
     if not data or "error" in data:
-        error_msg = data.get("error", "Unknown OCR error") if data else "Empty OCR response"
+        error_msg = (
+            data.get("error", "Unknown OCR error") if data else "Empty OCR response"
+        )
         raise HTTPException(status_code=500, detail=error_msg)
 
     # Log whether the AI matched a historical merchant name
@@ -102,15 +130,25 @@ async def process_transaction(content: bytes, db: AsyncSession, progress_callbac
     # Inject/Override currency if provided by user during upload
     if user_currency:
         # We pass it to the shared processor, but we can also check it here if needed.
-        # The shared processor handles the currency logic, so we will pass user_currency to it 
-        # via the data dict or checks. 
+        # The shared processor handles the currency logic, so we will pass user_currency to it
+        # via the data dict or checks.
         # Actually logic is in the shared block below.
         pass
 
-    return await _process_transaction_data(data, image_hash, db, report, user_currency, force_override=force_override, mm_client=mm_client)
+    return await _process_transaction_data(
+        data,
+        image_hash,
+        db,
+        report,
+        user_currency,
+        force_override=force_override,
+        mm_client=mm_client,
+    )
 
 
-async def _check_duplicates(image_hash: str, db: AsyncSession, report_func, force_override: bool):
+async def _check_duplicates(
+    image_hash: str, db: AsyncSession, report_func, force_override: bool
+):
     if image_hash.startswith("manual_") and not force_override:
         await report_func("Checking for duplicates...", 20)
         stmt = select(Transaction).where(Transaction.image_hash == image_hash)
@@ -120,15 +158,20 @@ async def _check_duplicates(image_hash: str, db: AsyncSession, report_func, forc
             return existing
     return None
 
+
 async def _apply_auto_mapping(data: dict, db: AsyncSession, report_func):
     await report_func("Checking merchant mapping...", 25)
     current_merchant = data.get("merchant", "").strip()
     if current_merchant:
-        stmt = select(MerchantMapping).where(MerchantMapping.receipt_merchant_name == current_merchant.lower())
+        stmt = select(MerchantMapping).where(
+            MerchantMapping.receipt_merchant_name == current_merchant.lower()
+        )
         result = await db.execute(stmt)
         mapping = result.scalars().first()
         if mapping:
-            print(f"Applying auto-mapping: '{current_merchant}' -> '{mapping.monarch_merchant_name}'")
+            print(
+                f"Applying auto-mapping: '{current_merchant}' -> '{mapping.monarch_merchant_name}'"
+            )
             await report_func(f"Mapped to '{mapping.monarch_merchant_name}'...", 28)
             data["original_merchant_name"] = current_merchant
             data["merchant"] = mapping.monarch_merchant_name
@@ -136,6 +179,7 @@ async def _apply_auto_mapping(data: dict, db: AsyncSession, report_func):
                 data["category_name"] = mapping.category_name
         else:
             print(f"No mapping found for '{current_merchant}'")
+
 
 async def _apply_historical_category_lookup(data: dict, db: AsyncSession, report_func):
     if data.get("used_historical_name") and not data.get("category_name"):
@@ -147,7 +191,9 @@ async def _apply_historical_category_lookup(data: dict, db: AsyncSession, report
             hist_result = await db.execute(hist_stmt)
             hist_mapping = hist_result.scalars().first()
             if hist_mapping and hist_mapping.category_name:
-                print(f"Historical name category lookup: '{hist_merchant}' -> '{hist_mapping.category_name}'")
+                print(
+                    f"Historical name category lookup: '{hist_merchant}' -> '{hist_mapping.category_name}'"
+                )
                 await report_func(f"Category resolved from history...", 29)
                 data["category_name"] = hist_mapping.category_name
                 if "original_merchant_name" not in data:
@@ -155,41 +201,60 @@ async def _apply_historical_category_lookup(data: dict, db: AsyncSession, report
             else:
                 print(f"No category found for historical merchant '{hist_merchant}'")
 
-async def _convert_currency(data: dict, report_func, user_currency_override: str = None):
+
+async def _convert_currency(
+    data: dict, report_func, user_currency_override: str = None
+):
     raw_currency = str(data.get("currency", "")).upper().strip()
     target_original = user_currency_override if user_currency_override else raw_currency
     if target_original:
         target_original = target_original.upper().strip()
-    
-    if target_original in ["EURO", "€"]: target_original = "EUR"
-    if target_original in ["£", "POUND"]: target_original = "GBP"
-    if target_original in ["¥", "YEN"]: target_original = "JPY"
-    if target_original in ["KČ", "KČS", "KC"]: target_original = "CZK"
-    if target_original in ["FT"]: target_original = "HUF"
-    
-    print(f"Currency Check: User='{user_currency_override}' OCR='{raw_currency}' -> Effective='{target_original}'")
-    
+
+    if target_original in ["EURO", "€"]:
+        target_original = "EUR"
+    if target_original in ["£", "POUND"]:
+        target_original = "GBP"
+    if target_original in ["¥", "YEN"]:
+        target_original = "JPY"
+    if target_original in ["KČ", "KČS", "KC"]:
+        target_original = "CZK"
+    if target_original in ["FT"]:
+        target_original = "HUF"
+
+    print(
+        f"Currency Check: User='{user_currency_override}' OCR='{raw_currency}' -> Effective='{target_original}'"
+    )
+
     if target_original == "USD":
         data["currency"] = "USD"
     elif target_original in ["EUR", "GBP", "JPY", "CZK", "HUF"]:
         try:
             await report_func(f"Converting {target_original} to USD...", 60)
             from .currency import get_exchange_rate
-            rate = await get_exchange_rate(target_original, "USD", data["date"], report_func=report_func)
+
+            rate = await get_exchange_rate(
+                target_original, "USD", data["date"], report_func=report_func
+            )
             original_amount = float(data["amount"])
             converted_amount = round(original_amount * rate, 2)
-            print(f"Converting {target_original} {original_amount} to USD {converted_amount} (Rate: {rate})")
+            print(
+                f"Converting {target_original} {original_amount} to USD {converted_amount} (Rate: {rate})"
+            )
             data["original_amount"] = original_amount
             data["original_currency"] = target_original
             data["amount"] = converted_amount
             data["currency"] = "USD"
             data["exchange_rate"] = rate
         except Exception as e:
-             print(f"Conversion failed: {e}")
-             raise HTTPException(status_code=502, detail=f"Currency conversion failed ({target_original} to USD): {str(e)}")
+            print(f"Conversion failed: {e}")
+            raise HTTPException(
+                status_code=502,
+                detail=f"Currency conversion failed ({target_original} to USD): {str(e)}",
+            )
     else:
         print(f"Skipping conversion: '{target_original}' not in supported list.")
         data["currency"] = target_original
+
 
 async def _push_to_monarch(data: dict, db: AsyncSession, report_func, mm_client=None):
     await report_func("Connecting to Monarch Money...", 70)
@@ -199,7 +264,9 @@ async def _push_to_monarch(data: dict, db: AsyncSession, report_func, mm_client=
         print(f"DEBUG ORCHESTRATOR: Found credentials: {creds}")
 
         if not creds:
-            raise HTTPException(status_code=400, detail="No Monarch credentials configured")
+            raise HTTPException(
+                status_code=400, detail="No Monarch credentials configured"
+            )
 
         try:
             mm_client = await get_monarch_client(db, creds.id)
@@ -210,12 +277,14 @@ async def _push_to_monarch(data: dict, db: AsyncSession, report_func, mm_client=
         await report_func("Creating transaction in Monarch...", 85)
         tx_id = await push_transaction(mm_client, data)
         if tx_id:
-            data['monarch_tx_id'] = tx_id
+            data["monarch_tx_id"] = tx_id
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Monarch Error: {str(e)}")
 
+
 _CATEGORY_EMOJI_CACHE = {}
 _MERCHANT_STARRED_CACHE = {}
+
 
 async def _fetch_category_emoji(data: dict, db: AsyncSession):
     try:
@@ -228,6 +297,7 @@ async def _fetch_category_emoji(data: dict, db: AsyncSession):
                 return
 
             from ..models import Category
+
             stmt = select(Category).where(Category.category_name == category_name)
             result = await db.execute(stmt)
             cat = result.scalar_one_or_none()
@@ -240,26 +310,33 @@ async def _fetch_category_emoji(data: dict, db: AsyncSession):
     except Exception as e:
         print(f"Failed to fetch category emoji: {e}")
 
-async def _save_transaction_and_log(data: dict, image_hash: str, db: AsyncSession, report_func, force_override: bool):
+
+async def _save_transaction_and_log(
+    data: dict, image_hash: str, db: AsyncSession, report_func, force_override: bool
+):
     await report_func("Finalizing...", 95)
-    
+
     if force_override:
         import uuid
+
         image_hash = f"{image_hash}_forced_{uuid.uuid4().hex[:8]}"
-        
+
     new_tx = Transaction(image_hash=image_hash, parsed_data=data)
     db.add(new_tx)
 
     try:
         from ..models import Log
+
         raw_amt = data.get("amount")
         raw_original_amt = data.get("original_amount")
         amount_val = float(raw_amt) if raw_amt is not None else 0.0
-        original_amount_val = float(raw_original_amt) if raw_original_amt is not None else None
-        
+        original_amount_val = (
+            float(raw_original_amt) if raw_original_amt is not None else None
+        )
+
         is_credit = bool(data.get("is_credit", False))
         signed_amount = abs(amount_val) if is_credit else -abs(amount_val)
-        
+
         new_log = Log(
             merchant=data.get("merchant", "Unknown Merchant"),
             amount=signed_amount,
@@ -268,16 +345,27 @@ async def _save_transaction_and_log(data: dict, image_hash: str, db: AsyncSessio
             original_amount=original_amount_val,
             original_currency=data.get("original_currency"),
             is_cash=bool(data.get("is_cash", False)),
-            monarch_tx_id=data.get("monarch_tx_id")
+            monarch_tx_id=data.get("monarch_tx_id"),
         )
         db.add(new_log)
-        print(f"Adding transaction to history logs: {new_log.merchant} ({new_log.amount} {new_log.currency})")
+        print(
+            f"Adding transaction to history logs: {new_log.merchant} ({new_log.amount} {new_log.currency})"
+        )
     except Exception as e:
         print(f"Failed to log transaction: {e}")
-        
+
     await db.commit()
 
-async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSession, report_func, user_currency_override: str = None, force_override: bool = False, mm_client=None):
+
+async def _process_transaction_data(
+    data: dict,
+    image_hash: str,
+    db: AsyncSession,
+    report_func,
+    user_currency_override: str = None,
+    force_override: bool = False,
+    mm_client=None,
+):
     """
     Shared logic for processing transaction data, converting currency, pushing to Monarch, and saving.
     """
@@ -304,8 +392,10 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
         await _fetch_category_emoji(data, db)
 
         # 5. Save Record
-        await _save_transaction_and_log(data, image_hash, db, report_func, force_override)
-        
+        await _save_transaction_and_log(
+            data, image_hash, db, report_func, force_override
+        )
+
         # 5b. Fetch Merchant Starred Status
         merchant_name = data.get("merchant")
         if merchant_name:
@@ -316,10 +406,15 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
                 try:
                     from ..models import Merchant
                     from sqlalchemy import func
-                    m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == clean_name)
+
+                    m_stmt = select(Merchant.is_starred).where(
+                        func.lower(Merchant.name) == clean_name
+                    )
                     m_res = await db.execute(m_stmt)
                     is_starred_val = m_res.scalar_one_or_none()
-                    star_val = bool(is_starred_val) if is_starred_val is not None else False
+                    star_val = (
+                        bool(is_starred_val) if is_starred_val is not None else False
+                    )
                     data["is_starred"] = star_val
                     _MERCHANT_STARRED_CACHE[clean_name] = star_val
                 except Exception as m_err:
@@ -334,14 +429,26 @@ async def _process_transaction_data(data: dict, image_hash: str, db: AsyncSessio
             e.parsed_data = data
         raise e
 
-async def process_parsed_transaction(data: dict, image_hash: str, db: AsyncSession, progress_callback=None, user_currency_override: str = None, force_override: bool = True):
+
+async def process_parsed_transaction(
+    data: dict,
+    image_hash: str,
+    db: AsyncSession,
+    progress_callback=None,
+    user_currency_override: str = None,
+    force_override: bool = True,
+):
     """
     Process already parsed/edited transaction data (used when retrying a failed transaction with parsed fields).
     """
-    async def report(msg, percent=None):
-        print(f"Progress: {msg} ({percent}%)")
-        if progress_callback:
-            await progress_callback(msg, percent)
-            
+    report = make_reporter(progress_callback)
+
     await report("Retrying transaction processing...", 10)
-    return await _process_transaction_data(data, image_hash, db, report, user_currency_override=user_currency_override, force_override=force_override)
+    return await _process_transaction_data(
+        data,
+        image_hash,
+        db,
+        report,
+        user_currency_override=user_currency_override,
+        force_override=force_override,
+    )
