@@ -35,6 +35,10 @@ RISK_PROFILES = {
 DEFAULT_ITERATIONS = 10_000
 
 
+def _get_rng() -> np.random.Generator:
+    return np.random.default_rng(seed=42)
+
+
 def calculate_social_security_mba(
     pia: Optional[float],
     fra: Optional[int],
@@ -192,7 +196,7 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     years_to_retire = max(inp.retirement_age - inp.current_age, 0)
 
     # Generate random annual returns: shape (n_iter, n_years)
-    rng = np.random.default_rng(seed=42)
+    rng = _get_rng()
     returns = rng.normal(mean_r, std_r, size=(n_iter, n_years))
 
     # Precompute inflation factors
@@ -304,7 +308,7 @@ def _calc_fire_date(inp: SimulationInput, profile: dict) -> Optional[int]:
         if total_years > inp.simulation_years:
             break
 
-        rng = np.random.default_rng(seed=42)
+        rng = _get_rng()
         returns = rng.normal(
             profile["mean_return"],
             profile["std_return"],
@@ -370,7 +374,7 @@ def _calc_swr(inp: SimulationInput, profile: dict) -> float:
         total_years = 80
 
     # First, simulate to get portfolio value at retirement
-    rng = np.random.default_rng(seed=42)
+    rng = _get_rng()
     returns = rng.normal(
         profile["mean_return"],
         profile["std_return"],
@@ -489,7 +493,7 @@ def _calc_required_spend(inp: SimulationInput, profile: dict) -> float:
         return 0.0
 
     # Generate market returns identical to actual simulation
-    rng = np.random.default_rng(seed=42)
+    rng = _get_rng()
     returns = rng.normal(
         profile["mean_return"],
         profile["std_return"],
