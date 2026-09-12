@@ -160,12 +160,6 @@ Run the interactive login script to authenticate with Monarch. This will verify 
 venv/bin/python3 scripts/interactive_login.py
 ```
 
-- or -
-
-```bash
-venv/bin/python3 scripts/seed_session_token.py
-```
-
 ### 5. Start the Server
 
 ```bash

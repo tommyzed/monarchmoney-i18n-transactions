@@ -65,8 +65,6 @@ async def seed():
         if existing:
             print(f"Updating credentials for {email}...")
             existing.encrypted_payload = encrypt(payload)
-            # Clear session on password change
-            existing.monarch_session = None
         else:
             print(f"Creating new user {email}...")
             new_cred = Credentials(email=email, encrypted_payload=encrypt(payload))
