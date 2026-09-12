@@ -3,6 +3,7 @@ import asyncio
 import os
 import json
 import hmac
+import logging
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +20,8 @@ from sqlalchemy import delete, func
 from pydantic import BaseModel
 from typing import Optional, Any, List
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 DEMO_DEFAULTS = {
     "current_age": 45,
@@ -394,8 +397,8 @@ async def retry_job(job_id: str, force: bool = False, background_tasks: Backgrou
                     await db.delete(failed_tx)
                     await db.commit()
                     print(f"Cleaned up previous failed_tx {failed_tx_id} for retry.")
-        except Exception as cleanup_err:
-            print(f"Error cleaning up failed_tx before retry: {cleanup_err}")
+        except Exception:
+            logger.exception("Error cleaning up failed_tx before retry")
     
     # Reset job status
     jobs[job_id]["status"] = "processing"
