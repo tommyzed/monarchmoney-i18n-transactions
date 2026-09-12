@@ -2,8 +2,7 @@
 CREATE TABLE IF NOT EXISTS credentials (
     id SERIAL PRIMARY KEY,
     email VARCHAR NOT NULL UNIQUE,
-    encrypted_payload BYTEA NOT NULL,
-    monarch_session BYTEA
+    encrypted_payload BYTEA NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS ix_credentials_email ON credentials (email);

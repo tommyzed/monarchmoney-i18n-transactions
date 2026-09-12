@@ -1,7 +1,6 @@
 import asyncio
 import os
 import sys
-import pickle
 from dotenv import load_dotenv
 
 # Add project root to path
@@ -60,11 +59,6 @@ async def interactive_login_flow():
     else:
         print("⚠️  No cookies captured — auth will fall back to token/pickle")
 
-    # Legacy: pickle session bytes (kept for backward compat)
-    session_data = {"token": mm._token, "headers": mm._headers}
-    session_bytes = pickle.dumps(session_data)
-    long_lived_token = mm._token
-
     # Save to user's credentials in DB
     if not email:
         email = input("Confirm your email to save session to: ").strip()
@@ -80,8 +74,6 @@ async def interactive_login_flow():
         if creds:
             print(f"Updating credentials for {email}...")
             creds.monarch_cookies = cookie_jar or None
-            creds.monarch_session = session_bytes
-            creds.monarch_token = long_lived_token
             creds.last_update_date = datetime.now(timezone.utc)
         else:
             print(f"User {email} not found in DB. Creating placeholder.")
@@ -91,8 +83,6 @@ async def interactive_login_flow():
                 email=email,
                 encrypted_payload=payload,
                 monarch_cookies=cookie_jar or None,
-                monarch_session=session_bytes,
-                monarch_token=long_lived_token,
                 last_update_date=datetime.now(timezone.utc),
             )
             db.add(creds)
@@ -101,8 +91,6 @@ async def interactive_login_flow():
         print("✅ Credentials saved to database!")
         if cookie_jar:
             print("🎉 Cookie-based auth stored — this is the new long-lived Monarch session format!")
-        elif long_lived_token:
-            print("🎉 Long-lived token stored (legacy format).")
         break
 
 

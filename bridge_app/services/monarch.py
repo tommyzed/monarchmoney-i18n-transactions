@@ -1,5 +1,4 @@
 import os
-import pickle
 import pyotp
 from sqlalchemy.ext.asyncio import AsyncSession
 from monarchmoney import MonarchMoney
@@ -55,33 +54,6 @@ async def get_monarch_client(db: AsyncSession, user_id: int):
         except Exception as e:
             print(f"Cookie auth failed: {e}")
             mm._cookie_jar = None
-
-    # --- Strategy 2: Long-lived API token (legacy) ---
-    if creds.monarch_token:
-        mm.set_token(creds.monarch_token)
-        mm._headers["Authorization"] = f"Token {creds.monarch_token}"
-        try:
-            await mm.get_subscription_details()
-            print("✅ Authenticated via long-lived token (legacy)")
-            return mm
-        except Exception as e:
-            print(f"Long-lived token validation failed: {e}")
-            del mm._headers["Authorization"]
-
-    # --- Strategy 3: Cookie/session pickle (oldest legacy fallback) ---
-    if creds.monarch_session:
-        import tempfile
-        try:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                tmp.write(creds.monarch_session)
-                tmp_path = tmp.name
-            mm.load_session(tmp_path)
-            os.unlink(tmp_path)
-            await mm.get_subscription_details()
-            print("✅ Authenticated via session pickle (oldest legacy)")
-            return mm
-        except Exception as e:
-            print(f"Session pickle failed: {e}")
 
     raise ValueError(
         "Monarch auth expired or missing. "
