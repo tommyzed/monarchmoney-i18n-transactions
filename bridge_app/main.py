@@ -15,7 +15,7 @@ from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client, get_latest_credentials
 from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant, SpendingReport
 from sqlalchemy.future import select
-from sqlalchemy import delete, func
+from sqlalchemy import delete, func, or_
 from pydantic import BaseModel
 from typing import Optional, Any, List
 from datetime import datetime, timedelta
@@ -3179,14 +3179,26 @@ async def get_starred_merchants(db: AsyncSession = Depends(get_db)):
         starred = result.scalars().all()
 
         # Fetch mappings to auto-populate category if present
-        mappings_result = await db.execute(select(MerchantMapping))
-        mappings = mappings_result.scalars().all()
+        starred_names = [s.name.strip().lower() for s in starred] if starred else []
         mapping_map = {}
-        for m in mappings:
-            if m.receipt_merchant_name:
-                mapping_map[m.receipt_merchant_name.strip().lower()] = m.category_name
-            if m.monarch_merchant_name:
-                mapping_map[m.monarch_merchant_name.strip().lower()] = m.category_name
+
+        if starred_names:
+            # Chunking to avoid SQLite param limits (max 999 params, we use 2 per item = 450 items max chunk)
+            chunk_size = 450
+            for i in range(0, len(starred_names), chunk_size):
+                chunk = starred_names[i:i + chunk_size]
+                stmt_map = select(MerchantMapping).where(
+                    or_(
+                        func.trim(func.lower(MerchantMapping.receipt_merchant_name)).in_(chunk),
+                        func.trim(func.lower(MerchantMapping.monarch_merchant_name)).in_(chunk)
+                    )
+                )
+                chunk_result = await db.execute(stmt_map)
+                for m in chunk_result.scalars().all():
+                    if m.receipt_merchant_name:
+                        mapping_map[m.receipt_merchant_name.strip().lower()] = m.category_name
+                    if m.monarch_merchant_name:
+                        mapping_map[m.monarch_merchant_name.strip().lower()] = m.category_name
 
         data = []
         for s in starred:
