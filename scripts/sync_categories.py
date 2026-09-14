@@ -34,7 +34,7 @@ async def sync_categories():
         if mm_email:
             creds_result = await db.execute(select(Credentials).where(Credentials.email == mm_email))
         else:
-            creds_result = await db.execute(select(Credentials).where(Credentials.monarch_session.isnot(None)))
+            creds_result = await db.execute(select(Credentials).where(Credentials.monarch_cookies.isnot(None)))
         creds = creds_result.scalars().first()
         
         if not creds:

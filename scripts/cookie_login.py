@@ -16,7 +16,6 @@ HOW TO GET YOUR COOKIES:
 import asyncio
 import os
 import sys
-import pickle
 from datetime import datetime, timezone
 
 sys.path.append(os.getcwd())
@@ -173,19 +172,6 @@ async def manual_session_save():
     if not session_id:
         print("⚠️  Warning: no session_id found — session may not persist!")
 
-    # Build legacy pickle blob for backward compat
-    headers = {
-        "Accept": "*/*",
-        "Client-Platform": "web",
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-        "monarch-client": "web",
-        "monarch-client-version": "2025.05",
-        "cookie": cookie_string,
-        "X-Csrftoken": csrf or "",
-    }
-    session_bytes = pickle.dumps({"token": None, "headers": headers})
-
     email = os.getenv("MM_EMAIL") or input("\nEmail to save session for: ").strip()
     print(f"\n💾 Saving cookies for {email}...")
 
@@ -200,8 +186,6 @@ async def manual_session_save():
             if creds:
                 print(f"Updating existing credentials for {email}...")
                 creds.monarch_cookies = cookie_dict
-                creds.monarch_session = session_bytes
-                creds.monarch_token = None
                 creds.last_update_date = now
             else:
                 print(f"User {email} not found — creating new record.")
@@ -211,8 +195,6 @@ async def manual_session_save():
                     email=email,
                     encrypted_payload=payload,
                     monarch_cookies=cookie_dict,
-                    monarch_session=session_bytes,
-                    monarch_token=None,
                     last_update_date=now,
                 )
                 db.add(creds)
