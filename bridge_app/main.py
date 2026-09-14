@@ -441,36 +441,16 @@ async def _process_batch_item(batch_id: str, item_index: int, content: bytes, cu
                     mm_client=mm_client
                 )
 
-                # Determine merchant starred status
-                if isinstance(result, dict):
-                    target = result.get("data", result) if result.get("status") == "duplicate" else result
-                    merchant_name = target.get("merchant") if isinstance(target, dict) else None
-                    if merchant_name:
-                        m_key = merchant_name.strip().lower()
-                        if m_key in merchant_star_cache:
-                            target["is_starred"] = merchant_star_cache[m_key]
-                        elif batch_cache is not None and m_key in batch_cache:
-                            target["is_starred"] = batch_cache[m_key]
-                        else:
-                            m_stmt = select(Merchant.is_starred).where(func.lower(Merchant.name) == m_key)
-                            m_res = await db.execute(m_stmt)
-                            is_starred_val = m_res.scalar_one_or_none()
-                            is_starred = bool(is_starred_val) if is_starred_val is not None else False
-                            target["is_starred"] = is_starred
-                            merchant_star_cache[m_key] = is_starred
-                            if batch_cache is not None:
-                                batch_cache[m_key] = is_starred
-
             # Classify result
             if isinstance(result, dict) and result.get("status") == "duplicate":
-                item["status"] = "duplicate"
-                item["progress"] = 100
-                item["step"] = "Duplicate detected"
+                item["status"] = "finalizing_duplicate"
+                item["progress"] = 99
+                item["step"] = "Duplicate detected (Finalizing...)"
                 item["result"] = result
             else:
-                item["status"] = "completed"
-                item["progress"] = 100
-                item["step"] = "Synced to Monarch"
+                item["status"] = "finalizing_completed"
+                item["progress"] = 99
+                item["step"] = "Synced to Monarch (Finalizing...)"
                 item["result"] = result
 
         except Exception as e:
@@ -540,8 +520,58 @@ async def process_batch_background(batch_id: str, items_data: list, currency: st
 
     await asyncio.gather(*tasks, return_exceptions=True)
 
-    # Determine overall batch status
+    # Resolve starred merchants in bulk to prevent N+1 queries
     items = batch_store[batch_id]["items"]
+    merchants_to_fetch = set()
+    for item in items:
+        if item["status"] in ("finalizing_completed", "finalizing_duplicate"):
+            res = item.get("result")
+            if isinstance(res, dict):
+                target = res.get("data") if "data" in res else res
+                m = target.get("merchant") if isinstance(target, dict) else None
+                if m:
+                    m_key = m.strip().lower()
+                    if m_key not in merchant_star_cache and m_key not in batch_cache:
+                        merchants_to_fetch.add(m_key)
+
+    if merchants_to_fetch:
+        try:
+            async with AsyncSessionLocal() as db:
+                m_stmt = select(Merchant.name, Merchant.is_starred).where(func.lower(Merchant.name).in_(merchants_to_fetch))
+                m_res = await db.execute(m_stmt)
+                for m_name, m_starred in m_res.all():
+                    m_key = m_name.strip().lower()
+                    batch_cache[m_key] = m_starred
+        except Exception as e:
+            print(f"⚠️ Batch {batch_id}: Error fetching merchant starred status: {e}")
+
+    # Finalize items and apply starred status
+    for item in items:
+        if item["status"] in ("finalizing_completed", "finalizing_duplicate"):
+            res = item.get("result")
+            if isinstance(res, dict):
+                target = res.get("data") if "data" in res else res
+                m = target.get("merchant") if isinstance(target, dict) else None
+                if m:
+                    m_key = m.strip().lower()
+                    is_starred = batch_cache.get(m_key)
+                    if is_starred is None:
+                        is_starred = merchant_star_cache.get(m_key, False)
+                    target["is_starred"] = is_starred
+                    merchant_star_cache[m_key] = is_starred
+                    batch_cache[m_key] = is_starred
+
+            # Transition from finalizing to final status
+            if item["status"] == "finalizing_duplicate":
+                item["status"] = "duplicate"
+                item["progress"] = 100
+                item["step"] = "Duplicate detected"
+            else:
+                item["status"] = "completed"
+                item["progress"] = 100
+                item["step"] = "Synced to Monarch"
+
+    # Determine overall batch status
     all_done = all(it["status"] in ("completed", "duplicate", "failed") for it in items)
     if all_done:
         failed_count = sum(1 for it in items if it["status"] == "failed")
