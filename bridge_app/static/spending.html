@@ -570,9 +570,18 @@
         }
 
         .modal-btn-primary:disabled {
-            opacity: 0.5;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: none;
             cursor: not-allowed;
             transform: none;
+        }
+
+        .modal-btn-primary:disabled:hover {
+            transform: none;
+            box-shadow: none;
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .modal-btn-secondary {
@@ -2949,7 +2958,6 @@
             // Reset progress
             progress.classList.remove('show');
             document.getElementById('refreshProgressFill').style.width = '0%';
-            startBtn.disabled = false;
             startBtn.style.display = '';
             document.getElementById('refreshStartBtnText').textContent = 'Start Refresh';
             cancelBtn.textContent = 'Cancel';
@@ -2965,10 +2973,13 @@
                     <label for="refreshYear_${year}">${year}</label>
                     <span class="year-status" id="refreshStatus_${year}"></span>
                 `;
-                // Clicking the row toggles the checkbox
+                const cb = li.querySelector('input[type="checkbox"]');
+                cb.addEventListener('change', () => {
+                    updateRefreshStartBtn();
+                });
+                // Clicking the row toggles the checkbox (excluding direct clicks on input or label which handle it natively)
                 li.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'INPUT') return;
-                    const cb = li.querySelector('input[type="checkbox"]');
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
                     cb.checked = !cb.checked;
                     updateRefreshStartBtn();
                 });
@@ -2976,7 +2987,6 @@
             });
 
             updateRefreshStartBtn();
-            updateSelectToggleText();
             document.getElementById('refreshModal').classList.add('show');
         }
 
@@ -2990,7 +3000,6 @@
             const allChecked = [...boxes].every(cb => cb.checked);
             boxes.forEach(cb => cb.checked = !allChecked);
             updateRefreshStartBtn();
-            updateSelectToggleText();
         }
 
         function updateSelectToggleText() {
@@ -3002,7 +3011,11 @@
         function updateRefreshStartBtn() {
             const boxes = document.querySelectorAll('#refreshYearList input[type="checkbox"]');
             const anyChecked = [...boxes].some(cb => cb.checked);
-            document.getElementById('refreshStartBtn').disabled = !anyChecked;
+            const startBtn = document.getElementById('refreshStartBtn');
+            if (startBtn) {
+                startBtn.disabled = !anyChecked;
+                startBtn.title = !anyChecked ? 'Select at least one year to refresh' : '';
+            }
             updateSelectToggleText();
         }
 
