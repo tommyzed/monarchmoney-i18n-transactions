@@ -48,14 +48,6 @@ async def lifespan(app: FastAPI):
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
         print("✅ LIFESPAN: Database connected.")
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            for col in ["monthly_category_groups", "monthly_categories", "category_to_group"]:
-                try:
-                    await conn.execute(text(f"ALTER TABLE spending_reports ADD COLUMN {col} JSON;"))
-                except Exception:
-                    pass
-        print("✅ LIFESPAN: Database tables verified/created.")
     except Exception as e:
         print(f"❌ LIFESPAN: Database connection failed: {e}")
         # We might want to re-raise or continue depending on severity, but for diagnosis, printing is key.
