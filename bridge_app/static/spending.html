@@ -508,37 +508,162 @@
             text-decoration: underline;
         }
 
-        .refresh-progress {
-            display: none;
-            margin-bottom: 1rem;
+        /* Main Refresh Progress Banner */
+        .main-refresh-banner {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.4rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            position: relative;
+            overflow: hidden;
+            transition: opacity 0.5s ease, transform 0.3s ease;
         }
 
-        .refresh-progress.show {
-            display: block;
+        .main-refresh-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-brand), var(--accent-green));
         }
 
-        .refresh-progress-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 6px;
-            font-weight: 500;
+        .main-refresh-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
-        .refresh-progress-track {
+        .main-refresh-title-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .main-refresh-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .main-refresh-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .main-refresh-counter {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .main-refresh-track {
             width: 100%;
-            height: 6px;
+            height: 8px;
             background: rgba(255, 255, 255, 0.08);
-            border-radius: 3px;
+            border-radius: 4px;
             overflow: hidden;
             margin-bottom: 12px;
+            position: relative;
         }
 
-        .refresh-progress-fill {
+        .main-refresh-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--accent-green), #34d399);
-            border-radius: 3px;
+            background: linear-gradient(90deg, #6366f1, #10b981);
+            border-radius: 4px;
             width: 0%;
             transition: width 0.4s ease;
+            position: relative;
+        }
+
+        .main-refresh-fill.active {
+            background-size: 30px 30px;
+            background-image: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(255, 255, 255, 0.2) 75%,
+                transparent 75%,
+                transparent
+            );
+            animation: progress-shimmer 1.5s linear infinite;
+        }
+
+        @keyframes progress-shimmer {
+            0% { background-position: 0 0; }
+            100% { background-position: 60px 0; }
+        }
+
+        .main-refresh-status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .main-refresh-detail {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .main-refresh-years-chips {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .refresh-year-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.78rem;
+            padding: 3px 9px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .refresh-year-chip.pending {
+            color: var(--text-muted);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .refresh-year-chip.syncing {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.4);
+            color: #c7d2fe;
+            font-weight: 600;
+        }
+
+        .refresh-year-chip.done {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        .refresh-year-chip.error {
+            background: rgba(244, 63, 94, 0.12);
+            border-color: rgba(244, 63, 94, 0.3);
+            color: #fda4af;
         }
 
         .modal-actions {
@@ -1459,17 +1584,10 @@
 
             <span class="refresh-select-toggle" id="refreshSelectToggle" onclick="toggleAllRefreshYears()">Select All</span>
 
-            <div class="refresh-progress" id="refreshProgress">
-                <div class="refresh-progress-label" id="refreshProgressLabel">Refreshing 0/0 years...</div>
-                <div class="refresh-progress-track">
-                    <div class="refresh-progress-fill" id="refreshProgressFill"></div>
-                </div>
-            </div>
-
             <div class="modal-actions">
                 <button class="modal-btn modal-btn-secondary" id="refreshCancelBtn" onclick="closeRefreshModal()">Cancel</button>
                 <button class="modal-btn modal-btn-primary" id="refreshStartBtn" onclick="startMultiYearRefresh()">
-                    <span id="refreshStartBtnText">Start Refresh</span>
+                    <span id="refreshStartBtnText">🔄 Refresh Data</span>
                 </button>
             </div>
         </div>
@@ -1488,6 +1606,26 @@
                 </div>
             </div>
         </section>
+
+        <!-- Main Refresh Progress Banner -->
+        <div class="main-refresh-banner" id="mainRefreshBanner" style="display: none;">
+            <div class="main-refresh-header">
+                <div class="main-refresh-title-group">
+                    <span class="main-refresh-icon" id="mainRefreshIcon">🔄</span>
+                    <span class="main-refresh-title" id="mainRefreshTitle">Refreshing Spending Data</span>
+                </div>
+                <span class="main-refresh-counter" id="mainRefreshCounter">0/0 years (0%)</span>
+            </div>
+            <div class="main-refresh-track">
+                <div class="main-refresh-fill" id="mainRefreshFill"></div>
+            </div>
+            <div class="main-refresh-status-bar">
+                <span class="main-refresh-detail" id="mainRefreshDetail">Connecting to Monarch Money...</span>
+                <div class="main-refresh-years-chips" id="mainRefreshYearsChips">
+                    <!-- Populated dynamically per year -->
+                </div>
+            </div>
+        </div>
 
         <!-- Loading / Empty / Content Containers -->
         <div id="contentArea">
@@ -2933,33 +3071,21 @@
 
         // Trigger Recalculate / Background Sync (single year — used by empty state button)
         async function triggerRecalculate() {
-            setSyncingState(true);
-            const syncYear = currentYear;
-            try {
-                const res = await fetch(`/api/spending/recalculate?year=${syncYear}`, { method: 'POST' });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                startPolling(syncYear);
-            } catch (err) {
-                alert(`Could not start refresh: ${err.message}`);
-                setSyncingState(false);
-            }
+            await startMultiYearRefresh([currentYear]);
         }
 
-        // --- Multi-Year Refresh Modal ---
+        // --- Multi-Year Refresh ---
         let multiYearRefreshInProgress = false;
+        let dismissTimer = null;
 
         function openRefreshModal() {
             if (multiYearRefreshInProgress) return;
             const list = document.getElementById('refreshYearList');
-            const progress = document.getElementById('refreshProgress');
             const startBtn = document.getElementById('refreshStartBtn');
             const cancelBtn = document.getElementById('refreshCancelBtn');
 
-            // Reset progress
-            progress.classList.remove('show');
-            document.getElementById('refreshProgressFill').style.width = '0%';
             startBtn.style.display = '';
-            document.getElementById('refreshStartBtnText').textContent = 'Start Refresh';
+            document.getElementById('refreshStartBtnText').textContent = '🔄 Refresh Data';
             cancelBtn.textContent = 'Cancel';
 
             // Populate year checkboxes
@@ -2971,7 +3097,6 @@
                 li.innerHTML = `
                     <input type="checkbox" id="refreshYear_${year}" value="${year}" ${year === currentYear ? 'checked' : ''}>
                     <label for="refreshYear_${year}">${year}</label>
-                    <span class="year-status" id="refreshStatus_${year}"></span>
                 `;
                 const cb = li.querySelector('input[type="checkbox"]');
                 cb.addEventListener('change', () => {
@@ -2991,7 +3116,6 @@
         }
 
         function closeRefreshModal() {
-            if (multiYearRefreshInProgress) return;
             document.getElementById('refreshModal').classList.remove('show');
         }
 
@@ -3024,10 +3148,32 @@
             return [...boxes].map(cb => parseInt(cb.value)).sort((a, b) => b - a);
         }
 
+        function dismissMainRefreshBanner() {
+            if (dismissTimer) {
+                clearTimeout(dismissTimer);
+                dismissTimer = null;
+            }
+            const banner = document.getElementById('mainRefreshBanner');
+            if (!banner) return;
+            banner.style.opacity = '0';
+            setTimeout(() => {
+                banner.style.display = 'none';
+                banner.style.opacity = '1';
+            }, 500);
+        }
+
         // Poll a single year until ready/error. Returns a Promise.
         function pollYearUntilDone(year) {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
+                let attempts = 0;
+                const maxAttempts = 120; // 5 minutes max safety limit
                 const interval = setInterval(async () => {
+                    attempts++;
+                    if (attempts > maxAttempts) {
+                        clearInterval(interval);
+                        resolve('timeout');
+                        return;
+                    }
                     try {
                         const res = await fetch(`/api/spending/status?year=${year}`);
                         if (!res.ok) return;
@@ -3046,36 +3192,15 @@
             });
         }
 
-        async function startMultiYearRefresh() {
-            const years = getCheckedRefreshYears();
-            if (years.length === 0) return;
+        async function startMultiYearRefresh(customYears = null) {
+            const years = customYears || getCheckedRefreshYears();
+            if (!years || years.length === 0) return;
+
+            // Immediately close the modal so user returns to the main page
+            closeRefreshModal();
 
             multiYearRefreshInProgress = true;
             const totalYears = years.length;
-
-            // Disable modal controls
-            const startBtn = document.getElementById('refreshStartBtn');
-            const cancelBtn = document.getElementById('refreshCancelBtn');
-            const boxes = document.querySelectorAll('#refreshYearList input[type="checkbox"]');
-            const selectToggle = document.getElementById('refreshSelectToggle');
-
-            startBtn.disabled = true;
-            document.getElementById('refreshStartBtnText').textContent = 'Refreshing...';
-            cancelBtn.textContent = 'Close';
-            cancelBtn.disabled = true;
-            boxes.forEach(cb => cb.disabled = true);
-            selectToggle.style.display = 'none';
-
-            // Show progress UI
-            const progress = document.getElementById('refreshProgress');
-            const progressLabel = document.getElementById('refreshProgressLabel');
-            const progressFill = document.getElementById('refreshProgressFill');
-            progress.classList.add('show');
-            progressFill.style.width = '0%';
-            progressLabel.textContent = `Refreshing 0/${totalYears} years...`;
-
-            // Set freshness pill to multi-year syncing state
-            setMultiYearSyncingState(0, totalYears);
 
             // Set menu button to disabled/syncing
             const menuBtn = document.getElementById('menuRefreshBtn');
@@ -3085,74 +3210,123 @@
             if (menuIcon) menuIcon.innerHTML = '<div class="spinner" style="width:12px; height:12px; border-width:2px;"></div>';
             if (menuText) menuText.textContent = 'Refreshing...';
 
-            // Initialize year statuses
+            const emptyBtn = document.getElementById('emptyRecalcBtn');
+            if (emptyBtn) emptyBtn.disabled = true;
+
+            // Setup main page progress banner
+            if (dismissTimer) {
+                clearTimeout(dismissTimer);
+                dismissTimer = null;
+            }
+            const banner = document.getElementById('mainRefreshBanner');
+            const icon = document.getElementById('mainRefreshIcon');
+            const title = document.getElementById('mainRefreshTitle');
+            const counter = document.getElementById('mainRefreshCounter');
+            const fill = document.getElementById('mainRefreshFill');
+            const detail = document.getElementById('mainRefreshDetail');
+            const chipsContainer = document.getElementById('mainRefreshYearsChips');
+
+            banner.style.opacity = '1';
+            banner.style.display = 'block';
+
+            icon.innerHTML = '<div class="spinner" style="width:14px; height:14px; border-width:2px; border-top-color:#818cf8; border-color:rgba(255,255,255,0.2);"></div>';
+            title.textContent = 'Refreshing Spending Data';
+            counter.textContent = `0 of ${totalYears} years (0%)`;
+            detail.textContent = `Starting refresh for ${years.join(', ')}...`;
+            fill.style.width = '0%';
+            fill.classList.add('active');
+
+            // Populate year chips
+            chipsContainer.innerHTML = '';
             years.forEach(yr => {
-                const statusEl = document.getElementById(`refreshStatus_${yr}`);
-                if (statusEl) statusEl.textContent = '⬜';
+                const chip = document.createElement('span');
+                chip.className = 'refresh-year-chip pending';
+                chip.id = `mainChip_${yr}`;
+                chip.innerHTML = `⏳ ${yr}`;
+                chipsContainer.appendChild(chip);
             });
+
+            setMultiYearSyncingState(0, totalYears);
 
             let completed = 0;
             let errors = [];
 
             // Process each year sequentially
-            for (const year of years) {
-                const statusEl = document.getElementById(`refreshStatus_${year}`);
-                if (statusEl) statusEl.innerHTML = '<div class="spinner" style="width:12px; height:12px; border-width:2px; border-top-color: #c7d2fe; border-color: rgba(255,255,255,0.15);"></div>';
-                progressLabel.textContent = `Refreshing ${completed}/${totalYears} years — ${year}...`;
+            for (let i = 0; i < years.length; i++) {
+                const year = years[i];
+                const chip = document.getElementById(`mainChip_${year}`);
+                if (chip) {
+                    chip.className = 'refresh-year-chip syncing';
+                    chip.innerHTML = `<span class="spinner" style="width:10px; height:10px; border-width:2px; border-top-color:#c7d2fe; border-color:rgba(255,255,255,0.15);"></span> <span>${year}</span>`;
+                }
+                detail.textContent = `Querying Monarch Money & calculating ${year}...`;
 
                 try {
-                    // Trigger recalculation
                     const res = await fetch(`/api/spending/recalculate?year=${year}`, { method: 'POST' });
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-                    // Poll until done
                     const result = await pollYearUntilDone(year);
 
                     if (result === 'ready') {
-                        if (statusEl) statusEl.textContent = '✅';
+                        if (chip) {
+                            chip.className = 'refresh-year-chip done';
+                            chip.innerHTML = `✅ ${year}`;
+                        }
                         delete cachedAnnualReports[year];
                     } else {
-                        if (statusEl) statusEl.textContent = '❌';
+                        if (chip) {
+                            chip.className = 'refresh-year-chip error';
+                            chip.innerHTML = `❌ ${year}`;
+                        }
                         errors.push(year);
                     }
                 } catch (err) {
-                    if (statusEl) statusEl.textContent = '❌';
+                    if (chip) {
+                        chip.className = 'refresh-year-chip error';
+                        chip.innerHTML = `❌ ${year}`;
+                    }
                     errors.push(year);
                     console.error(`Refresh error for ${year}:`, err);
                 }
 
                 completed++;
                 const pct = Math.round((completed / totalYears) * 100);
-                progressFill.style.width = `${pct}%`;
-                progressLabel.textContent = `Refreshed ${completed}/${totalYears} years`;
+                fill.style.width = `${pct}%`;
+                counter.textContent = `${completed} of ${totalYears} years (${pct}%)`;
                 setMultiYearSyncingState(completed, totalYears);
             }
 
-            // All done — update UI
+            // All done — update banner state
             multiYearRefreshInProgress = false;
+            fill.classList.remove('active');
 
             if (errors.length === 0) {
-                progressLabel.textContent = `✅ All ${totalYears} year${totalYears > 1 ? 's' : ''} refreshed successfully!`;
+                icon.textContent = '✅';
+                title.textContent = `All ${totalYears} year${totalYears > 1 ? 's' : ''} refreshed successfully!`;
+                detail.textContent = 'Spending calculations and trends are fully updated.';
                 showToast(`✅ Refreshed ${totalYears} year${totalYears > 1 ? 's' : ''} successfully`, 'success');
             } else {
-                progressLabel.textContent = `Completed with ${errors.length} error${errors.length > 1 ? 's' : ''} (${errors.join(', ')})`;
+                icon.textContent = '⚠️';
+                title.textContent = `Completed with ${errors.length} error${errors.length > 1 ? 's' : ''}`;
+                detail.textContent = `Failed for: ${errors.join(', ')}. Try refreshing again.`;
                 showToast(`⚠️ ${errors.length} year${errors.length > 1 ? 's' : ''} had errors`, 'error');
             }
 
-            startBtn.style.display = 'none';
-            cancelBtn.disabled = false;
-            cancelBtn.textContent = 'Done';
+            // Auto-dismiss summary message after 10 seconds
+            dismissTimer = setTimeout(() => {
+                dismissMainRefreshBanner();
+            }, 10000);
 
             // Reset menu button
             if (menuBtn) menuBtn.disabled = false;
             if (menuIcon) menuIcon.textContent = '🔄';
             if (menuText) menuText.textContent = 'Refresh Data';
+            if (emptyBtn) emptyBtn.disabled = false;
 
             // Reload current year if it was refreshed
             if (years.includes(currentYear)) {
                 await loadReport(currentYear);
             } else {
-                // Just reset the freshness pill
                 setSyncingState(false);
             }
         }
