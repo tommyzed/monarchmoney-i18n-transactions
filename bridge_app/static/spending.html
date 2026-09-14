@@ -2269,6 +2269,7 @@
             const option = {
                 tooltip: {
                     trigger: 'item',
+                    confine: true,
                     formatter: (p) => {
                         let res = `<b>${escHtml(p.name)}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
                         if (hasPrevMonth) {
@@ -2818,6 +2819,7 @@
             const option = {
                 tooltip: {
                     trigger: 'axis',
+                    confine: true,
                     formatter: (params) => {
                         let res = `<b>${params[0].name}</b><br/>`;
                         params.forEach(p => {
@@ -2879,6 +2881,7 @@
             const option = {
                 tooltip: {
                     trigger: 'item',
+                    confine: true,
                     formatter: (p) => {
                         let res = `<b>${escHtml(p.name)}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
                         if (prevYearData && prevTotalExpense > 0) {
