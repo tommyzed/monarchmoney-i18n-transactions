@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
 from sqlalchemy.ext.asyncio import AsyncSession
-from .database import engine, Base, get_db, AsyncSessionLocal
+from .database import engine, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client, get_latest_credentials
