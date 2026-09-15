@@ -5,7 +5,8 @@
     <title>💶 Monarch Money Bridge</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sriracha&display=swap" rel="stylesheet">
@@ -19,7 +20,12 @@
             font-family: 'Sriracha', cursive;
             padding: 2rem;
             text-align: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #064e3b;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(52, 211, 153, 0.25) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.2) 0%, transparent 40%),
+                linear-gradient(135deg, #064e3b 0%, #065f46 25%, #047857 50%, #059669 75%, #10b981 100%);
+            background-attachment: fixed;
             min-height: 100vh;
             min-height: 100dvh;
             /* Better mobile support */
@@ -98,7 +104,7 @@
         /* Animate Hamburger to X */
         .hamburger-btn.open .hamburger-bar:nth-child(1) {
             transform: translateY(7px) rotate(45deg);
-            background-color: #667eea;
+            background-color: #059669;
         }
 
         .hamburger-btn.open .hamburger-bar:nth-child(2) {
@@ -108,7 +114,7 @@
 
         .hamburger-btn.open .hamburger-bar:nth-child(3) {
             transform: translateY(-7px) rotate(-45deg);
-            background-color: #667eea;
+            background-color: #059669;
         }
 
         .deep-link-dropdown {
@@ -142,15 +148,15 @@
 
         .menu-divider {
             height: 1.5px;
-            background-color: rgba(102, 126, 234, 0.35);
+            background-color: rgba(5, 150, 105, 0.25);
             margin: 6px 12px;
             border: none;
             border-radius: 1px;
         }
 
         .deep-link-item:hover {
-            background: #f8faff;
-            color: #667eea;
+            background: #ecfdf5;
+            color: #059669;
             padding-left: 24px;
         }
 
@@ -321,13 +327,13 @@
 
         .file-label:hover,
         .file-label:active {
-            border-color: #667eea;
-            background: #f0f4ff;
-            color: #667eea;
+            border-color: #059669;
+            background: #ecfdf5;
+            color: #059669;
         }
 
         .btn {
-            background: linear-gradient(to right, #667eea, #764ba2);
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
             color: #fff;
             padding: 1rem 2rem;
             border-radius: 50px;
@@ -338,8 +344,8 @@
             border: none;
             font-size: 1.1rem;
             font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s;
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.35);
+            transition: transform 0.2s, box-shadow 0.2s;
             width: 100%;
             /* Full width button on mobile */
             box-sizing: border-box;
@@ -351,6 +357,7 @@
 
         .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.45);
         }
 
         @media (max-width: 480px) {
@@ -369,7 +376,7 @@
 
         /* Loading Animation Styles */
         #loadingOverlay {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%) !important;
             backdrop-filter: blur(10px);
             color: white;
         }
@@ -612,9 +619,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px dashed #667eea;
+            border: 2px dashed #059669;
             background: rgba(255, 255, 255, 0.7);
-            color: #667eea;
+            color: #059669;
             font-size: 1.6rem;
             font-weight: bold;
             cursor: pointer;
@@ -624,9 +631,9 @@
         }
 
         .batch-thumb-add:hover {
-            background: #e0e7ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: #ecfdf5;
+            border-color: #047857;
+            color: #047857;
             transform: scale(1.05);
         }
 
@@ -643,7 +650,7 @@
             width: 100%;
             height: 100%;
             z-index: 1100;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%);
             overflow-y: auto;
             padding: 1.5rem;
             box-sizing: border-box;
@@ -756,9 +763,9 @@
         /* Detail Modal Pills */
         .date-pill {
             font-weight: 600;
-            color: #667eea;
+            color: #059669;
             cursor: pointer;
-            border-bottom: 2px dashed #667eea;
+            border-bottom: 2px dashed #059669;
             padding-bottom: 1px;
             display: inline-flex;
             align-items: center;
@@ -768,8 +775,8 @@
         }
 
         .date-pill:hover {
-            color: #764ba2;
-            border-color: #764ba2;
+            color: #047857;
+            border-color: #047857;
         }
 
         .date-pill.updating {
@@ -779,9 +786,9 @@
 
         .category-pill {
             font-weight: 600;
-            color: #667eea;
+            color: #059669;
             cursor: pointer;
-            border-bottom: 2px dashed #667eea;
+            border-bottom: 2px dashed #059669;
             padding-bottom: 1px;
             display: inline-flex;
             align-items: center;
@@ -791,8 +798,8 @@
         }
 
         .category-pill:hover {
-            color: #764ba2;
-            border-color: #764ba2;
+            color: #047857;
+            border-color: #047857;
         }
 
         .category-pill.updating {
@@ -957,7 +964,7 @@
                     <div id="currencyWrapper" style="font-size: 1.1rem; color: #555;">
                         Original Currency:
                         <span id="currencyTrigger"
-                            style="color: #667eea; font-weight: bold; cursor: pointer; border-bottom: 2px dashed #667eea; padding-bottom: 2px; transition: all 0.2s;">EUR</span>
+                            style="color: #059669; font-weight: bold; cursor: pointer; border-bottom: 2px dashed #059669; padding-bottom: 2px; transition: all 0.2s;">EUR</span>
                     </div>
 
                     <input type="hidden" name="currency" id="hiddenCurrencyInput" value="EUR">
@@ -1007,8 +1014,8 @@
 
                 <style>
                     .magic-option:hover {
-                        background-color: #f8faff;
-                        color: #667eea;
+                        background-color: #ecfdf5;
+                        color: #059669;
                     }
                 </style>
 
@@ -1057,9 +1064,9 @@
                             closeDropdown();
 
                             // Visual feedback on trigger
-                            trigger.style.color = '#764ba2';
+                            trigger.style.color = '#047857';
                             setTimeout(() => {
-                                trigger.style.color = '#667eea';
+                                trigger.style.color = '#059669';
                             }, 300);
                         });
                     });
@@ -1074,7 +1081,7 @@
             <!-- Manual Entry Link -->
             <div style="margin-top: 2rem;">
                 <span id="manualEntryLink"
-                    style="color: #667eea; cursor: pointer; text-decoration: underline; font-size: 0.9rem;">
+                    style="color: #059669; cursor: pointer; text-decoration: underline; font-size: 0.9rem;">
                     Or enter manually ✍️
                 </span>
             </div>
@@ -1111,7 +1118,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260914.1344 ©2025-26 EGO /dev/null</span>
+        <span style="font-style: italic;">20260915.1610 ©2025-26 EGO /dev/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -1272,7 +1279,7 @@
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
                         <label style="color: #666; font-size: 0.9rem; font-weight: bold; margin: 0;">Merchant</label>
                         <a href="#" id="starredMerchantsLink" onclick="openSelectStarredModal(event)"
-                            style="color: #667eea; font-size: 0.9rem; font-weight: bold; text-decoration: none; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                            style="color: #059669; font-size: 0.9rem; font-weight: bold; text-decoration: none; display: flex; align-items: center; gap: 4px; cursor: pointer;">
                             <span>Starred Merchants</span> <span>⭐</span>
                         </a>
                     </div>
@@ -1698,7 +1705,7 @@
 
                     if (log.monarch_tx_id) {
                         const deepLink = `intent://transactions/${log.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${log.monarch_tx_id};end`;
-                        merchantCol.innerHTML = `<a href="${deepLink}" target="_blank" style="text-decoration: underline; color: #667eea;" title="View in Monarch">${merchantText}</a>${cashEmoji}`;
+                        merchantCol.innerHTML = `<a href="${deepLink}" target="_blank" style="text-decoration: underline; color: #059669;" title="View in Monarch">${merchantText}</a>${cashEmoji}`;
                     } else {
                         merchantCol.textContent = merchantText + cashEmoji;
                     }

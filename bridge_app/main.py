@@ -125,7 +125,8 @@ async def activate(request: Request, s: str):
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <link rel="manifest" href="/manifest.json">
-            <link rel="icon" type="image/png" href="/icon.png">
+            <link rel="icon" type="image/png" href="/logo.png">
+            <link rel="apple-touch-icon" href="/logo.png">
             <style>
                 body { font-family: sans-serif; text-align: center; padding: 2rem; background: #f0fdf4; color: #166534; }
                 .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
@@ -730,7 +731,8 @@ LOADING_HTML = """
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="manifest" href="/manifest.json">
-        <link rel="icon" type="image/png" href="/icon.png">
+        <link rel="icon" type="image/png" href="/logo.png">
+        <link rel="apple-touch-icon" href="/logo.png">
         <title>💶 Monarch Money Bridge</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -742,7 +744,9 @@ LOADING_HTML = """
                 font-family: 'Sriracha', cursive;  
                 padding: 2rem; 
                 text-align: center; 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background-color: #064e3b;
+                background: radial-gradient(circle at 20% 20%, rgba(52, 211, 153, 0.25) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.2) 0%, transparent 40%), linear-gradient(135deg, #064e3b 0%, #065f46 25%, #047857 50%, #059669 75%, #10b981 100%);
+                background-attachment: fixed;
                 min-height: 100vh;
                 min-height: 100dvh;
                 display: flex;
@@ -825,7 +829,7 @@ LOADING_HTML = """
             /* Animate Hamburger to X */
             .hamburger-btn.open .hamburger-bar:nth-child(1) {
                 transform: translateY(7px) rotate(45deg);
-                background-color: #667eea;
+                background-color: #059669;
             }
 
             .hamburger-btn.open .hamburger-bar:nth-child(2) {
@@ -835,7 +839,7 @@ LOADING_HTML = """
 
             .hamburger-btn.open .hamburger-bar:nth-child(3) {
                 transform: translateY(-7px) rotate(-45deg);
-                background-color: #667eea;
+                background-color: #059669;
             }
 
             .deep-link-dropdown {
@@ -869,15 +873,15 @@ LOADING_HTML = """
 
             .menu-divider {
                 height: 1.5px;
-                background-color: rgba(102, 126, 234, 0.35);
+                background-color: rgba(5, 150, 105, 0.25);
                 margin: 6px 12px;
                 border: none;
                 border-radius: 1px;
             }
 
             .deep-link-item:hover {
-                background: #f8faff;
-                color: #667eea;
+                background: #ecfdf5;
+                color: #059669;
                 padding-left: 24px;
             }
 
@@ -999,9 +1003,9 @@ LOADING_HTML = """
                 color: #dc2626;
                 font-weight: bold;
             }
-            .title { font-weight: bold; font-size: 1.5rem; margin-top: 0; margin-bottom: 1rem; color: green; }
+            .title { font-weight: bold; font-size: 1.5rem; margin-top: 0; margin-bottom: 1rem; color: #047857; }
             .btn { 
-                background: linear-gradient(to right, #667eea, #764ba2); 
+                background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); 
                 color: #fff; 
                 padding: 0.8rem 2rem; 
                 border-radius: 50px; 
@@ -1012,14 +1016,14 @@ LOADING_HTML = """
                 border: none;
                 font-size: 1rem;
                 font-weight: bold;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                transition: transform 0.2s;
+                box-shadow: 0 4px 15px rgba(5, 150, 105, 0.35);
+                transition: transform 0.2s, box-shadow 0.2s;
                 font-family: inherit;
             }
             #resultCard .btn {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             }
-            .btn:hover { transform: translateY(-2px); }
+            .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(5, 150, 105, 0.45); }
             .detail-row { display: flex; justify-content: space-between; align-items: center; margin: 0.25rem auto; border-bottom: 1px solid #eee; padding-bottom: 0.25rem; width: 100%; gap: 1rem; }
             .label { color: #666; }
             .value { font-weight: 600; text-align: right; }
@@ -1027,9 +1031,9 @@ LOADING_HTML = """
             /* Editable date pill */
             .date-pill {
                 font-weight: 600;
-                color: #667eea;
+                color: #059669;
                 cursor: pointer;
-                border-bottom: 2px dashed #667eea;
+                border-bottom: 2px dashed #059669;
                 padding-bottom: 1px;
                 display: inline-flex;
                 align-items: center;
@@ -1037,15 +1041,15 @@ LOADING_HTML = """
                 transition: color 0.2s, border-color 0.2s;
                 user-select: none;
             }
-            .date-pill:hover { color: #764ba2; border-color: #764ba2; }
+            .date-pill:hover { color: #047857; border-color: #047857; }
             .date-pill.updating { opacity: 0.5; pointer-events: none; }
             
             /* Editable category pill */
             .category-pill {
                 font-weight: 600;
-                color: #667eea;
+                color: #059669;
                 cursor: pointer;
-                border-bottom: 2px dashed #667eea;
+                border-bottom: 2px dashed #059669;
                 padding-bottom: 1px;
                 display: inline-flex;
                 align-items: center;
@@ -1053,7 +1057,7 @@ LOADING_HTML = """
                 transition: color 0.2s, border-color 0.2s;
                 user-select: none;
             }
-            .category-pill:hover { color: #764ba2; border-color: #764ba2; }
+            .category-pill:hover { color: #047857; border-color: #047857; }
             .category-pill.updating { opacity: 0.5; pointer-events: none; }
 
             #datePicker {
@@ -2468,7 +2472,7 @@ LOADING_HTML = """
 
                         if (log.monarch_tx_id) {
                             const deepLink = `intent://transactions/${log.monarch_tx_id}#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%2F${log.monarch_tx_id};end`;
-                            merchantCol.innerHTML = `<a href="${deepLink}" target="_blank" style="text-decoration: underline; color: #667eea;" title="View in Monarch">${merchantText}</a>${cashEmoji}`;
+                            merchantCol.innerHTML = `<a href="${deepLink}" target="_blank" style="text-decoration: underline; color: #059669;" title="View in Monarch">${merchantText}</a>${cashEmoji}`;
                         } else {
                             merchantCol.textContent = merchantText + cashEmoji;
                         }
