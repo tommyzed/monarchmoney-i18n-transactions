@@ -7,7 +7,7 @@ import logging
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 import hashlib
 from sqlalchemy.ext.asyncio import AsyncSession
 from .database import engine, get_db, AsyncSessionLocal
@@ -63,46 +63,77 @@ DEVICE_TOKEN_COOKIE = "device_token"
 # Token value is a hash of the secret to avoid exposing it directly in the cookie if inspected
 COOKIE_VALUE = hashlib.sha256(UNLOCK_SECRET.encode()).hexdigest() if UNLOCK_SECRET else None
 
-class GhostSecurityMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+class GhostSecurityMiddleware:
+    """
+    Pure ASGI middleware for cookie-based Ghost Mode security.
+    Uses raw ASGI instead of BaseHTTPMiddleware to avoid consuming
+    the request body stream (which breaks UploadFile / multipart parsing).
+    """
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # Build a lightweight Request just for header/cookie/path inspection.
+        # This does NOT read the body, so the stream stays intact.
+        request = Request(scope)
+
         # Default state
-        request.state.is_authenticated = False
+        scope.setdefault("state", {})
+        scope["state"]["is_authenticated"] = False
 
         # Check for cookie if secret is configured
         if UNLOCK_SECRET:
             token = request.cookies.get(DEVICE_TOKEN_COOKIE)
             if token:
                 if hmac.compare_digest(token, COOKIE_VALUE):
-                    request.state.is_authenticated = True
-                    return await call_next(request)
+                    scope["state"]["is_authenticated"] = True
+                    await self.app(scope, receive, send)
+                    return
 
         # --- Unauthenticated access rules ---
 
         # Allow activation endpoint
         if request.url.path == "/s":
-            return await call_next(request)
-            
+            await self.app(scope, receive, send)
+            return
+
         # Allow static assets (manifest, Service Worker, icons) to support PWA installation.
         if request.url.path in ["/manifest.json", "/sw.js", "/favicon.ico"]:
-            response = await call_next(request)
+            # For sw.js, inject Cache-Control header via a send wrapper
             if request.url.path == "/sw.js":
-                response.headers["Cache-Control"] = "no-cache, must-revalidate"
-            return response
+                async def send_with_no_cache(message):
+                    if message["type"] == "http.response.start":
+                        headers = list(message.get("headers", []))
+                        headers.append((b"cache-control", b"no-cache, must-revalidate"))
+                        message["headers"] = headers
+                    await send(message)
+                await self.app(scope, receive, send_with_no_cache)
+                return
+            await self.app(scope, receive, send)
+            return
 
         if request.url.path.endswith((".png", ".jpg", ".css", ".js", ".gif")):
-             return await call_next(request)
+            await self.app(scope, receive, send)
+            return
 
         # Allow FIRE dashboard demo access
         if request.url.path == "/fire" or request.url.path.startswith("/api/fire"):
-            return await call_next(request)
+            await self.app(scope, receive, send)
+            return
 
-        
         # If no secret is configured, block protected routes
         if not UNLOCK_SECRET:
-            return Response(status_code=401, content="Unauthorized - Security not configured on server")
+            response = Response(status_code=401, content="Unauthorized - Security not configured on server")
+            await response(scope, receive, send)
+            return
 
         # GHOST MODE: Return 404 Not Found if unauthorized
-        return Response(status_code=404, content="Not Found")
+        response = Response(status_code=404, content="Not Found")
+        await response(scope, receive, send)
 
 app.add_middleware(GhostSecurityMiddleware)
 
