@@ -5,7 +5,7 @@ import json
 import hmac
 import logging
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
@@ -1439,7 +1439,7 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" onclick="openFailedModal(event)" style="flex: 1; min-width: 140px; background: linear-gradient(to right, #e11d48, #be123c); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">⚠️ View Failed Txns</button>
                 <a href="/" style="flex: 1; min-width: 100px; background: #4b5563; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260910.1158 ©2025-26 EGO /dev/null</span>
+            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20260917.0554 ©2025-26 EGO /dev/null</span>
         </div>
 
         <!-- Mapping Modal -->
@@ -3125,28 +3125,159 @@ async def handle_manual_entry(
 
 @app.post("/share")
 async def handle_share(
+    request: Request,
     background_tasks: BackgroundTasks,
-    currency: str = Form(None),
-    file: UploadFile = File(...)
 ):
     """
-    Handle Share Target POST request. 
+    Handle Share Target POST request.
+    Resiliently accepts:
+    - Multipart form data under candidate names ('file', 'files', 'image', 'images', 'receipt', 'photo', etc.)
+    - Any uploaded file in multipart form data regardless of field name
+    - Multiple files (initiates batch background processing)
+    - Raw binary image payloads (e.g. iOS Shortcuts sending 'File' body with image/* content-type)
     Starts processing in background and returns a loading page that polls for status.
     """
     try:
-        # Read file immediately before response closes
-        content = await file.read()
+        content_type = request.headers.get("content-type", "").lower()
+        currency = request.query_params.get("currency") or request.headers.get("x-currency")
+        raw_files = []
+        raw_content = None
+
+        if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+            form = await request.form()
+            if not currency and form.get("currency"):
+                currency = str(form.get("currency"))
+
+            # Check common candidate keys in priority order
+            candidate_keys = [
+                "file", "files", "image", "images",
+                "receipt", "receipts", "photo", "photos",
+                "media", "attachment", "data"
+            ]
+            for key in candidate_keys:
+                items = form.getlist(key)
+                for item in items:
+                    if hasattr(item, "read"):
+                        raw_files.append(item)
+
+            # If none of the candidate keys matched, check all form items for any UploadFile
+            if not raw_files:
+                for _k, value in form.multi_items():
+                    if hasattr(value, "read") and value not in raw_files:
+                        raw_files.append(value)
+        else:
+            # Check for raw binary image stream (e.g. iOS Shortcuts with Request Body: File)
+            body = await request.body()
+            if body and len(body) > 0:
+                raw_content = body
+
+        # If files were found in multipart form data
+        if raw_files:
+            if len(raw_files) == 1:
+                raw_content = await raw_files[0].read()
+            else:
+                # Multiple receipts shared together -> route to batch processing
+                items_data = []
+                for f in raw_files:
+                    c = await f.read()
+                    fn = getattr(f, "filename", None) or f"receipt_{len(items_data)+1}"
+                    items_data.append((c, fn))
+
+                _cleanup_old_batches()
+                batch_id = str(uuid.uuid4())
+                batch_store[batch_id] = {
+                    "created_at": datetime.now(),
+                    "status": "processing",
+                    "total": len(items_data),
+                    "currency": currency,
+                    "items": [
+                        {
+                            "index": i,
+                            "filename": fn,
+                            "status": "queued",
+                            "progress": 0,
+                            "step": "Queued",
+                        }
+                        for i, (_content, fn) in enumerate(items_data)
+                    ]
+                }
+                background_tasks.add_task(process_batch_background, batch_id, items_data, currency)
+
+                accept_header = request.headers.get("accept", "").lower()
+                if "application/json" in accept_header and "text/html" not in accept_header:
+                    return JSONResponse({"batch_id": batch_id, "total": len(items_data), "status": "processing"})
+
+                return RedirectResponse(url=f"/?batch_id={batch_id}", status_code=303)
+
+        # If no image content found
+        if not raw_content:
+            logger.warning("/share received a request without any receipt image file.")
+            accept_header = request.headers.get("accept", "").lower()
+            if "application/json" in accept_header and "text/html" not in accept_header:
+                return JSONResponse(
+                    {
+                        "detail": "No receipt image was received. Please ensure an image is selected when sharing.",
+                        "loc": ["body", "file"],
+                        "msg": "Field required"
+                    },
+                    status_code=400
+                )
+            return HTMLResponse(
+                content="""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <title>No Receipt Image - Monarch Money Bridge</title>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            display: flex; align-items: center; justify-content: center; min-height: 100vh;
+                            background-color: #064e3b; margin: 0; padding: 1.5rem; box-sizing: border-box;
+                        }
+                        .card {
+                            background: linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%);
+                            padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                            max-width: 440px; width: 100%; text-align: center;
+                        }
+                        h2 { color: #991b1b; margin-top: 0.5rem; }
+                        p { color: #4b5563; line-height: 1.5; }
+                        .btn {
+                            background: #059669; color: white; border: none; padding: 0.75rem 1.5rem;
+                            border-radius: 9999px; text-decoration: none; font-weight: bold;
+                            display: inline-block; margin-top: 1.5rem; cursor: pointer;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="card">
+                        <div style="font-size: 3.5rem;">🧾</div>
+                        <h2>No Receipt Image Found</h2>
+                        <p>We received your share request, but no receipt image was attached. Please make sure to share an image file (e.g. JPG, PNG, HEIC).</p>
+                        <a href="/" class="btn">Return to App</a>
+                    </div>
+                </body>
+                </html>
+                """,
+                status_code=400
+            )
+
         job_id = str(uuid.uuid4())
         mm_account = os.environ.get("MM_ACCOUNT", "Euro Transactions")
-        
+
         # Start background task
-        background_tasks.add_task(process_background_job, job_id, content, currency)
-        
+        background_tasks.add_task(process_background_job, job_id, raw_content, currency)
+
+        accept_header = request.headers.get("accept", "").lower()
+        if "application/json" in accept_header and "text/html" not in accept_header:
+            return JSONResponse({"status": "processing", "job_id": job_id, "account": mm_account})
+
         # Return Loading HTML
         return HTMLResponse(content=LOADING_HTML.replace("__JOB_ID__", job_id).replace("__MM_ACCOUNT__", mm_account))
 
     except Exception as e:
-        print(f"Error starting job: {e}")
+        logger.exception(f"Error starting share job: {e}")
         return HTMLResponse(content="Error starting job", status_code=500)
 
 @app.get("/api/settings")
