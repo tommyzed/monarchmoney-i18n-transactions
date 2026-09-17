@@ -3126,13 +3126,45 @@ async def handle_manual_entry(
 @app.post("/share")
 async def handle_share(
     background_tasks: BackgroundTasks,
-    currency: str = Form(None),
-    file: UploadFile = File(...)
+    currency: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None)
 ):
     """
     Handle Share Target POST request. 
     Starts processing in background and returns a loading page that polls for status.
+    If no file is received (e.g. Chrome on Android dropping share intent files),
+    renders a friendly fallback guiding the user to the in-app file upload.
     """
+    if not file:
+        return HTMLResponse(
+            content="""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Monarch Money Bridge</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #064e3b; margin: 0; padding: 1.5rem; box-sizing: border-box; }
+        .card { background: linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%); padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-width: 440px; width: 100%; text-align: center; }
+        h2 { color: #991b1b; margin-top: 0.5rem; font-size: 1.5rem; }
+        p { color: #4b5563; line-height: 1.5; font-size: 0.95rem; }
+        .btn { background: #059669; color: white; border: none; padding: 0.85rem 1.6rem; border-radius: 9999px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 1.2rem; cursor: pointer; }
+        .sublink { display: block; margin-top: 1rem; color: #4b5563; text-decoration: underline; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div style="font-size: 3.5rem;">🧾</div>
+        <h2>No Receipt Image Received</h2>
+        <p>Chrome on Android currently has a known bug (<a href="https://issues.chromium.org/issues/559665266" target="_blank" style="color: #059669;">Chromium #559665266</a>) that drops image attachments when sharing from the Android share sheet.</p>
+        <p>Please use the in-app file upload instead.</p>
+        <a href="/?upload=1" class="btn">📁 Open App & Select Receipt</a>
+        <a href="/" class="sublink">Return to App</a>
+    </div>
+</body>
+</html>""",
+            status_code=200
+        )
     try:
         # Read file immediately before response closes
         content = await file.read()

@@ -1118,7 +1118,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260917.1638 ©2025-26 EGO /dev/null</span>
+        <span style="font-style: italic;">20260917.1641 ©2025-26 EGO /dev/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -1515,6 +1515,15 @@
                 toast.className = toast.className.replace("show", "");
                 toastTimeout = null;
             }, 3000);
+        }
+
+        // Check for upload intent from share fallback
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('upload') === '1') {
+            window.history.replaceState({}, '', window.location.pathname);
+            setTimeout(() => {
+                showToast("📁 Tap 'Upload Receipt' below to pick your receipt photo.", "success");
+            }, 300);
         }
 
         function showConfirmToast(message, onConfirm) {
