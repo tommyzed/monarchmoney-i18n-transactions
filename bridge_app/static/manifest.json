@@ -24,25 +24,11 @@
         "method": "POST",
         "enctype": "multipart/form-data",
         "params": {
-            "title": "title",
-            "text": "text",
-            "url": "url",
             "files": [
                 {
                     "name": "file",
                     "accept": [
-                        "image/*",
-                        "image/jpeg",
-                        "image/png",
-                        "image/webp",
-                        "image/heic",
-                        "image/heif",
-                        ".jpg",
-                        ".jpeg",
-                        ".png",
-                        ".webp",
-                        ".heic",
-                        ".heif"
+                        "image/*"
                     ]
                 }
             ]

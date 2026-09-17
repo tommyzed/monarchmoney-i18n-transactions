@@ -5,10 +5,9 @@ import json
 import hmac
 import logging
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
 from sqlalchemy.ext.asyncio import AsyncSession
 from .database import engine, get_db, AsyncSessionLocal
@@ -58,117 +57,52 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """
-    Log comprehensive diagnostics when a 422 RequestValidationError occurs.
-    Helps diagnose missing fields or format issues on production.
-    """
-    client_ip = request.client.host if request.client else "unknown"
-    content_type = request.headers.get("content-type", "")
-    content_length = request.headers.get("content-length", "")
-    user_agent = request.headers.get("user-agent", "")
-    
-    print(f"🚨 [422 VALIDATION ERROR] {request.method} {request.url.path} from {client_ip}", flush=True)
-    print(f"   Content-Type: {content_type} | Content-Length: {content_length}", flush=True)
-    print(f"   User-Agent: {user_agent}", flush=True)
-    print(f"   Headers: {dict(request.headers)}", flush=True)
-    print(f"   Validation Errors: {exc.errors()}", flush=True)
-    
-    try:
-        body = await request.body()
-        body_preview = body[:1000].decode("latin-1", errors="replace")
-        print(f"   Raw Body Preview ({len(body)} bytes): {body_preview[:500]}", flush=True)
-    except Exception as e:
-        print(f"   Could not read body: {e}", flush=True)
-
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors()}
-    )
-
 # --- Security Configuration (Ghost Cookie) ---
 UNLOCK_SECRET = os.environ.get("UNLOCK_SECRET")
 DEVICE_TOKEN_COOKIE = "device_token"
 # Token value is a hash of the secret to avoid exposing it directly in the cookie if inspected
 COOKIE_VALUE = hashlib.sha256(UNLOCK_SECRET.encode()).hexdigest() if UNLOCK_SECRET else None
 
-class GhostSecurityMiddleware:
-    """
-    Pure ASGI middleware for cookie-based Ghost Mode security.
-    Uses raw ASGI instead of BaseHTTPMiddleware to avoid consuming
-    the request body stream (which breaks UploadFile / multipart parsing).
-    """
-    def __init__(self, app: ASGIApp):
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send):
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-
-        # Build a lightweight Request just for header/cookie/path inspection.
-        # This does NOT read the body, so the stream stays intact.
-        request = Request(scope)
-
+class GhostSecurityMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
         # Default state
-        scope.setdefault("state", {})
-        scope["state"]["is_authenticated"] = False
+        request.state.is_authenticated = False
 
         # Check for cookie if secret is configured
         if UNLOCK_SECRET:
             token = request.cookies.get(DEVICE_TOKEN_COOKIE)
             if token:
                 if hmac.compare_digest(token, COOKIE_VALUE):
-                    scope["state"]["is_authenticated"] = True
-                    await self.app(scope, receive, send)
-                    return
+                    request.state.is_authenticated = True
+                    return await call_next(request)
 
         # --- Unauthenticated access rules ---
 
         # Allow activation endpoint
         if request.url.path == "/s":
-            await self.app(scope, receive, send)
-            return
-
+            return await call_next(request)
+            
         # Allow static assets (manifest, Service Worker, icons) to support PWA installation.
         if request.url.path in ["/manifest.json", "/sw.js", "/favicon.ico"]:
-            # For sw.js, inject Cache-Control header via a send wrapper
+            response = await call_next(request)
             if request.url.path == "/sw.js":
-                async def send_with_no_cache(message):
-                    if message["type"] == "http.response.start":
-                        headers = list(message.get("headers", []))
-                        headers.append((b"cache-control", b"no-cache, must-revalidate"))
-                        message["headers"] = headers
-                    await send(message)
-                await self.app(scope, receive, send_with_no_cache)
-                return
-            await self.app(scope, receive, send)
-            return
+                response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            return response
 
         if request.url.path.endswith((".png", ".jpg", ".css", ".js", ".gif")):
-            await self.app(scope, receive, send)
-            return
+             return await call_next(request)
 
         # Allow FIRE dashboard demo access
         if request.url.path == "/fire" or request.url.path.startswith("/api/fire"):
-            await self.app(scope, receive, send)
-            return
+            return await call_next(request)
 
-        # Allow Service Worker telemetry logging
-        if request.url.path == "/api/sw-log":
-            await self.app(scope, receive, send)
-            return
-
+        
         # If no secret is configured, block protected routes
         if not UNLOCK_SECRET:
-            response = Response(status_code=401, content="Unauthorized - Security not configured on server")
-            await response(scope, receive, send)
-            return
+            return Response(status_code=401, content="Unauthorized - Security not configured on server")
 
         # GHOST MODE: Return 404 Not Found if unauthorized
-        response = Response(status_code=404, content="Not Found")
-        await response(scope, receive, send)
+        return Response(status_code=404, content="Not Found")
 
 app.add_middleware(GhostSecurityMiddleware)
 
@@ -221,19 +155,6 @@ async def activate(request: Request, s: str):
         secure=is_secure
     )
     return response
-
-@app.post("/api/sw-log")
-async def log_from_service_worker(request: Request):
-    """
-    Diagnostic telemetry endpoint to receive log reports from the client-side Service Worker.
-    """
-    try:
-        data = await request.json()
-        print(f"📱 [SW TELEMETRY] {data}", flush=True)
-        return {"status": "ok"}
-    except Exception as e:
-        print(f"📱 [SW TELEMETRY ERROR] {e}", flush=True)
-        return {"status": "error"}
 
 from cachetools import TTLCache
 
@@ -3204,179 +3125,28 @@ async def handle_manual_entry(
 
 @app.post("/share")
 async def handle_share(
-    request: Request,
     background_tasks: BackgroundTasks,
-    currency: Optional[str] = Form(None),
-    file: Optional[UploadFile] = File(None)
+    currency: str = Form(None),
+    file: UploadFile = File(...)
 ):
     """
-    Handle Share Target POST request with comprehensive diagnostic logging.
-    Resiliently accepts:
-    - Standard 'file' multipart field
-    - Alternative candidate fields ('files', 'image', 'images', 'receipt', 'photo', etc.)
-    - Any UploadFile found in the multipart form data
-    - Raw binary image payloads
+    Handle Share Target POST request. 
+    Starts processing in background and returns a loading page that polls for status.
     """
-    client_ip = request.client.host if request.client else "unknown"
-    content_type = request.headers.get("content-type", "").lower()
-    content_length = request.headers.get("content-length", "")
-    user_agent = request.headers.get("user-agent", "")
-
-    print(f"📥 [/share] Incoming share POST from {client_ip}", flush=True)
-    print(f"   Content-Type: {content_type} | Content-Length: {content_length}", flush=True)
-    print(f"   User-Agent: {user_agent}", flush=True)
-
-    content = None
-    file_source = None
-
     try:
-        # 1. First check if FastAPI's File parameter bound a file
-        if file is not None:
-            content = await file.read()
-            if content and len(content) > 0:
-                file_source = f"FastAPI File parameter '{file.filename}' ({len(content)} bytes, {file.content_type})"
-                print(f"   ✅ [share] Received via 'file' parameter: {file_source}", flush=True)
-
-        # 2. If not bound by FastAPI, inspect the multipart form data directly
-        if not content:
-            print("   🔍 [share] 'file' parameter was empty/None. Inspecting form data...", flush=True)
-            try:
-                form = await request.form()
-                form_keys = list(form.keys())
-                print(f"   [share] Form keys received: {form_keys}", flush=True)
-
-                if not currency and form.get("currency"):
-                    currency = str(form.get("currency"))
-
-                # Log all received form items for diagnostics
-                for key, val in form.multi_items():
-                    if hasattr(val, "filename"):
-                        print(f"      - Field '{key}': UploadFile(filename='{val.filename}', content_type='{val.content_type}')", flush=True)
-                    else:
-                        print(f"      - Field '{key}': text/string value='{str(val)[:200]}'", flush=True)
-
-                # Candidate keys in priority order
-                candidate_keys = ["file", "files", "image", "images", "receipt", "receipts", "photo", "photos", "media", "attachment", "data"]
-                for key in candidate_keys:
-                    for item in form.getlist(key):
-                        if hasattr(item, "read"):
-                            c = await item.read()
-                            if c and len(c) > 0:
-                                content = c
-                                file_source = f"form field '{key}' (filename='{getattr(item, 'filename', None)}', {len(c)} bytes)"
-                                print(f"   🎯 [share] Recovered file from {file_source}", flush=True)
-                                break
-                    if content:
-                        break
-
-                # If still not found, check any item in form that is an UploadFile
-                if not content:
-                    for key, val in form.multi_items():
-                        if hasattr(val, "read") and hasattr(val, "filename"):
-                            c = await val.read()
-                            if c and len(c) > 0:
-                                content = c
-                                file_source = f"fallback form field '{key}' (filename='{val.filename}', {len(c)} bytes)"
-                                print(f"   🎯 [share] Recovered file from {file_source}", flush=True)
-                                break
-            except Exception as fe:
-                print(f"   ⚠️ [share] Error parsing form data: {fe}", flush=True)
-
-        # 3. Check for raw binary body (e.g. image stream without multipart packaging)
-        if not content:
-            try:
-                body = await request.body()
-                if body and len(body) > 0:
-                    print(f"   🔍 [share] Inspecting raw body ({len(body)} bytes)...", flush=True)
-                    if (
-                        body[:3] == b"\xff\xd8\xff"
-                        or body[:8] == b"\x89PNG\r\n\x1a\n"
-                        or (len(body) > 12 and body[:4] == b"RIFF" and body[8:12] == b"WEBP")
-                        or (len(body) > 12 and b"ftyp" in body[4:12])
-                        or "image" in content_type
-                    ):
-                        content = body
-                        file_source = f"raw binary stream ({len(body)} bytes, magic bytes verified)"
-                        print(f"   🎯 [share] Recovered file from {file_source}", flush=True)
-                    else:
-                        print(f"   ⚠️ [share] Raw body present ({len(body)} bytes) but did not match image signatures: {body[:32]}", flush=True)
-            except Exception as be:
-                print(f"   ⚠️ [share] Error reading raw body: {be}", flush=True)
-
-        # 4. If still no image content found, log full error and return diagnostic HTML/JSON
-        if not content:
-            print(f"❌ [share] No receipt image found in request! Headers: {dict(request.headers)}", flush=True)
-            accept_header = request.headers.get("accept", "").lower()
-            if "application/json" in accept_header and "text/html" not in accept_header:
-                return JSONResponse(
-                    {
-                        "detail": [
-                            {
-                                "type": "missing",
-                                "loc": ["body", "file"],
-                                "msg": "No receipt image was received in the share payload.",
-                                "input": None
-                            }
-                        ],
-                        "debug": {
-                            "content_type": content_type,
-                            "content_length": content_length,
-                            "user_agent": user_agent
-                        }
-                    },
-                    status_code=400
-                )
-            return HTMLResponse(
-                content=f"""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <title>No Receipt Image - Monarch Money Bridge</title>
-                    <style>
-                        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #064e3b; margin: 0; padding: 1.5rem; box-sizing: border-box; }}
-                        .card {{ background: linear-gradient(135deg, #fce4dc 0%, #f7c9bc 100%); padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-width: 460px; width: 100%; text-align: center; }}
-                        h2 {{ color: #991b1b; margin-top: 0.5rem; }}
-                        p {{ color: #4b5563; line-height: 1.5; }}
-                        .debug-box {{ background: rgba(0,0,0,0.06); padding: 0.75rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; text-align: left; margin: 1rem 0; word-break: break-all; color: #374151; }}
-                        .btn {{ background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 9999px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 1rem; cursor: pointer; }}
-                    </style>
-                </head>
-                <body>
-                    <div class="card">
-                        <div style="font-size: 3.5rem;">🧾</div>
-                        <h2>No Receipt Image Found</h2>
-                        <p>We received your share request, but no image file was attached. When sharing from Android, ensure an image file (JPG, PNG, HEIC) is selected.</p>
-                        <div class="debug-box">
-                            <strong>Diagnostic Info:</strong><br>
-                            Content-Type: {content_type or 'None'}<br>
-                            Content-Length: {content_length or 'None'}
-                        </div>
-                        <a href="/" class="btn">Return to App</a>
-                    </div>
-                </body>
-                </html>
-                """,
-                status_code=400
-            )
-
-        # File content was successfully obtained!
+        # Read file immediately before response closes
+        content = await file.read()
         job_id = str(uuid.uuid4())
         mm_account = os.environ.get("MM_ACCOUNT", "Euro Transactions")
-        print(f"🚀 [share] Starting background processing job {job_id} from {file_source}", flush=True)
-
+        
+        # Start background task
         background_tasks.add_task(process_background_job, job_id, content, currency)
-
-        accept_header = request.headers.get("accept", "").lower()
-        if "application/json" in accept_header and "text/html" not in accept_header:
-            return JSONResponse({"status": "processing", "job_id": job_id, "account": mm_account})
-
+        
+        # Return Loading HTML
         return HTMLResponse(content=LOADING_HTML.replace("__JOB_ID__", job_id).replace("__MM_ACCOUNT__", mm_account))
 
     except Exception as e:
-        print(f"❌ [share] Error starting job: {e}", flush=True)
-        logger.exception(f"Error starting share job: {e}")
+        print(f"Error starting job: {e}")
         return HTMLResponse(content="Error starting job", status_code=500)
 
 @app.get("/api/settings")
