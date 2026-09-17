@@ -1118,7 +1118,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260917.0554 ©2025-26 EGO /dev/null</span>
+        <span style="font-style: italic;">20260915.1610 ©2025-26 EGO /dev/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -3445,26 +3445,14 @@
             });
         }
 
-        // Check if redirected with a batch_id from share target
-        const urlParams = new URLSearchParams(window.location.search);
-        const batchIdParam = urlParams.get('batch_id');
-        if (batchIdParam) {
-            currentBatchId = batchIdParam;
-            var batchDash = document.getElementById('batchDashboard');
-            if (batchDash) batchDash.style.display = 'block';
-            pollBatchStatus();
-            urlParams.delete('batch_id');
-        }
-
         // Check if app was just updated to announce via toast
+        const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('updated') === '1') {
             showToast("✨ Updated to the latest version!", "success");
             urlParams.delete('updated');
             urlParams.delete('v');
-        }
-        const newSearch = urlParams.toString() ? ('?' + urlParams.toString()) : '';
-        const cleanUrl = window.location.pathname + newSearch + window.location.hash;
-        if (cleanUrl !== (window.location.pathname + window.location.search + window.location.hash)) {
+            const newSearch = urlParams.toString() ? ('?' + urlParams.toString()) : '';
+            const cleanUrl = window.location.pathname + newSearch + window.location.hash;
             window.history.replaceState({}, document.title, cleanUrl);
         }
     </script>
