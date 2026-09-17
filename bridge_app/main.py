@@ -3158,8 +3158,7 @@ async def handle_share(
         <h2>No Receipt Image Received</h2>
         <p>Chrome on Android currently has a known bug (<a href="https://issues.chromium.org/issues/559665266" target="_blank" style="color: #059669;">Chromium #559665266</a>) that drops image attachments when sharing from the Android share sheet.</p>
         <p>Please use the in-app file upload instead.</p>
-        <a href="/?upload=1" class="btn">📁 Open App & Select Receipt</a>
-        <a href="/" class="sublink">Return to App</a>
+        <a href="/?upload=1" class="btn">Return Home</a>
     </div>
 </body>
 </html>""",
