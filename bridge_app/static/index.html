@@ -12,7 +12,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Sriracha&display=swap" rel="stylesheet">
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                reg.update();
+            });
         }
     </script>
     <style>
@@ -1118,7 +1120,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20260917.1604 ©2025-26 EGO /dev/null</span>
+        <span style="font-style: italic;">20260917.1617 ©2025-26 EGO /dev/null</span>
     </div>
 
     <!-- History Log Modal -->

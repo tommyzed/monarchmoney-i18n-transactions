@@ -155,6 +155,11 @@ class GhostSecurityMiddleware:
             await self.app(scope, receive, send)
             return
 
+        # Allow Service Worker telemetry logging
+        if request.url.path == "/api/sw-log":
+            await self.app(scope, receive, send)
+            return
+
         # If no secret is configured, block protected routes
         if not UNLOCK_SECRET:
             response = Response(status_code=401, content="Unauthorized - Security not configured on server")
@@ -216,6 +221,19 @@ async def activate(request: Request, s: str):
         secure=is_secure
     )
     return response
+
+@app.post("/api/sw-log")
+async def log_from_service_worker(request: Request):
+    """
+    Diagnostic telemetry endpoint to receive log reports from the client-side Service Worker.
+    """
+    try:
+        data = await request.json()
+        print(f"📱 [SW TELEMETRY] {data}", flush=True)
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"📱 [SW TELEMETRY ERROR] {e}", flush=True)
+        return {"status": "error"}
 
 from cachetools import TTLCache
 
