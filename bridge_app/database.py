@@ -37,6 +37,11 @@ if DATABASE_URL.startswith("postgres"):
         
         sslmode = query_params.get("sslmode", [""])[0]
 
+        if sslmode:
+            valid_sslmodes = {"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}
+            if sslmode not in valid_sslmodes:
+                raise ValueError(f"Invalid sslmode parameter: {sslmode}")
+
         if sslmode == "disable":
             ssl_ctx = False
         else:

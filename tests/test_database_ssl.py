@@ -44,3 +44,10 @@ def test_database_ssl_config_disable():
             ssl_ctx = connect_args.get("ssl")
 
             assert ssl_ctx is False
+
+def test_database_ssl_config_invalid():
+    with patch.dict(os.environ, {"DATABASE_URL": "postgresql://user:pass@host/db?sslmode=invalid"}):
+        with patch("sqlalchemy.ext.asyncio.create_async_engine") as mock_create_engine:
+            with pytest.raises(ValueError, match="Invalid sslmode parameter: invalid"):
+                import bridge_app.database
+                importlib.reload(bridge_app.database)
