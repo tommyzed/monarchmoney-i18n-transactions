@@ -3940,50 +3940,67 @@ async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
         return {"status": "ok", "total": 0, "succeeded": 0, "failed": 0, "results": []}
         
     from .services.orchestrator import process_transaction, process_manual_transaction, process_parsed_transaction
+    from .database import AsyncSessionLocal
+    import asyncio
     
     succeeded = 0
     failed = 0
     results = []
     
-    for tx in failed_list:
-        tx_id = tx.id
-        merchant = (tx.parsed_data or tx.manual_data or {}).get("merchant", f"Transaction #{tx_id}")
-        try:
-            if tx.parsed_data:
-                img_hash = tx.image_hash or f"retry_{tx.id}_{uuid.uuid4().hex[:6]}"
-                res = await process_parsed_transaction(
-                    data=dict(tx.parsed_data),
-                    image_hash=img_hash,
-                    db=db,
-                    user_currency_override=tx.user_currency,
-                    force_override=True
-                )
-            elif tx.source_type == "manual" and tx.manual_data:
-                res = await process_manual_transaction(
-                    manual_data=dict(tx.manual_data),
-                    db=db,
-                    force_override=True
-                )
-            elif tx.raw_content:
-                res = await process_transaction(
-                    content=tx.raw_content,
-                    db=db,
-                    user_currency=tx.user_currency,
-                    force_override=True
-                )
-            else:
-                raise ValueError("No data or content available to retry")
-                
-            await db.delete(tx)
-            await db.commit()
+    semaphore = asyncio.Semaphore(5)
+
+    async def process_one(tx_id: int):
+        async with semaphore:
+            async with AsyncSessionLocal() as local_db:
+                tx = await local_db.get(FailedTransaction, tx_id)
+                if not tx:
+                    return {"id": tx_id, "status": "failed", "error": "Transaction not found"}
+
+                merchant = (tx.parsed_data or tx.manual_data or {}).get("merchant", f"Transaction #{tx_id}")
+                try:
+                    if tx.parsed_data:
+                        img_hash = tx.image_hash or f"retry_{tx.id}_{uuid.uuid4().hex[:6]}"
+                        res = await process_parsed_transaction(
+                            data=dict(tx.parsed_data),
+                            image_hash=img_hash,
+                            db=local_db,
+                            user_currency_override=tx.user_currency,
+                            force_override=True
+                        )
+                    elif tx.source_type == "manual" and tx.manual_data:
+                        res = await process_manual_transaction(
+                            manual_data=dict(tx.manual_data),
+                            db=local_db,
+                            force_override=True
+                        )
+                    elif tx.raw_content:
+                        res = await process_transaction(
+                            content=tx.raw_content,
+                            db=local_db,
+                            user_currency=tx.user_currency,
+                            force_override=True
+                        )
+                    else:
+                        raise ValueError("No data or content available to retry")
+
+                    await local_db.delete(tx)
+                    await local_db.commit()
+                    return {"id": tx_id, "merchant": merchant, "status": "success"}
+                except Exception as e:
+                    tx.retry_count = (tx.retry_count or 0) + 1
+                    tx.error_message = str(e)
+                    await local_db.commit()
+                    return {"id": tx_id, "merchant": merchant, "status": "failed", "error": str(e)}
+
+    tasks = [process_one(tx.id) for tx in failed_list]
+    outcomes = await asyncio.gather(*tasks)
+
+    for outcome in outcomes:
+        results.append(outcome)
+        if outcome.get("status") == "success":
             succeeded += 1
-            results.append({"id": tx_id, "merchant": merchant, "status": "success"})
-        except Exception as e:
-            tx.retry_count = (tx.retry_count or 0) + 1
-            tx.error_message = str(e)
-            await db.commit()
+        else:
             failed += 1
-            results.append({"id": tx_id, "merchant": merchant, "status": "failed", "error": str(e)})
             
     return {
         "status": "ok",
