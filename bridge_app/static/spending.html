@@ -588,17 +588,18 @@
         }
 
         .main-refresh-fill.active {
-            background-size: 30px 30px;
-            background-image: linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.2) 25%,
-                transparent 25%,
-                transparent 50%,
-                rgba(255, 255, 255, 0.2) 50%,
-                rgba(255, 255, 255, 0.2) 75%,
-                transparent 75%,
-                transparent
-            );
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(255, 255, 255, 0.2) 25%,
+                    transparent 25%,
+                    transparent 50%,
+                    rgba(255, 255, 255, 0.2) 50%,
+                    rgba(255, 255, 255, 0.2) 75%,
+                    transparent 75%,
+                    transparent
+                ) 0 0 / 30px 30px repeat,
+                linear-gradient(90deg, #6366f1, #10b981);
             animation: progress-shimmer 1.5s linear infinite;
         }
 
