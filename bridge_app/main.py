@@ -14,7 +14,7 @@ from .database import engine, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client, get_latest_credentials
-from .models import Credentials, MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant, SpendingReport
+from .models import MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant, SpendingReport
 from sqlalchemy.future import select
 from sqlalchemy import delete, func, or_
 from pydantic import BaseModel
