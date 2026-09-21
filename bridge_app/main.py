@@ -60,8 +60,11 @@ app = FastAPI(lifespan=lifespan)
 # --- Security Configuration (Ghost Cookie) ---
 UNLOCK_SECRET = os.environ.get("UNLOCK_SECRET")
 DEVICE_TOKEN_COOKIE = "device_token"
-# Token value is a hash of the secret to avoid exposing it directly in the cookie if inspected
-COOKIE_VALUE = hashlib.sha256(UNLOCK_SECRET.encode()).hexdigest() if UNLOCK_SECRET else None
+# Use PBKDF2 with a static salt to securely derive a deterministic cookie value
+if UNLOCK_SECRET:
+    COOKIE_VALUE = hashlib.pbkdf2_hmac("sha256", UNLOCK_SECRET.encode(), b"monarch_bridge_ghost_cookie_salt_v1", 100000).hex()
+else:
+    COOKIE_VALUE = None
 
 class GhostSecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
