@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,9 +60,27 @@ TAX_SHELTERED_SUBTYPES = {
 }
 
 TAX_SHELTERED_KEYWORDS = [
-    "401k", "401(k)", "403b", "403(b)", "457", "roth", "sep ira", "simple ira",
-    "traditional ira", "rollover ira", "pension", "retirement", "superannuation",
-    "rrsp", "rrif", "lira", "lif", "tfsa", "hsa", "529", "health savings",
+    "401k",
+    "401(k)",
+    "403b",
+    "403(b)",
+    "457",
+    "roth",
+    "sep ira",
+    "simple ira",
+    "traditional ira",
+    "rollover ira",
+    "pension",
+    "retirement",
+    "superannuation",
+    "rrsp",
+    "rrif",
+    "lira",
+    "lif",
+    "tfsa",
+    "hsa",
+    "529",
+    "health savings",
 ]
 
 
@@ -98,7 +115,11 @@ def is_taxable_earnings_account(account: Optional[Dict[str, Any]]) -> bool:
     # Check display name for explicit tax-sheltered markers (especially for investment accounts)
     if type_name == "brokerage":
         import re
-        if re.search(r"\b(ira|roth|401k|401\(k\)|403b|403\(b\)|457b?|sep\s+ira|simple\s+ira|pension|hsa|529)\b", display_name):
+
+        if re.search(
+            r"\b(ira|roth|401k|401\(k\)|403b|403\(b\)|457b?|sep\s+ira|simple\s+ira|pension|hsa|529)\b",
+            display_name,
+        ):
             return False
 
     return True
@@ -125,7 +146,9 @@ async def _retry_monarch_call(func, *args, max_retries=4, initial_delay=1.5, **k
             return await func(*args, **kwargs)
         except Exception as e:
             last_err = e
-            logger.warning(f"Monarch call {func.__name__} attempt {attempt}/{max_retries} failed: {e}. Retrying in {delay:.1f}s...")
+            logger.warning(
+                f"Monarch call {func.__name__} attempt {attempt}/{max_retries} failed: {e}. Retrying in {delay:.1f}s..."
+            )
             if attempt < max_retries:
                 await asyncio.sleep(delay)
                 delay *= 2
@@ -158,7 +181,9 @@ async def calculate_and_save_spending_report(
         resolved_user_id = creds.id
 
         # 2. Find or initialize report record
-        report = await get_or_create_spending_report(db, year=year, user_id=resolved_user_id)
+        report = await get_or_create_spending_report(
+            db, year=year, user_id=resolved_user_id
+        )
         if not report:
             report = SpendingReport(
                 user_id=resolved_user_id,
@@ -188,7 +213,9 @@ async def calculate_and_save_spending_report(
             accounts_map = {acc["id"]: acc for acc in accounts_res.get("accounts", [])}
 
             # 4. Read Cash Flow Aggregates (READ-ONLY)
-            cashflow_res = await _retry_monarch_call(mm.get_cashflow, start_date=start_date, end_date=end_date)
+            cashflow_res = await _retry_monarch_call(
+                mm.get_cashflow, start_date=start_date, end_date=end_date
+            )
             summary_list = cashflow_res.get("summary", [])
             server_sum = summary_list[0].get("summary", {}) if summary_list else {}
 
@@ -200,7 +227,11 @@ async def calculate_and_save_spending_report(
                     {
                         "name": group.get("name") or UNCATEGORIZED,
                         "type": group.get("type") or "other",
-                        "amount": abs(g_sum) if (group.get("type") == "expense" and g_sum < 0) else g_sum,
+                        "amount": (
+                            abs(g_sum)
+                            if (group.get("type") == "expense" and g_sum < 0)
+                            else g_sum
+                        ),
                         "raw_sum": g_sum,
                     }
                 )
@@ -282,11 +313,16 @@ async def calculate_and_save_spending_report(
                 acc_id = tx_acc.get("id")
                 full_acc = accounts_map.get(acc_id) or tx_acc
 
-                if cat_name_clean in TAXABLE_EARNINGS_CATEGORIES and is_taxable_earnings_account(full_acc):
+                if (
+                    cat_name_clean in TAXABLE_EARNINGS_CATEGORIES
+                    and is_taxable_earnings_account(full_acc)
+                ):
                     if group_type == "income" or amount > 0:
                         itemized_taxable_earnings_total += amount
 
-                if group_type == "expense" or (group_type not in ("income", "transfer") and amount < 0):
+                if group_type == "expense" or (
+                    group_type not in ("income", "transfer") and amount < 0
+                ):
                     expense_val = -amount
                     itemized_expense_total += expense_val
                     categorized_breakdown[cat_name] = (
@@ -301,14 +337,18 @@ async def calculate_and_save_spending_report(
                     if month_key not in monthly_category_group_breakdown:
                         monthly_category_group_breakdown[month_key] = {}
                     monthly_category_group_breakdown[month_key][group_name] = (
-                        monthly_category_group_breakdown[month_key].get(group_name, 0.0) + expense_val
+                        monthly_category_group_breakdown[month_key].get(group_name, 0.0)
+                        + expense_val
                     )
                     if month_key not in monthly_categorized_breakdown:
                         monthly_categorized_breakdown[month_key] = {}
                     monthly_categorized_breakdown[month_key][cat_name] = (
-                        monthly_categorized_breakdown[month_key].get(cat_name, 0.0) + expense_val
+                        monthly_categorized_breakdown[month_key].get(cat_name, 0.0)
+                        + expense_val
                     )
-                elif group_type == "income" or (group_type not in ("expense", "transfer") and amount >= 0):
+                elif group_type == "income" or (
+                    group_type not in ("expense", "transfer") and amount >= 0
+                ):
                     itemized_income_total += amount
                 elif group_type == "transfer":
                     itemized_transfers_total += amount
@@ -347,11 +387,15 @@ async def calculate_and_save_spending_report(
                 "status": "success",
                 "year": year,
                 "summary": report.summary,
-                "updated_at": report.updated_at.isoformat() if report.updated_at else None,
+                "updated_at": (
+                    report.updated_at.isoformat() if report.updated_at else None
+                ),
             }
 
         except Exception as e:
-            logger.error(f"Error calculating spending report for {year}: {e}", exc_info=True)
+            logger.error(
+                f"Error calculating spending report for {year}: {e}", exc_info=True
+            )
             report.sync_status = "error"
             report.error_message = str(e)
             await db.commit()
