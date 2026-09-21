@@ -392,8 +392,15 @@
         }
 
         @keyframes modalSlideIn {
-            from { opacity: 0; transform: translateY(12px) scale(0.97); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
         .modal-close {
@@ -589,23 +596,26 @@
 
         .main-refresh-fill.active {
             background:
-                linear-gradient(
-                    135deg,
+                linear-gradient(135deg,
                     rgba(255, 255, 255, 0.2) 25%,
                     transparent 25%,
                     transparent 50%,
                     rgba(255, 255, 255, 0.2) 50%,
                     rgba(255, 255, 255, 0.2) 75%,
                     transparent 75%,
-                    transparent
-                ) 0 0 / 30px 30px repeat,
+                    transparent) 0 0 / 30px 30px repeat,
                 linear-gradient(90deg, #6366f1, #10b981);
             animation: progress-shimmer 1.5s linear infinite;
         }
 
         @keyframes progress-shimmer {
-            0% { background-position: 0 0; }
-            100% { background-position: 60px 0; }
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 60px 0;
+            }
         }
 
         .main-refresh-status-bar {
@@ -1584,10 +1594,12 @@
                 <!-- Populated by JS -->
             </ul>
 
-            <span class="refresh-select-toggle" id="refreshSelectToggle" onclick="toggleAllRefreshYears()">Select All</span>
+            <span class="refresh-select-toggle" id="refreshSelectToggle" onclick="toggleAllRefreshYears()">Select
+                All</span>
 
             <div class="modal-actions">
-                <button class="modal-btn modal-btn-secondary" id="refreshCancelBtn" onclick="closeRefreshModal()">Cancel</button>
+                <button class="modal-btn modal-btn-secondary" id="refreshCancelBtn"
+                    onclick="closeRefreshModal()">Cancel</button>
                 <button class="modal-btn modal-btn-primary" id="refreshStartBtn" onclick="startMultiYearRefresh()">
                     <span id="refreshStartBtnText">🔄 Refresh Data</span>
                 </button>
@@ -2090,7 +2102,7 @@
                 <!-- Monthly Spending Trend Chart -->
                 <div class="section-card">
                     <div class="section-title">
-                        <span>📅 Monthly Spend</span>
+                        <span>📅 Trend</span>
                         <span id="monthlyAvgBadge" style="display:none; font-size:0.8rem; font-weight:600; color:#fbbf24; background:rgba(245,158,11,0.12); padding:4px 10px; border-radius:6px; border:1px solid rgba(245,158,11,0.3);"></span>
                     </div>
                     <div id="monthlyChart" class="chart-container"></div>
