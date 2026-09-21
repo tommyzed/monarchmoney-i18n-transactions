@@ -3244,7 +3244,8 @@ async def get_starred_merchants(db: AsyncSession = Depends(get_db)):
 
         if starred_names:
             # Chunking to avoid SQLite param limits (max 999 params, we use 2 per item = 450 items max chunk)
-            chunk_size = 450
+            # Postgres supports up to 65535 parameters, allowing much larger chunks
+            chunk_size = 32000 if db.bind.dialect.name == "postgresql" else 450
             for i in range(0, len(starred_names), chunk_size):
                 chunk = starred_names[i:i + chunk_size]
                 stmt_map = select(MerchantMapping).where(
