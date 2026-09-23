@@ -2378,7 +2378,7 @@
                             } else if (delta > 0) {
                                 mmBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;">▲ +${formatCurrency(delta)}</span>`;
                             } else {
-                                mmBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;">🔻-${formatCurrency(Math.abs(delta))}</span>`;
+                                mmBadge = `, <span style="color:#ff9a86; font-weight:600; font-size:0.75rem;">🔻-${formatCurrency(Math.abs(delta))}</span>`;
                             }
                         }
 
@@ -2439,7 +2439,7 @@
                             if (delta > 0.005) {
                                 res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${formatCurrency(delta)} vs ${escHtml(prevShortName)} (${formatCurrency(prevAmt)})</span>`;
                             } else if (delta < -0.005) {
-                                res += `<br/><span style="color:#f43f5e; font-size:0.85em;">🔻-${formatCurrency(Math.abs(delta))} vs ${escHtml(prevShortName)} (${formatCurrency(prevAmt)})</span>`;
+                                res += `<br/><span style="color:#ff9a86; font-size:0.85em;">🔻-${formatCurrency(Math.abs(delta))} vs ${escHtml(prevShortName)} (${formatCurrency(prevAmt)})</span>`;
                             } else {
                                 res += `<br/><span style="color:var(--text-muted); font-size:0.85em;">$0.00 vs ${escHtml(prevShortName)}</span>`;
                             }
@@ -2504,7 +2504,7 @@
                     } else if (delta > 0) {
                         mmHtml = `<span style="color:#10b981; font-weight:600; font-size:0.82rem;">▲ +${formatCurrency(delta)}</span>`;
                     } else {
-                        mmHtml = `<span style="color:#f43f5e; font-weight:600; font-size:0.82rem;">🔻-${formatCurrency(Math.abs(delta))}</span>`;
+                        mmHtml = `<span style="color:#ff9a86; font-weight:600; font-size:0.82rem;">🔻-${formatCurrency(Math.abs(delta))}</span>`;
                     }
                 }
 
@@ -2694,7 +2694,7 @@
                         } else if (delta > 0) {
                             yyBadge = `, <span style="color:#10b981; font-weight:600; font-size:0.75rem;">▲ +${delta.toFixed(1)}%</span>`;
                         } else {
-                            yyBadge = `, <span style="color:#f43f5e; font-weight:600; font-size:0.75rem;">🔻${Math.abs(delta).toFixed(1)}%</span>`;
+                            yyBadge = `, <span style="color:#ff9a86; font-weight:600; font-size:0.75rem;">🔻${Math.abs(delta).toFixed(1)}%</span>`;
                         }
                     }
 
@@ -2827,7 +2827,7 @@
                     } else if (delta > 0) {
                         yyHtml = `<span style="color:#10b981; font-weight:600; font-size:0.82rem;">▲ +${delta.toFixed(1)}%</span>`;
                     } else {
-                        yyHtml = `<span style="color:#f43f5e; font-weight:600; font-size:0.82rem;">🔻${Math.abs(delta).toFixed(1)}%</span>`;
+                        yyHtml = `<span style="color:#ff9a86; font-weight:600; font-size:0.82rem;">🔻${Math.abs(delta).toFixed(1)}%</span>`;
                     }
                 }
 
@@ -3052,7 +3052,7 @@
                             if (delta > 0.05) {
                                 res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${delta.toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
                             } else if (delta < -0.05) {
-                                res += `<br/><span style="color:#f43f5e; font-size:0.85em;">🔻${Math.abs(delta).toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
+                                res += `<br/><span style="color:#ff9a86; font-size:0.85em;">🔻${Math.abs(delta).toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
                             }
                         }
                         return res;
