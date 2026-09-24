@@ -5,7 +5,7 @@ from monarchmoney import MonarchMoney
 from ..models import Credentials
 
 # Path for session persistence - logic says store in DB, but library uses file.
-# We will use DB to store/retrieve the session pickle bytes.
+# We will use DB to store/retrieve the session json bytes.
 
 async def get_latest_credentials(db: AsyncSession) -> Credentials:
     """
