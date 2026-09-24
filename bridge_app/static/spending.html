@@ -1037,6 +1037,41 @@
             color: #fbbf24;
         }
 
+        .cat-amount-val.cat-amount-offset {
+            color: #3fcaff !important;
+        }
+
+        .cat-name-primary-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .cat-offset-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.62rem;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: rgba(16, 185, 129, 0.15);
+            color: #3fcaff;
+            border: 1px solid #3fcaff;
+            margin-left: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            vertical-align: middle;
+        }
+
+        .cat-group-name.cat-group-offset {
+            color: #5fa255 !important;
+        }
+
+        .group-amount-val.group-amount-offset {
+            color: #3fcaff !important;
+        }
+
         .cat-amount-sub-mobile {
             display: none;
         }
@@ -1688,6 +1723,16 @@
             '#3b82f6', '#8b5cf6', '#14b8a6', '#f43f5e',
             '#84cc16', '#a855f7', '#06b6d4', '#eab308'
         ];
+
+        // Expense Offset Helpers
+        function isExpenseOffsetGroup(groupName) {
+            return (groupName || '').trim().toLowerCase() === 'expense offsets';
+        }
+
+        function isExpenseOffsetCategory(catName) {
+            const grp = categoryToGroupMap[catName];
+            return isExpenseOffsetGroup(grp);
+        }
 
         // Format Currency Helper
         function formatCurrency(val) {
@@ -2352,7 +2397,7 @@
 
             // Category Groups for Selected Month
             const currMonthGroups = (reportData.monthly_category_groups && reportData.monthly_category_groups[selectedMonth]) || {};
-            const sortedMonthGroups = Object.entries(currMonthGroups).sort((a, b) => b[1] - a[1]);
+            const sortedMonthGroups = Object.entries(currMonthGroups).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
 
             const groupListContainer = document.getElementById('monthGroupListContainer');
             if (groupListContainer) {
@@ -2362,17 +2407,20 @@
                 } else {
                     const frag = document.createDocumentFragment();
                     sortedMonthGroups.forEach(([name, amt], idx) => {
-                        const pct = monthTotalSpend > 0 ? (amt / monthTotalSpend) * 100 : 0;
-                        const color = GROUP_COLORS[idx % GROUP_COLORS.length];
+                        const isOffset = isExpenseOffsetGroup(name);
+                        const displayAmt = isOffset ? Math.abs(amt) : amt;
+                        const pct = monthTotalSpend > 0 ? (displayAmt / monthTotalSpend) * 100 : 0;
+                        const color = isOffset ? '#10b981' : GROUP_COLORS[idx % GROUP_COLORS.length];
 
                         let mmBadge = '';
                         let groupTip = '';
                         if (hasPrevMonth) {
-                            const prevAmt = prevMonthGroups[name] || 0;
+                            const prevAmtRaw = prevMonthGroups[name] || 0;
+                            const prevAmt = isOffset ? Math.abs(prevAmtRaw) : prevAmtRaw;
                             const prevPct = prevMonthTotalSpend > 0 ? (prevAmt / prevMonthTotalSpend) * 100 : 0;
                             groupTip = `<span style="color:#a5b4fc; font-weight:600;">${escHtml(prevShortName)}:</span> ${formatCurrency(prevAmt)} <span style="color:#94a3b8;">(${prevPct.toFixed(1)}%)</span>`;
 
-                            const delta = amt - prevAmt;
+                            const delta = displayAmt - prevAmt;
                             if (Math.abs(delta) < 0.005) {
                                 mmBadge = `, <span style="color:var(--text-muted); font-size:0.75rem;">$0.00</span>`;
                             } else if (delta > 0) {
@@ -2382,16 +2430,21 @@
                             }
                         }
 
+                        const offsetBadgeHtml = isOffset ? `<span class="cat-offset-badge">Offset</span>` : '';
+                        const nameClass = 'group-name';
+                        const amountClass = isOffset ? 'group-amount-val group-amount-offset' : 'group-amount-val';
+
                         const item = document.createElement('div');
                         item.className = 'group-item';
                         item.innerHTML = `
                             <div class="group-header">
-                                <span class="group-name">
+                                <span class="${nameClass}">
                                     <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
                                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(name)}</span>
+                                    ${offsetBadgeHtml}
                                 </span>
                                 <div class="group-amount-wrap" ${ENABLE_TABLE_HOVERS && groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
-                                    <span class="group-amount-val">${formatCurrency(amt)}</span>
+                                    <span class="${amountClass}">${formatCurrency(displayAmt)}</span>
                                     <span class="group-amount-pct">(${pct.toFixed(1)}%${mmBadge})</span>
                                 </div>
                             </div>
@@ -2421,7 +2474,10 @@
             if (monthGroupChart) monthGroupChart.dispose();
             monthGroupChart = echarts.init(chartDom);
 
-            const data = sortedGroups.map(([name, value], idx) => ({
+            // Filter out Expense Offsets and non-positive slices from expense donut chart
+            const filteredGroups = sortedGroups.filter(([name, val]) => !isExpenseOffsetGroup(name) && val > 0);
+
+            const data = filteredGroups.map(([name, value], idx) => ({
                 name,
                 value,
                 itemStyle: { color: GROUP_COLORS[idx % GROUP_COLORS.length] }
@@ -2470,7 +2526,7 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            let sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+            let sorted = Object.entries(cats).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
             if (filterQuery.trim()) {
                 const q = filterQuery.toLowerCase();
                 sorted = sorted.filter(([name]) => {
@@ -2488,17 +2544,20 @@
 
             const frag = document.createDocumentFragment();
             sorted.forEach(([name, amt], idx) => {
-                const pct = monthTotalSpend > 0 ? (amt / monthTotalSpend) * 100 : 0;
+                const isOffset = isExpenseOffsetCategory(name);
+                const displayAmt = isOffset ? Math.abs(amt) : amt;
+                const pct = monthTotalSpend > 0 ? (displayAmt / monthTotalSpend) * 100 : 0;
                 const groupName = categoryToGroupMap[name] || '';
 
                 let mmHtml = `<span style="color:var(--text-muted); font-size:0.82rem;">-</span>`;
                 let cellTooltip = '';
                 if (hasPrevMonth) {
-                    const prevAmt = prevMonthCats[name] || 0;
+                    const prevAmtRaw = prevMonthCats[name] || 0;
+                    const prevAmt = isOffset ? Math.abs(prevAmtRaw) : prevAmtRaw;
                     const prevPct = prevMonthTotalSpend > 0 ? (prevAmt / prevMonthTotalSpend) * 100 : 0;
                     cellTooltip = `<span style="color:#a5b4fc; font-weight:600;">${escHtml(prevShortName)}:</span> ${formatCurrency(prevAmt)} <span style="color:#94a3b8;">(${prevPct.toFixed(1)}%)</span>`;
 
-                    const delta = amt - prevAmt;
+                    const delta = displayAmt - prevAmt;
                     if (Math.abs(delta) < 0.005) {
                         mmHtml = `<span style="color:var(--text-muted); font-size:0.82rem;">$0.00</span>`;
                     } else if (delta > 0) {
@@ -2508,18 +2567,25 @@
                     }
                 }
 
+                const offsetBadgeHtml = isOffset ? `<span class="cat-offset-badge">Offset</span>` : '';
+                const amountValClass = isOffset ? 'cat-amount-val cat-amount-offset' : 'cat-amount-val';
+                const groupNameClass = isOffset ? 'cat-group-name cat-group-offset' : 'cat-group-name';
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="rank">${idx + 1}</td>
                     <td class="name">
                         <div class="cat-name-cell">
-                            <span class="cat-name-primary">${escHtml(name)}</span>
-                            ${groupName ? `<span class="cat-group-name">${escHtml(groupName)}</span>` : ''}
+                            <div class="cat-name-primary-wrap">
+                                <span class="cat-name-primary">${escHtml(name)}</span>
+                                ${offsetBadgeHtml}
+                            </div>
+                            ${groupName ? `<span class="${groupNameClass}">${escHtml(groupName)}</span>` : ''}
                         </div>
                     </td>
                     <td class="amount" ${ENABLE_TABLE_HOVERS && cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
                         <div class="cat-amount-cell">
-                            <span class="cat-amount-val">${formatCurrency(amt)}</span>
+                            <span class="${amountValClass}">${formatCurrency(displayAmt)}</span>
                             <span class="cat-amount-sub-mobile">(${pct.toFixed(1)}%, ${mmHtml})</span>
                         </div>
                     </td>
@@ -2672,19 +2738,22 @@
             // Populate Category Groups List with Y/Y comparison
             if (groupContainer) {
                 groupContainer.innerHTML = '';
-                const sortedGroups = Object.entries(catGroups).sort((a, b) => b[1] - a[1]);
+                const sortedGroups = Object.entries(catGroups).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
                 const prevTotalExpense = prevData?.summary?.total_expense || 0;
                 const prevCatGroups = prevData?.category_groups || {};
 
                 const frag = document.createDocumentFragment();
                 sortedGroups.forEach(([name, amt], idx) => {
-                    const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
-                    const color = GROUP_COLORS[idx % GROUP_COLORS.length];
+                    const isOffset = isExpenseOffsetGroup(name);
+                    const displayAmt = isOffset ? Math.abs(amt) : amt;
+                    const pct = totalExpense > 0 ? (displayAmt / totalExpense) * 100 : 0;
+                    const color = isOffset ? '#10b981' : GROUP_COLORS[idx % GROUP_COLORS.length];
 
                     let yyBadge = '';
                     let groupTip = '';
                     if (hasPrevYear) {
-                        const prevAmt = prevCatGroups[name] || 0;
+                        const prevAmtRaw = prevCatGroups[name] || 0;
+                        const prevAmt = isOffset ? Math.abs(prevAmtRaw) : prevAmtRaw;
                         const prevPct = prevTotalExpense > 0 ? (prevAmt / prevTotalExpense) * 100 : 0;
                         groupTip = `<span style="color:#a5b4fc; font-weight:600;">${prevTargetYear}:</span> ${formatCurrency(prevAmt)} <span style="color:#94a3b8;">(${prevPct.toFixed(1)}%)</span>`;
 
@@ -2698,16 +2767,21 @@
                         }
                     }
 
+                    const offsetBadgeHtml = isOffset ? `<span class="cat-offset-badge">Offset</span>` : '';
+                    const nameClass = 'group-name';
+                    const amountClass = isOffset ? 'group-amount-val group-amount-offset' : 'group-amount-val';
+
                     const item = document.createElement('div');
                     item.className = 'group-item';
                     item.innerHTML = `
                         <div class="group-header">
-                            <span class="group-name">
+                            <span class="${nameClass}">
                                 <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0;"></span>
                                 <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(name)}</span>
+                                ${offsetBadgeHtml}
                             </span>
                             <div class="group-amount-wrap" ${ENABLE_TABLE_HOVERS && groupTip ? `data-tooltip="${groupTip.replace(/"/g, '&quot;')}"` : ''}>
-                                <span class="group-amount-val">${formatCurrency(amt)}</span>
+                                <span class="${amountClass}">${formatCurrency(displayAmt)}</span>
                                 <span class="group-amount-pct">(${pct.toFixed(1)}%${yyBadge})</span>
                             </div>
                         </div>
@@ -2789,7 +2863,7 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            let sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+            let sorted = Object.entries(cats).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
             if (filterQuery.trim()) {
                 const q = filterQuery.toLowerCase();
                 sorted = sorted.filter(([name]) => {
@@ -2811,13 +2885,16 @@
 
             const frag = document.createDocumentFragment();
             sorted.forEach(([name, amt], idx) => {
-                const pct = totalExpense > 0 ? (amt / totalExpense) * 100 : 0;
+                const isOffset = isExpenseOffsetCategory(name);
+                const displayAmt = isOffset ? Math.abs(amt) : amt;
+                const pct = totalExpense > 0 ? (displayAmt / totalExpense) * 100 : 0;
                 const groupName = categoryToGroupMap[name] || '';
 
                 let yyHtml = `<span style="color:var(--text-muted); font-size:0.82rem;">-</span>`;
                 let cellTooltip = '';
                 if (hasPrevYear) {
-                    const prevAmt = prevCats[name] || 0;
+                    const prevAmtRaw = prevCats[name] || 0;
+                    const prevAmt = isOffset ? Math.abs(prevAmtRaw) : prevAmtRaw;
                     const prevPct = prevTotalExpense > 0 ? (prevAmt / prevTotalExpense) * 100 : 0;
                     cellTooltip = `<span style="color:#a5b4fc; font-weight:600;">${prevTargetYear}:</span> ${formatCurrency(prevAmt)} <span style="color:#94a3b8;">(${prevPct.toFixed(1)}%)</span>`;
 
@@ -2831,18 +2908,25 @@
                     }
                 }
 
+                const offsetBadgeHtml = isOffset ? `<span class="cat-offset-badge">Offset</span>` : '';
+                const amountValClass = isOffset ? 'cat-amount-val cat-amount-offset' : 'cat-amount-val';
+                const groupNameClass = isOffset ? 'cat-group-name cat-group-offset' : 'cat-group-name';
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="rank">${idx + 1}</td>
                     <td class="name">
                         <div class="cat-name-cell">
-                            <span class="cat-name-primary">${escHtml(name)}</span>
-                            ${groupName ? `<span class="cat-group-name">${escHtml(groupName)}</span>` : ''}
+                            <div class="cat-name-primary-wrap">
+                                <span class="cat-name-primary">${escHtml(name)}</span>
+                                ${offsetBadgeHtml}
+                            </div>
+                            ${groupName ? `<span class="${groupNameClass}">${escHtml(groupName)}</span>` : ''}
                         </div>
                     </td>
                     <td class="amount" ${ENABLE_TABLE_HOVERS && cellTooltip ? `data-tooltip="${cellTooltip.replace(/"/g, '&quot;')}"` : ''}>
                         <div class="cat-amount-cell">
-                            <span class="cat-amount-val">${formatCurrency(amt)}</span>
+                            <span class="${amountValClass}">${formatCurrency(displayAmt)}</span>
                             <span class="cat-amount-sub-mobile">(${pct.toFixed(1)}%, ${yyHtml})</span>
                         </div>
                     </td>
@@ -3033,7 +3117,10 @@
             const prevTotalExpense = prevYearData?.summary?.total_expense || 0;
             const prevCatGroups = prevYearData?.category_groups || {};
 
-            const data = sortedGroups.map(([name, value], idx) => ({
+            // Filter out Expense Offsets and non-positive slices from expense donut chart
+            const filteredGroups = sortedGroups.filter(([name, val]) => !isExpenseOffsetGroup(name) && val > 0);
+
+            const data = filteredGroups.map(([name, value], idx) => ({
                 name,
                 value,
                 itemStyle: { color: GROUP_COLORS[idx % GROUP_COLORS.length] }

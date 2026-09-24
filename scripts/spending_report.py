@@ -303,7 +303,7 @@ async def fetch_spending_report(
             },
             "server_group_aggregates": server_group_aggregates,
             "category_groups": category_group_breakdown,
-
+            "category_to_group": category_to_group_map,
             "categories": categorized_breakdown,
             "monthly_spending": monthly_breakdown,
         }
@@ -336,18 +336,26 @@ def print_formatted_report(data: dict, top_n: int = 15):
     print(f"Itemized Gross Sum            : ${itemized_sum['total_expense']:>12,.2f}")
     print()
 
+    cat_to_group = data.get("category_to_group") or {}
+
     print("--- SPENDING BY CATEGORY GROUP ---")
     total_exp = server_sum["total_expense"] if server_sum["total_expense"] > 0 else 1.0
-    for g_name, amt in sorted(cat_groups.items(), key=lambda x: x[1], reverse=True):
-        pct = (amt / total_exp) * 100
-        print(f"  {g_name:<30} : ${amt:>10,.2f}  ({pct:>5.1f}%)")
+    for g_name, amt in sorted(cat_groups.items(), key=lambda x: abs(x[1]), reverse=True):
+        is_offset = (g_name or "").strip().lower() == "expense offsets"
+        display_amt = abs(amt) if is_offset else amt
+        pct = (abs(amt) if is_offset else amt) / total_exp * 100
+        tag = " [OFFSET]" if is_offset else ""
+        print(f"  {g_name + tag:<30} : ${display_amt:>10,.2f}  ({pct:>5.1f}%)")
     print()
 
     print(f"--- TOP {top_n} SPENDING CATEGORIES ---")
-    sorted_cats = sorted(categories.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    sorted_cats = sorted(categories.items(), key=lambda x: abs(x[1]), reverse=True)[:top_n]
     for c_name, amt in sorted_cats:
-        pct = (amt / total_exp) * 100
-        print(f"  {c_name:<35} : ${amt:>10,.2f}  ({pct:>5.1f}%)")
+        is_offset = (cat_to_group.get(c_name, "").strip().lower() == "expense offsets") or amt < 0
+        display_amt = abs(amt) if is_offset else amt
+        pct = (abs(amt) if is_offset else amt) / total_exp * 100
+        tag = " [OFFSET]" if is_offset else ""
+        print(f"  {c_name + tag:<35} : ${display_amt:>10,.2f}  ({pct:>5.1f}%)")
     print()
 
     print("--- MONTHLY SPENDING BREAKDOWN ---")
