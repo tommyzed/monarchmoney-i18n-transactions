@@ -3099,10 +3099,6 @@
                 const clickedMonth = months[params.dataIndex] || params.name;
                 if (clickedMonth) {
                     selectDrillDownMonth(clickedMonth);
-                    const drillDownEl = document.getElementById('monthlyDrillDownCard');
-                    if (drillDownEl && window.innerWidth <= 768) {
-                        drillDownEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
                 }
             });
         }
