@@ -2494,9 +2494,9 @@
                             const prevAmt = prevMonthGroups[p.name] || 0;
                             const delta = p.value - prevAmt;
                             if (delta > 0.005) {
-                                res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${formatCurrency(delta)} vs ${escHtml(prevShortName)} (${formatCurrency(prevAmt)})</span>`;
+                                res += `<br/><span style="color:#059669; font-size:0.85em;">▲ +${formatCurrency(delta)} vs ${escHtml(prevShortName)} (${formatCurrency(prevAmt)})</span>`;
                             } else if (delta < -0.005) {
-                                res += `<br/><span style="color:#ff9a86; font-size:0.85em;">🔻-${formatCurrency(Math.abs(delta))} vs ${escHtml(prevShortName)} (${formatCurrency(prevAmt)})</span>`;
+                                res += `<br/><span style="color:#dc2626; font-size:0.85em;">🔻-${formatCurrency(Math.abs(delta))} vs ${escHtml(prevShortName)} (${formatCurrency(prevAmt)})</span>`;
                             } else {
                                 res += `<br/><span style="color:var(--text-muted); font-size:0.85em;">$0.00 vs ${escHtml(prevShortName)}</span>`;
                             }
@@ -3125,9 +3125,9 @@
                             const prevPct = (prevAmt / prevTotalExpense) * 100;
                             const delta = actualPct - prevPct;
                             if (delta > 0.05) {
-                                res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${delta.toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
+                                res += `<br/><span style="color:#059669; font-size:0.85em;">▲ +${delta.toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
                             } else if (delta < -0.05) {
-                                res += `<br/><span style="color:#ff9a86; font-size:0.85em;">🔻${Math.abs(delta).toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
+                                res += `<br/><span style="color:#dc2626; font-size:0.85em;">🔻${Math.abs(delta).toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
                             }
                         }
                         return res;
