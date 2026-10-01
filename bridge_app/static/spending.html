@@ -2488,7 +2488,8 @@
                     trigger: 'item',
                     confine: true,
                     formatter: (p) => {
-                        let res = `<b>${escHtml(p.name)}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
+                        const actualPct = totalExpense > 0 ? (p.value / totalExpense) * 100 : 0;
+                        let res = `<b>${escHtml(p.name)}</b><br/>${formatCurrency(p.value)} (${actualPct.toFixed(1)}%)`;
                         if (hasPrevMonth) {
                             const prevAmt = prevMonthGroups[p.name] || 0;
                             const delta = p.value - prevAmt;
@@ -3117,11 +3118,12 @@
                     trigger: 'item',
                     confine: true,
                     formatter: (p) => {
-                        let res = `<b>${escHtml(p.name)}</b><br/>${formatCurrency(p.value)} (${p.percent}%)`;
+                        const actualPct = totalExpense > 0 ? (p.value / totalExpense) * 100 : 0;
+                        let res = `<b>${escHtml(p.name)}</b><br/>${formatCurrency(p.value)} (${actualPct.toFixed(1)}%)`;
                         if (prevYearData && prevTotalExpense > 0) {
                             const prevAmt = prevCatGroups[p.name] || 0;
                             const prevPct = (prevAmt / prevTotalExpense) * 100;
-                            const delta = p.percent - prevPct;
+                            const delta = actualPct - prevPct;
                             if (delta > 0.05) {
                                 res += `<br/><span style="color:#10b981; font-size:0.85em;">▲ +${delta.toFixed(1)}% vs ${targetYear - 1} (${prevPct.toFixed(1)}%)</span>`;
                             } else if (delta < -0.05) {
