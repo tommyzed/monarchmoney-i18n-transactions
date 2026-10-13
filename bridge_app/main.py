@@ -183,6 +183,21 @@ def _cleanup_old_batches(max_age_minutes: int = 30):
     if expired:
         print(f"🧹 Cleaned up {len(expired)} expired batch(es)")
 
+def sanitize_failed_transaction_data(data: Optional[dict]) -> Optional[dict]:
+    """
+    Ensure failed transaction data stores the original unconverted amount and currency.
+    If ForEx conversion had already occurred (original_amount / original_currency present),
+    revert 'amount' and 'currency' to the original values and strip conversion artifacts.
+    """
+    if not data or not isinstance(data, dict):
+        return data
+    clean = dict(data)
+    if "original_amount" in clean and clean.get("original_currency"):
+        clean["amount"] = clean.pop("original_amount")
+        clean["currency"] = clean.pop("original_currency")
+        clean.pop("exchange_rate", None)
+    return clean
+
 async def process_background_job(job_id: str, content: bytes, user_currency: str = None, manual_data: dict = None, force_override: bool = False):
     """
     Background task to process the transaction using a fresh DB session.
@@ -284,23 +299,24 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
 
         # Save to FailedTransaction in DB
         failed_tx_id = None
+        clean_manual_data = sanitize_failed_transaction_data(manual_data)
         try:
             img_hash = None
             if content:
                 img_hash = hashlib.sha256(content).hexdigest()
-            elif manual_data:
-                data_string = json.dumps(manual_data, sort_keys=True)
+            elif clean_manual_data:
+                data_string = json.dumps(clean_manual_data, sort_keys=True)
                 img_hash = "manual_" + hashlib.sha256(data_string.encode()).hexdigest()
 
-            parsed_data = getattr(e, "parsed_data", None)
+            parsed_data = sanitize_failed_transaction_data(getattr(e, "parsed_data", None))
             async with AsyncSessionLocal() as db:
                 failed_tx = FailedTransaction(
-                    source_type="manual" if manual_data else "receipt",
+                    source_type="manual" if clean_manual_data else "receipt",
                     image_hash=img_hash,
                     raw_content=content if content else None,
                     user_currency=user_currency,
                     parsed_data=parsed_data,
-                    manual_data=manual_data,
+                    manual_data=clean_manual_data,
                     error_message=display_error,
                     retry_count=0
                 )
@@ -320,7 +336,7 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
             "inputs": {
                 "content": content,
                 "user_currency": user_currency,
-                "manual_data": manual_data,
+                "manual_data": clean_manual_data,
                 "failed_tx_id": failed_tx_id
             }
         }
@@ -343,7 +359,7 @@ async def upload_receipt(
         print(f"Error processing transaction in /upload: {e}")
         try:
             img_hash = hashlib.sha256(content).hexdigest()
-            parsed_data = getattr(e, "parsed_data", None)
+            parsed_data = sanitize_failed_transaction_data(getattr(e, "parsed_data", None))
             failed_tx = FailedTransaction(
                 source_type="receipt",
                 image_hash=img_hash,
@@ -464,7 +480,7 @@ async def _process_batch_item(batch_id: str, item_index: int, content: bytes, cu
             failed_tx_id = None
             try:
                 img_hash = hashlib.sha256(content).hexdigest()
-                parsed_data = getattr(e, "parsed_data", None)
+                parsed_data = sanitize_failed_transaction_data(getattr(e, "parsed_data", None))
                 async with AsyncSessionLocal() as db:
                     failed_tx = FailedTransaction(
                         source_type="receipt",
@@ -3776,8 +3792,8 @@ async def get_failed_transactions(db: AsyncSession = Depends(get_db)):
         
         items = []
         for tx in failed_list:
-            parsed = tx.parsed_data
-            manual = tx.manual_data
+            parsed = sanitize_failed_transaction_data(tx.parsed_data)
+            manual = sanitize_failed_transaction_data(tx.manual_data)
             display_data = parsed or manual or {}
             items.append({
                 "id": tx.id,
@@ -3854,10 +3870,12 @@ async def update_failed_transaction(
     if not tx:
         raise HTTPException(status_code=404, detail="Failed transaction not found")
         
-    data = dict(tx.parsed_data or tx.manual_data or {})
+    data = sanitize_failed_transaction_data(dict(tx.parsed_data or tx.manual_data or {}))
     if update_req.merchant is not None: data["merchant"] = update_req.merchant
     if update_req.amount is not None: data["amount"] = update_req.amount
-    if update_req.currency is not None: data["currency"] = update_req.currency
+    if update_req.currency is not None:
+        data["currency"] = update_req.currency
+        tx.user_currency = update_req.currency
     if update_req.date is not None: data["date"] = update_req.date
     if update_req.category_name is not None: data["category_name"] = update_req.category_name
     if update_req.is_cash is not None: data["is_cash"] = update_req.is_cash
@@ -3894,17 +3912,19 @@ async def retry_failed_transaction(
         result = None
         if tx.parsed_data:
             # We already have parsed/edited fields, retry from parsed data
+            retry_data = sanitize_failed_transaction_data(dict(tx.parsed_data))
             img_hash = tx.image_hash or f"retry_{tx.id}_{uuid.uuid4().hex[:6]}"
             result = await process_parsed_transaction(
-                data=dict(tx.parsed_data),
+                data=retry_data,
                 image_hash=img_hash,
                 db=db,
-                user_currency_override=tx.user_currency,
+                user_currency_override=retry_data.get("currency") or tx.user_currency,
                 force_override=True
             )
         elif tx.source_type == "manual" and tx.manual_data:
+            retry_data = sanitize_failed_transaction_data(dict(tx.manual_data))
             result = await process_manual_transaction(
-                manual_data=dict(tx.manual_data),
+                manual_data=retry_data,
                 db=db,
                 force_override=True
             )
@@ -3954,17 +3974,19 @@ async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
         merchant = (tx.parsed_data or tx.manual_data or {}).get("merchant", f"Transaction #{tx_id}")
         try:
             if tx.parsed_data:
+                retry_data = sanitize_failed_transaction_data(dict(tx.parsed_data))
                 img_hash = tx.image_hash or f"retry_{tx.id}_{uuid.uuid4().hex[:6]}"
                 res = await process_parsed_transaction(
-                    data=dict(tx.parsed_data),
+                    data=retry_data,
                     image_hash=img_hash,
                     db=db,
-                    user_currency_override=tx.user_currency,
+                    user_currency_override=retry_data.get("currency") or tx.user_currency,
                     force_override=True
                 )
             elif tx.source_type == "manual" and tx.manual_data:
+                retry_data = sanitize_failed_transaction_data(dict(tx.manual_data))
                 res = await process_manual_transaction(
-                    manual_data=dict(tx.manual_data),
+                    manual_data=retry_data,
                     db=db,
                     force_override=True
                 )

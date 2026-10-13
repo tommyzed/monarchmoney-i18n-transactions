@@ -33,12 +33,13 @@ async def process_manual_transaction(
     await report("Validating manual entry...", 10)
 
     # generate a synthetic hash for manual entries to prevent re-submission of the exact same form
-    # We use a prefix to distinguish from file hashes
     data_string = json.dumps(manual_data, sort_keys=True)
     image_hash = "manual_" + hashlib.sha256(data_string.encode()).hexdigest()
 
+    # Work on a copy so the caller's manual_data is not mutated in-place by currency conversion
+    data = dict(manual_data)
     return await _process_transaction_data(
-        manual_data, image_hash, db, report, force_override=force_override
+        data, image_hash, db, report, force_override=force_override
     )
 
 
@@ -205,6 +206,16 @@ async def _apply_historical_category_lookup(data: dict, db: AsyncSession, report
 async def _convert_currency(
     data: dict, report_func, user_currency_override: str = None
 ):
+    # Defensive guard: if data was previously converted and already contains original_amount / original_currency,
+    # restore them so we do not perform double ForEx conversion on an already-converted amount.
+    if "original_amount" in data and "original_currency" in data:
+        print(
+            f"⚠️ Restoring original pre-conversion amount from data: {data['original_amount']} {data['original_currency']}"
+        )
+        data["amount"] = data.pop("original_amount")
+        data["currency"] = data.pop("original_currency")
+        data.pop("exchange_rate", None)
+
     raw_currency = str(data.get("currency", "")).upper().strip()
     target_original = user_currency_override if user_currency_override else raw_currency
     if target_original:
@@ -426,7 +437,13 @@ async def _process_transaction_data(
         return data
     except Exception as e:
         if not hasattr(e, "parsed_data"):
-            e.parsed_data = data
+            # Ensure failed transaction data holds the original pre-conversion amount and currency
+            failed_data = dict(data)
+            if "original_amount" in failed_data and "original_currency" in failed_data:
+                failed_data["amount"] = failed_data.pop("original_amount")
+                failed_data["currency"] = failed_data.pop("original_currency")
+                failed_data.pop("exchange_rate", None)
+            e.parsed_data = failed_data
         raise e
 
 
@@ -444,6 +461,7 @@ async def process_parsed_transaction(
     report = make_reporter(progress_callback)
 
     await report("Retrying transaction processing...", 10)
+    data = dict(data)
     return await _process_transaction_data(
         data,
         image_hash,
