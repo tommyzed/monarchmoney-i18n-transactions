@@ -137,14 +137,16 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     is_cash = bool(data.get("is_cash", False))
 
     if is_cash:
-        cash_account_id = os.environ.get("MM_ACCOUNT_CASH")
+        currency = data.get("original_currency") or data.get("currency")
+        env_var = "MM_ACCOUNT_CASH_USD" if currency == "USD" else "MM_ACCOUNT_CASH_EUR"
+        cash_account_id = os.environ.get(env_var)
         if not cash_account_id:
-            raise ValueError("Transaction is marked as cash, but MM_ACCOUNT_CASH environment variable is not set.")
+            raise ValueError(f"Transaction is marked as cash, but {env_var} environment variable is not set.")
 
         target_account = next((acc for acc in accounts.get('accounts', []) if str(acc.get('id')) == str(cash_account_id)), None)
 
         if not target_account:
-            raise ValueError(f"No account found with ID '{cash_account_id}' for cash transaction (MM_ACCOUNT_CASH).")
+            raise ValueError(f"No account found with ID '{cash_account_id}' for cash transaction ({env_var}).")
     else:
         target_name = os.environ.get("MM_ACCOUNT", "Euro Transactions")
 

@@ -142,7 +142,8 @@ async def test_push_transaction_cash():
     mm.get_accounts = AsyncMock(return_value={
         "accounts": [
             {"id": "acc_standard", "displayName": "Euro Transactions"},
-            {"id": "acc_cash_123", "displayName": "Cash Account"}
+            {"id": "acc_cash_usd_123", "displayName": "Cash USD Account"},
+            {"id": "acc_cash_eur_456", "displayName": "Cash EUR Account"}
         ]
     })
     mm.get_transaction_categories = AsyncMock(return_value={
@@ -158,49 +159,83 @@ async def test_push_transaction_cash():
 
     today_str = datetime.date.today().strftime("%Y-%m-%d")
 
-    # Case 1: is_cash is True, MM_ACCOUNT_CASH is set and matches
-    print("Case 1: is_cash is True, MM_ACCOUNT_CASH matches")
-    data_cash = {
+    # Clean up any preexisting env vars
+    for k in ["MM_ACCOUNT_CASH", "MM_ACCOUNT_CASH_USD", "MM_ACCOUNT_CASH_EUR"]:
+        if k in os.environ:
+            del os.environ[k]
+
+    # Case 1: is_cash is True, currency is USD -> routes to MM_ACCOUNT_CASH_USD
+    print("Case 1: is_cash is True, currency is USD -> MM_ACCOUNT_CASH_USD")
+    data_cash_usd = {
         "date": today_str,
         "amount": 15.0,
         "currency": "USD",
-        "merchant": "Cash Merchant",
+        "merchant": "Cash USD Merchant",
         "is_cash": True
     }
-    
-    os.environ["MM_ACCOUNT_CASH"] = "acc_cash_123"
-    await push_transaction(mm, data_cash)
+    os.environ["MM_ACCOUNT_CASH_USD"] = "acc_cash_usd_123"
+    await push_transaction(mm, data_cash_usd)
     call_args = mm.create_transaction.call_args[1]
-    assert call_args['account_id'] == "acc_cash_123"
+    assert call_args['account_id'] == "acc_cash_usd_123"
     assert call_args['date'] == today_str
-    print("✅ SUCCESS: Routed to cash account ID successfully")
+    print("✅ SUCCESS: Routed to MM_ACCOUNT_CASH_USD successfully")
 
-    # Case 2: is_cash is True, MM_ACCOUNT_CASH is NOT set
-    print("Case 2: is_cash is True, MM_ACCOUNT_CASH not set")
-    if "MM_ACCOUNT_CASH" in os.environ:
-        del os.environ["MM_ACCOUNT_CASH"]
-    
+    # Case 2: is_cash is True, currency is EUR -> routes to MM_ACCOUNT_CASH_EUR
+    print("Case 2: is_cash is True, currency is EUR -> MM_ACCOUNT_CASH_EUR")
+    data_cash_eur = {
+        "date": today_str,
+        "amount": 20.0,
+        "currency": "EUR",
+        "merchant": "Cash EUR Merchant",
+        "is_cash": True
+    }
+    os.environ["MM_ACCOUNT_CASH_EUR"] = "acc_cash_eur_456"
+    await push_transaction(mm, data_cash_eur)
+    call_args = mm.create_transaction.call_args[1]
+    assert call_args['account_id'] == "acc_cash_eur_456"
+    assert call_args['date'] == today_str
+    print("✅ SUCCESS: Routed to MM_ACCOUNT_CASH_EUR successfully")
+
+    # Case 3: is_cash is True, converted currency (original_currency="EUR", currency="USD")
+    print("Case 3: is_cash is True, original_currency EUR -> MM_ACCOUNT_CASH_EUR")
+    data_cash_converted = {
+        "date": today_str,
+        "amount": 22.0,
+        "currency": "USD",
+        "original_currency": "EUR",
+        "original_amount": 20.0,
+        "merchant": "Converted EUR Merchant",
+        "is_cash": True
+    }
+    await push_transaction(mm, data_cash_converted)
+    call_args = mm.create_transaction.call_args[1]
+    assert call_args['account_id'] == "acc_cash_eur_456"
+    print("✅ SUCCESS: Converted transaction routed to MM_ACCOUNT_CASH_EUR")
+
+    # Case 4: is_cash is True, expected environment variable is NOT set
+    print("Case 4: is_cash is True, env var not set")
+    del os.environ["MM_ACCOUNT_CASH_USD"]
     try:
-        await push_transaction(mm, data_cash)
-        print("❌ FAILURE: Expected ValueError when MM_ACCOUNT_CASH is not set")
+        await push_transaction(mm, data_cash_usd)
+        print("❌ FAILURE: Expected ValueError when MM_ACCOUNT_CASH_USD is not set")
         assert False
     except ValueError as e:
-        assert "MM_ACCOUNT_CASH environment variable is not set" in str(e)
-        print("✅ SUCCESS: Raised ValueError when MM_ACCOUNT_CASH is not set")
+        assert "MM_ACCOUNT_CASH_USD environment variable is not set" in str(e)
+        print("✅ SUCCESS: Raised ValueError when MM_ACCOUNT_CASH_USD is not set")
 
-    # Case 3: is_cash is True, MM_ACCOUNT_CASH is set but does not match any account
-    print("Case 3: is_cash is True, MM_ACCOUNT_CASH does not match")
-    os.environ["MM_ACCOUNT_CASH"] = "nonexistent_id"
+    # Case 5: is_cash is True, cash account is set but not found in accounts
+    print("Case 5: is_cash is True, cash account does not match")
+    os.environ["MM_ACCOUNT_CASH_USD"] = "nonexistent_id"
     try:
-        await push_transaction(mm, data_cash)
+        await push_transaction(mm, data_cash_usd)
         print("❌ FAILURE: Expected ValueError when cash account is not found")
         assert False
     except ValueError as e:
         assert "No account found with ID" in str(e)
         print("✅ SUCCESS: Raised ValueError when cash account is not found")
 
-    # Case 4: is_cash is False, falls back to display name MM_ACCOUNT
-    print("Case 4: is_cash is False, falls back to display name")
+    # Case 6: is_cash is False, falls back to display name MM_ACCOUNT
+    print("Case 6: is_cash is False, falls back to display name")
     data_non_cash = {
         "date": today_str,
         "amount": 15.0,
