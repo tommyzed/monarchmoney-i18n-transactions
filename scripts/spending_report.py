@@ -26,7 +26,12 @@ if repo_root not in sys.path:
 
 from bridge_app.database import AsyncSessionLocal
 from bridge_app.services.monarch import get_latest_credentials, get_monarch_client
-from bridge_app.services.spending_service import is_taxable_earnings_account, TAXABLE_EARNINGS_CATEGORIES
+from bridge_app.services.spending_service import (
+    is_taxable_earnings_account,
+    TAXABLE_EARNINGS_CATEGORIES,
+    DE_TAXABLE_INCOME_ACCOUNT_IDS,
+    DE_TAXABLE_INCOME_CATEGORY_IDS,
+)
 
 
 def parse_args():
@@ -167,6 +172,7 @@ async def fetch_spending_report(
         itemized_income_total = 0.0
         itemized_transfers_total = 0.0
         itemized_taxable_earnings_total = 0.0
+        itemized_de_taxable_income_total = 0.0
 
         categorized_breakdown = {}
         category_group_breakdown = {}
@@ -209,6 +215,15 @@ async def fetch_spending_report(
             if cat_name_clean in TAXABLE_EARNINGS_CATEGORIES and is_taxable_earnings_account(full_acc):
                 if group_type == "income" or amount > 0:
                     itemized_taxable_earnings_total += amount
+
+            # DE Taxable Income: total transactions matching specified accounts and categories
+            acc_id_str = str(acc_id or "")
+            cat_id_str = str(cat_id or "")
+            if (
+                acc_id_str in DE_TAXABLE_INCOME_ACCOUNT_IDS
+                and cat_id_str in DE_TAXABLE_INCOME_CATEGORY_IDS
+            ):
+                itemized_de_taxable_income_total += amount
 
             if group_type == "expense" or (group_type not in ("income", "transfer") and amount < 0):
                 expense_val = -amount
@@ -266,6 +281,7 @@ async def fetch_spending_report(
                     "net_savings": sum_savings,
                     "savings_rate": sum_savings_rate,
                     "taxable_earnings": round(itemized_taxable_earnings_total, 2),
+                    "de_taxable_income": round(itemized_de_taxable_income_total, 2),
                     "itemized_expense": itemized_expense_total,
                     "itemized_income": itemized_income_total,
                     "itemized_transfers": itemized_transfers_total,
@@ -294,12 +310,14 @@ async def fetch_spending_report(
                 "net_savings": sum_savings,
                 "savings_rate": sum_savings_rate,
                 "taxable_earnings": round(itemized_taxable_earnings_total, 2),
+                "de_taxable_income": round(itemized_de_taxable_income_total, 2),
             },
             "itemized_summary": {
                 "total_expense": itemized_expense_total,
                 "total_income": itemized_income_total,
                 "total_transfers": itemized_transfers_total,
                 "taxable_earnings": round(itemized_taxable_earnings_total, 2),
+                "de_taxable_income": round(itemized_de_taxable_income_total, 2),
             },
             "server_group_aggregates": server_group_aggregates,
             "category_groups": category_group_breakdown,
@@ -332,6 +350,7 @@ def print_formatted_report(data: dict, top_n: int = 15):
     print(f"Total Spending (Net)          : ${server_sum['total_expense']:>12,.2f}")
     print(f"Total Income                  : ${server_sum['total_income']:>12,.2f}")
     print(f"Taxable Earnings              : ${itemized_sum.get('taxable_earnings', 0.0):>12,.2f}")
+    print(f"DE Taxable Income             : ${itemized_sum.get('de_taxable_income', 0.0):>12,.2f}")
     print(f"Net Savings                   : ${server_sum['net_savings']:>12,.2f} ({savings_rate*100:.1f}%)")
     print(f"Itemized Gross Sum            : ${itemized_sum['total_expense']:>12,.2f}")
     print()

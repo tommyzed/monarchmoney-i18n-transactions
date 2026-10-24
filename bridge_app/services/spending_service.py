@@ -22,6 +22,21 @@ TAXABLE_EARNINGS_CATEGORIES = {
     "bonuses",
 }
 
+DE_TAXABLE_INCOME_ACCOUNT_IDS = {
+    "161771648750862611",
+    "161771648799097108",
+    "165678505356837668",
+    "165766005491385245",
+    "173196443058061630",
+    "189288389787664529",
+    "219467442390712365",
+}
+
+DE_TAXABLE_INCOME_CATEGORY_IDS = {
+    "207418185825534724",
+    "169645499485667936",
+}
+
 TAX_SHELTERED_SUBTYPES = {
     # US Defined Contribution & Retirement
     "st_401k",
@@ -274,6 +289,7 @@ async def calculate_and_save_spending_report(
             itemized_income_total = 0.0
             itemized_transfers_total = 0.0
             itemized_taxable_earnings_total = 0.0
+            itemized_de_taxable_income_total = 0.0
 
             categorized_breakdown = {}
             category_group_breakdown = {}
@@ -320,6 +336,15 @@ async def calculate_and_save_spending_report(
                     if group_type == "income" or amount > 0:
                         itemized_taxable_earnings_total += amount
 
+                # DE Taxable Income: total transactions matching specified accounts and categories
+                acc_id_str = str(acc_id or "")
+                cat_id_str = str(cat_id or "")
+                if (
+                    acc_id_str in DE_TAXABLE_INCOME_ACCOUNT_IDS
+                    and cat_id_str in DE_TAXABLE_INCOME_CATEGORY_IDS
+                ):
+                    itemized_de_taxable_income_total += amount
+
                 if group_type == "expense" or (
                     group_type not in ("income", "transfer") and amount < 0
                 ):
@@ -365,6 +390,7 @@ async def calculate_and_save_spending_report(
                 "net_savings": sum_savings,
                 "savings_rate": sum_savings_rate,
                 "taxable_earnings": round(itemized_taxable_earnings_total, 2),
+                "de_taxable_income": round(itemized_de_taxable_income_total, 2),
                 "itemized_expense": itemized_expense_total,
                 "itemized_income": itemized_income_total,
                 "itemized_transfers": itemized_transfers_total,

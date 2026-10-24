@@ -2103,6 +2103,8 @@
             const savingsRate = (sum.savings_rate || 0) * 100;
             const hasTaxable = sum.taxable_earnings != null;
             const taxableEarnings = hasTaxable ? sum.taxable_earnings : 0;
+            const hasDeTaxable = sum.de_taxable_income != null;
+            const deTaxableIncome = hasDeTaxable ? sum.de_taxable_income : 0;
 
             // Determine default selectedMonth
             const months = Object.keys(monthly).sort();
@@ -2130,17 +2132,17 @@
                     <div class="kpi-card" style="--card-accent: #10b981;">
                         <div class="kpi-label">Total Income</div>
                         <div class="kpi-value" style="color: #6ee7b7;">${formatCurrency(totalIncome)}</div>
-                        <div class="kpi-sub">Total recorded inflows</div>
-                    </div>
-                    <div class="kpi-card" style="--card-accent: #3b82f6;">
-                        <div class="kpi-label">Net Savings</div>
-                        <div class="kpi-value" style="color: #93c5fd;">${formatCurrency(netSavings)}</div>
-                        <div class="kpi-sub">${savingsRate.toFixed(1)}% Savings Rate</div>
+                        <div class="kpi-sub">💹: ${formatCurrency(netSavings)} (${savingsRate.toFixed(1)}%)</div>
                     </div>
                     <div class="kpi-card" style="--card-accent: #8b5cf6;">
-                        <div class="kpi-label">Taxable Earnings</div>
+                        <div class="kpi-label">US Taxable Income</div>
                         <div class="kpi-value" style="color: #c4b5fd;">${formatCurrency(taxableEarnings)}</div>
                         <div class="kpi-sub">${hasTaxable ? 'Non-retirement income' : 'Needs recalculation'}</div>
+                    </div>
+                    <div class="kpi-card" style="--card-accent: #3b82f6;">
+                        <div class="kpi-label">DE Taxable Income</div>
+                        <div class="kpi-value" style="color: #93c5fd;">${formatCurrency(deTaxableIncome)}</div>
+                        <div class="kpi-sub">${hasDeTaxable ? 'Dividends & capital gains' : 'Needs recalculation'}</div>
                     </div>
                 </div>
 
