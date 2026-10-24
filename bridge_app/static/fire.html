@@ -1400,7 +1400,7 @@
                 <!-- Analysis Chart Section -->
                 <div class="ss-chart-container">
                     <div
-                        style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; text-align: center;">
+                        style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; text-align: center;">
                         Cumulative Benefit Comparison (62 vs 70)
                     </div>
                     <div id="ssChart"></div>
@@ -1717,9 +1717,54 @@
                 backgroundColor: 'transparent',
                 tooltip: {
                     trigger: 'axis',
+                    confine: true,
                     backgroundColor: 'rgba(26, 26, 46, 0.95)',
                     borderColor: 'rgba(255,255,255,0.1)',
                     textStyle: { color: '#f0f0f5', fontSize: 11 },
+                    extraCssText: 'max-width: calc(100vw - 24px); max-height: calc(100vh - 24px); overflow-y: auto; white-space: normal; word-break: break-word; pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100;',
+                    position: function (pos, params, dom, rect, size) {
+                        const tooltipW = (size && size.contentSize && size.contentSize[0]) || (dom && dom.offsetWidth) || 200;
+                        const tooltipH = (size && size.contentSize && size.contentSize[1]) || (dom && dom.offsetHeight) || 160;
+                        const viewW = (size && size.viewSize && size.viewSize[0]) || container.clientWidth || 300;
+                        const viewH = (size && size.viewSize && size.viewSize[1]) || container.clientHeight || 320;
+
+                        // Place horizontally: flip away from the touch point
+                        let x = pos[0] > viewW / 2
+                            ? pos[0] - tooltipW - 14
+                            : pos[0] + 14;
+
+                        // Center vertically near the touch point
+                        let y = pos[1] - tooltipH / 2;
+
+                        // Chart container constraints
+                        if (viewW > tooltipW) {
+                            x = Math.max(5, Math.min(x, viewW - tooltipW - 5));
+                        }
+                        if (viewH > tooltipH) {
+                            y = Math.max(5, Math.min(y, viewH - tooltipH - 5));
+                        }
+
+                        // Viewport safety clamp: ensure the tooltip never goes outside the viewport
+                        const chartRect = container.getBoundingClientRect();
+                        const pad = 8;
+                        const minX = pad - chartRect.left;
+                        const maxX = window.innerWidth - tooltipW - pad - chartRect.left;
+                        if (minX <= maxX) {
+                            x = Math.max(minX, Math.min(x, maxX));
+                        } else {
+                            x = minX;
+                        }
+
+                        const minY = pad - chartRect.top;
+                        const maxY = window.innerHeight - tooltipH - pad - chartRect.top;
+                        if (minY <= maxY) {
+                            y = Math.max(minY, Math.min(y, maxY));
+                        } else {
+                            y = minY;
+                        }
+
+                        return [x, y];
+                    },
                     formatter: function (params) {
                         const ageStr = params[0].axisValue;
                         const paramsInfo = getCurrentInvestmentParams();
@@ -2565,9 +2610,54 @@
                 backgroundColor: 'transparent',
                 tooltip: {
                     trigger: 'axis',
+                    confine: true,
                     backgroundColor: 'rgba(15, 15, 26, 0.95)',
                     borderColor: 'rgba(255,255,255,0.1)',
                     textStyle: { color: '#f0f0f5', fontSize: 12 },
+                    extraCssText: 'max-width: calc(100vw - 24px); white-space: normal; word-break: break-word; pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100;',
+                    position: function (pos, params, dom, rect, size) {
+                        const tooltipW = (size && size.contentSize && size.contentSize[0]) || (dom && dom.offsetWidth) || 180;
+                        const tooltipH = (size && size.contentSize && size.contentSize[1]) || (dom && dom.offsetHeight) || 80;
+                        const viewW = (size && size.viewSize && size.viewSize[0]) || container.clientWidth || 300;
+                        const viewH = (size && size.viewSize && size.viewSize[1]) || container.clientHeight || 250;
+
+                        // Place horizontally: flip away from the touch point
+                        let x = pos[0] > viewW / 2
+                            ? pos[0] - tooltipW - 14
+                            : pos[0] + 14;
+
+                        // Center vertically near the touch point
+                        let y = pos[1] - tooltipH / 2;
+
+                        // Chart container constraints
+                        if (viewW > tooltipW) {
+                            x = Math.max(5, Math.min(x, viewW - tooltipW - 5));
+                        }
+                        if (viewH > tooltipH) {
+                            y = Math.max(5, Math.min(y, viewH - tooltipH - 5));
+                        }
+
+                        // Viewport safety clamp: ensure the tooltip never goes outside the viewport
+                        const chartRect = container.getBoundingClientRect();
+                        const pad = 8;
+                        const minX = pad - chartRect.left;
+                        const maxX = window.innerWidth - tooltipW - pad - chartRect.left;
+                        if (minX <= maxX) {
+                            x = Math.max(minX, Math.min(x, maxX));
+                        } else {
+                            x = minX;
+                        }
+
+                        const minY = pad - chartRect.top;
+                        const maxY = window.innerHeight - tooltipH - pad - chartRect.top;
+                        if (minY <= maxY) {
+                            y = Math.max(minY, Math.min(y, maxY));
+                        } else {
+                            y = minY;
+                        }
+
+                        return [x, y];
+                    },
                     formatter: function (params) {
                         const age = params[0].axisValue;
                         let tooltipText = `<strong>Age ${age}</strong><br/>`;
