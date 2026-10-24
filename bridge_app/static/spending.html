@@ -2132,17 +2132,17 @@
                     <div class="kpi-card" style="--card-accent: #10b981;">
                         <div class="kpi-label">Total Income</div>
                         <div class="kpi-value" style="color: #6ee7b7;">${formatCurrency(totalIncome)}</div>
-                        <div class="kpi-sub">💹: ${formatCurrency(netSavings)} (${savingsRate.toFixed(1)}%)</div>
+                        <div class="kpi-sub">Savings Rate: ${formatCurrency(netSavings)} (${savingsRate.toFixed(1)}%)</div>
                     </div>
                     <div class="kpi-card" style="--card-accent: #8b5cf6;">
                         <div class="kpi-label">US Taxable Income</div>
                         <div class="kpi-value" style="color: #c4b5fd;">${formatCurrency(taxableEarnings)}</div>
-                        <div class="kpi-sub">${hasTaxable ? 'Non-retirement income' : 'Needs recalculation'}</div>
+                        <div class="kpi-sub">${hasTaxable ? 'Excl retirement & unemployment' : 'Needs recalculation'}</div>
                     </div>
                     <div class="kpi-card" style="--card-accent: #3b82f6;">
                         <div class="kpi-label">DE Taxable Income</div>
                         <div class="kpi-value" style="color: #93c5fd;">${formatCurrency(deTaxableIncome)}</div>
-                        <div class="kpi-sub">${hasDeTaxable ? 'Dividends & capital gains' : 'Needs recalculation'}</div>
+                        <div class="kpi-sub">${hasDeTaxable ? 'Only dividends & capital gains' : 'Needs recalculation'}</div>
                     </div>
                 </div>
 
