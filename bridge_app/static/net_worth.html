@@ -913,17 +913,17 @@
             <div class="kpi-card accent-blue">
                 <div class="kpi-label">Current Net Worth</div>
                 <div class="kpi-value" id="kpiCurrentNetWorth">$0</div>
-                <div class="kpi-subtext">
-                    <span class="trend-pill trend-positive" id="kpiTotalPctPill">+0.00%</span>
-                    <span>since Jan 1, 2024</span>
-                </div>
+                <div class="kpi-subtext" id="kpiStartingSubtext">Starting: $0</div>
             </div>
 
             <!-- Card 2: Total Dollar Gain -->
             <div class="kpi-card accent-green">
                 <div class="kpi-label">Total Dollar Gain</div>
                 <div class="kpi-value" id="kpiTotalDollarGain">+$0</div>
-                <div class="kpi-subtext" id="kpiStartingSubtext">Starting: $0</div>
+                <div class="kpi-subtext">
+                    <span class="trend-pill trend-positive" id="kpiTotalPctPill">+0.00%</span>
+                    <span>since Jan 1, 2024</span>
+                </div>
             </div>
 
             <!-- Card 3: All-Time Peak -->
@@ -961,11 +961,9 @@
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title">📊 Monthly Net Worth Percentage Change</h2>
-                        <p class="section-subtitle">Percentage gain or loss for each calendar month relative to starting
-                            balance</p>
+                        <h2 class="section-title">📊 Month / Month %</h2>
+                        <p class="section-subtitle">% gain or loss for each month relative to the previous month</p>
                     </div>
-                    <span class="section-badge">Bar Chart • % Gain/Loss</span>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="monthlyBarChart"></canvas>
@@ -976,10 +974,9 @@
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title">📈 Cumulative Net Worth Growth (%)</h2>
+                        <h2 class="section-title">📈 Cumulative Growth (%)</h2>
                         <p class="section-subtitle">Overall percentage portfolio growth since January 1, 2024</p>
                     </div>
-                    <span class="section-badge">Area Chart • Cumulative %</span>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="cumulativeAreaChart"></canvas>
