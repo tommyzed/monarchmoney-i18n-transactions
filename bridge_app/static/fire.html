@@ -33,7 +33,7 @@
             };
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" defer></script>
     <style>
         /* ===== INIT_AUTH_STATE will be injected here ===== */
         /* INIT_AUTH_STATE */
@@ -326,6 +326,8 @@
             border-radius: var(--radius);
             padding: 1.2rem 1.5rem;
             margin-bottom: 1.5rem;
+            content-visibility: auto;
+            contain-intrinsic-size: auto none auto 300px;
         }
 
         .portfolio-header {
@@ -1495,6 +1497,18 @@
                     el.addEventListener('input', updateSsCalculation);
                 }
             });
+
+            // Single rAF-throttled resize listener for all ECharts instances
+            let resizeRaf = null;
+            window.addEventListener('resize', () => {
+                if (resizeRaf) cancelAnimationFrame(resizeRaf);
+                resizeRaf = requestAnimationFrame(() => {
+                    if (chartInstance) chartInstance.resize();
+                    if (swrChartInstance) swrChartInstance.resize();
+                    if (typeof ssChartInstance !== 'undefined' && ssChartInstance) ssChartInstance.resize();
+                    resizeRaf = null;
+                });
+            }, { passive: true });
         });
 
         // ===== Social Security Calculator Helpers =====
@@ -2536,11 +2550,6 @@
             };
 
             chartInstance.setOption(option);
-
-            // Resize handler
-            window.addEventListener('resize', () => {
-                if (chartInstance) chartInstance.resize();
-            });
         }
 
         function renderSwrChart(data) {
@@ -2705,11 +2714,6 @@
             };
 
             swrChartInstance.setOption(option);
-
-            // Resize handler
-            window.addEventListener('resize', () => {
-                if (swrChartInstance) swrChartInstance.resize();
-            });
         }
 
         // ===== Settings Modal =====

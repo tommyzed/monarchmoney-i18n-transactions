@@ -6,13 +6,24 @@ from PIL import Image
 import io
 from typing import Optional
 
+_GENAI_CLIENTS: dict[str, genai.Client] = {}
+
+
+def _get_genai_client(api_key: str) -> genai.Client:
+    client = _GENAI_CLIENTS.get(api_key)
+    if client is None:
+        client = genai.Client(api_key=api_key)
+        _GENAI_CLIENTS[api_key] = client
+    return client
+
+
 def extract_transaction_data(image_bytes: bytes, historical_merchant_names: Optional[list] = None) -> dict:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return {"error": "GEMINI_API_KEY not set"}
 
-    # Initialize Client
-    client = genai.Client(api_key=api_key)
+    # Initialize or reuse cached Client
+    client = _get_genai_client(api_key)
 
     # Build the historical merchant hint block (injected only when names exist)
     merchant_hint_block = ""
@@ -51,6 +62,8 @@ Do NOT include any markdown fences or extra text — only the raw JSON object.
 
     try:
         image = Image.open(io.BytesIO(image_bytes))
+        if max(image.size) > 2048:
+            image.thumbnail((2048, 2048), Image.Resampling.LANCZOS)
 
         # New SDK call
         model_name = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")

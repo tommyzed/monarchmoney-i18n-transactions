@@ -31,6 +31,7 @@ async def test_get_failed_transactions_empty(auth_client):
         await session.execute(FailedTransaction.__table__.delete())
         await session.commit()
 
+    await engine.dispose()
     response = auth_client.get("/api/failed-transactions")
     assert response.status_code == 200
     assert response.json() == []
@@ -57,6 +58,7 @@ async def test_get_failed_transactions_with_data(auth_client):
         await session.commit()
         await session.refresh(tx)
 
+    await engine.dispose()
     response = auth_client.get("/api/failed-transactions")
     assert response.status_code == 200
 

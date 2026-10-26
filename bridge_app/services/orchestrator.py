@@ -8,6 +8,40 @@ from ..models import Transaction, MerchantMapping
 from .gemini import extract_transaction_data
 from .monarch import get_monarch_client, get_latest_credentials, push_transaction
 from starlette.concurrency import run_in_threadpool
+from cachetools import TTLCache
+
+
+_HISTORICAL_MERCHANTS_CACHE = TTLCache(maxsize=1, ttl=300)
+_CATEGORY_EMOJI_CACHE = TTLCache(maxsize=1000, ttl=300)
+_MERCHANT_STARRED_CACHE = TTLCache(maxsize=1000, ttl=300)
+merchant_star_cache = _MERCHANT_STARRED_CACHE
+
+
+async def get_cached_historical_merchants(db: AsyncSession) -> list[str]:
+    if "merchants" in _HISTORICAL_MERCHANTS_CACHE:
+        return _HISTORICAL_MERCHANTS_CACHE["merchants"]
+    hist_result = await db.execute(
+        select(MerchantMapping.monarch_merchant_name).distinct()
+    )
+    historical_names = sorted([r[0] for r in hist_result.fetchall() if r[0]])
+    _HISTORICAL_MERCHANTS_CACHE["merchants"] = historical_names
+    return historical_names
+
+
+def invalidate_mapping_caches():
+    _HISTORICAL_MERCHANTS_CACHE.clear()
+    _CATEGORY_EMOJI_CACHE.clear()
+
+
+def invalidate_merchant_star_cache(merchant_name: str = None, is_starred: bool = None):
+    if merchant_name:
+        clean_name = merchant_name.strip().lower()
+        if is_starred is not None:
+            _MERCHANT_STARRED_CACHE[clean_name] = bool(is_starred)
+        else:
+            _MERCHANT_STARRED_CACHE.pop(clean_name, None)
+    else:
+        _MERCHANT_STARRED_CACHE.clear()
 
 
 def make_reporter(progress_callback):
@@ -24,6 +58,7 @@ async def process_manual_transaction(
     db: AsyncSession,
     progress_callback=None,
     force_override: bool = False,
+    mm_client=None,
 ):
     """
     Process a manually entered transaction.
@@ -39,7 +74,7 @@ async def process_manual_transaction(
     # Work on a copy so the caller's manual_data is not mutated in-place by currency conversion
     data = dict(manual_data)
     return await _process_transaction_data(
-        data, image_hash, db, report, force_override=force_override
+        data, image_hash, db, report, force_override=force_override, mm_client=mm_client
     )
 
 
@@ -76,10 +111,7 @@ async def process_transaction(
     await report("Scanning receipt with Gemini AI...", 30)
 
     # Fetch historical merchant names to hint the AI
-    hist_result = await db.execute(
-        select(MerchantMapping.monarch_merchant_name).distinct()
-    )
-    historical_names = sorted([r[0] for r in hist_result.fetchall() if r[0]])
+    historical_names = await get_cached_historical_merchants(db)
     if historical_names:
         print(
             f"Passing {len(historical_names)} historical merchant names to Gemini as hints"
@@ -293,10 +325,6 @@ async def _push_to_monarch(data: dict, db: AsyncSession, report_func, mm_client=
         raise HTTPException(status_code=502, detail=f"Monarch Error: {str(e)}")
 
 
-_CATEGORY_EMOJI_CACHE = {}
-_MERCHANT_STARRED_CACHE = {}
-
-
 async def _fetch_category_emoji(data: dict, db: AsyncSession):
     try:
         if data.get("category_name"):
@@ -454,6 +482,7 @@ async def process_parsed_transaction(
     progress_callback=None,
     user_currency_override: str = None,
     force_override: bool = True,
+    mm_client=None,
 ):
     """
     Process already parsed/edited transaction data (used when retrying a failed transaction with parsed fields).
@@ -469,4 +498,5 @@ async def process_parsed_transaction(
         report,
         user_currency_override=user_currency_override,
         force_override=force_override,
+        mm_client=mm_client,
     )

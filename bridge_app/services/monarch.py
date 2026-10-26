@@ -1,11 +1,51 @@
+import asyncio
 import os
 import pyotp
+from cachetools import TTLCache
 from sqlalchemy.ext.asyncio import AsyncSession
 from monarchmoney import MonarchMoney
 from ..models import Credentials
 
 # Path for session persistence - logic says store in DB, but library uses file.
 # We will use DB to store/retrieve the session json bytes.
+
+_MONARCH_CLIENT_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
+_ACCOUNTS_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
+_CATEGORIES_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
+_TAGS_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
+
+
+async def _get_accounts_cached(mm: MonarchMoney):
+    if isinstance(mm, MonarchMoney):
+        key = id(mm)
+        if key in _ACCOUNTS_CACHE:
+            return _ACCOUNTS_CACHE[key]
+        res = await mm.get_accounts()
+        _ACCOUNTS_CACHE[key] = res
+        return res
+    return await mm.get_accounts()
+
+
+async def _get_categories_cached(mm: MonarchMoney):
+    if isinstance(mm, MonarchMoney):
+        key = id(mm)
+        if key in _CATEGORIES_CACHE:
+            return _CATEGORIES_CACHE[key]
+        res = await mm.get_transaction_categories()
+        _CATEGORIES_CACHE[key] = res
+        return res
+    return await mm.get_transaction_categories()
+
+
+async def _get_tags_cached(mm: MonarchMoney):
+    if isinstance(mm, MonarchMoney):
+        key = id(mm)
+        if key in _TAGS_CACHE:
+            return _TAGS_CACHE[key]
+        res = await mm.get_transaction_tags()
+        _TAGS_CACHE[key] = res
+        return res
+    return await mm.get_transaction_tags()
 
 async def get_latest_credentials(db: AsyncSession) -> Credentials:
     """
@@ -43,6 +83,12 @@ async def get_monarch_client(db: AsyncSession, user_id: int):
     # Restores the cookie jar captured at login time (csrftoken + session cookie).
     # The session cookie is long-lived when trusted_device=True was used.
     if creds.monarch_cookies:
+        cookie_fp = tuple(sorted(creds.monarch_cookies.items()))
+        cache_key = (user_id, cookie_fp)
+        cached_mm = _MONARCH_CLIENT_CACHE.get(cache_key)
+        if cached_mm is not None:
+            return cached_mm
+
         mm._cookie_jar = creds.monarch_cookies
         csrf = creds.monarch_cookies.get("csrftoken")
         if csrf:
@@ -50,6 +96,7 @@ async def get_monarch_client(db: AsyncSession, user_id: int):
         try:
             await mm.get_subscription_details()
             print("✅ Authenticated via cookie-based auth (new)")
+            _MONARCH_CLIENT_CACHE[cache_key] = mm
             return mm
         except Exception as e:
             print(f"Cookie auth failed: {e}")
@@ -130,8 +177,14 @@ async def update_transaction_fields(
 async def push_transaction(mm: MonarchMoney, data: dict):
 
     # data: date, amount, currency, merchant
-    # Find manual account
-    accounts = await mm.get_accounts()
+    # Fetch accounts and categories concurrently (with 5-min TTL cache on real MonarchMoney instances)
+    accounts, categories_res = await asyncio.gather(
+        _get_accounts_cached(mm),
+        _get_categories_cached(mm),
+        return_exceptions=True,
+    )
+    if isinstance(accounts, Exception):
+        raise accounts
     # Logic to pick account
     target_account = None
     is_cash = bool(data.get("is_cash", False))
@@ -189,7 +242,9 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     fallback_category_id = data.get('category_id')
 
     try:
-        categories_data = await mm.get_transaction_categories()
+        if isinstance(categories_res, Exception):
+            raise categories_res
+        categories_data = categories_res
         categories = categories_data.get('categories', [])
         
         target_name_lower = target_category_name.lower() if target_category_name else None
@@ -274,7 +329,10 @@ async def push_transaction(mm: MonarchMoney, data: dict):
     # create_transaction doesn't support this flag, so we update it immediately after.
     try:
         tx_id = result['createTransaction']['transaction']['id']
-        await mm.update_transaction(transaction_id=tx_id, needs_review=True)
+        _, existing_tags = await asyncio.gather(
+            mm.update_transaction(transaction_id=tx_id, needs_review=True),
+            _get_tags_cached(mm),
+        )
         print(f"Marked transaction {tx_id} as 'Needs Review'")
         
         # Apply Tags
@@ -292,7 +350,6 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         apply_cash_tag = data.get('is_cash')
         
         # 1. Find existing tags
-        existing_tags = await mm.get_transaction_tags()
         for tag in existing_tags.get("householdTransactionTags", []):
             if tag["name"] == base_tag_name:
                 base_tag_id = tag["id"]
@@ -305,11 +362,15 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         if not base_tag_id:
             new_tag_res = await mm.create_transaction_tag(name=base_tag_name, color=base_tag_color)
             base_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
+            if isinstance(mm, MonarchMoney):
+                _TAGS_CACHE.pop(id(mm), None)
             print(f"Created new tag: {base_tag_name} with ID: {base_tag_id}")
             
         if apply_cash_tag and not cash_tag_id:
             new_tag_res = await mm.create_transaction_tag(name=cash_tag_name, color=cash_tag_color)
             cash_tag_id = new_tag_res["createTransactionTag"]["tag"]["id"]
+            if isinstance(mm, MonarchMoney):
+                _TAGS_CACHE.pop(id(mm), None)
             print(f"Created new tag: {cash_tag_name} with ID: {cash_tag_id}")
             
         if base_tag_id:

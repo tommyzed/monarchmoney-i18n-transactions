@@ -34,7 +34,7 @@
             };
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" defer></script>
     <style>
         /* ===== INIT_AUTH_STATE will be injected here ===== */
         /* INIT_AUTH_STATE */
@@ -854,6 +854,11 @@
             border-radius: var(--radius);
             padding: 1.5rem;
             margin-bottom: 2rem;
+        }
+
+        .deferred-table-section {
+            content-visibility: auto;
+            contain-intrinsic-size: auto none auto 500px;
         }
 
         .section-title {
@@ -1974,11 +1979,16 @@
             renderYearSelector();
             await loadReport(currentYear);
 
-            // Unified passive resize listener for all ECharts instances
+            // Unified passive rAF-throttled resize listener for all ECharts instances
+            let resizeRaf = null;
             window.addEventListener('resize', () => {
-                monthlyChart?.resize();
-                groupChart?.resize();
-                monthGroupChart?.resize();
+                if (resizeRaf) cancelAnimationFrame(resizeRaf);
+                resizeRaf = requestAnimationFrame(() => {
+                    monthlyChart?.resize();
+                    groupChart?.resize();
+                    monthGroupChart?.resize();
+                    resizeRaf = null;
+                });
             }, { passive: true });
         }
 
@@ -2186,7 +2196,7 @@
                     </div>
 
                     <!-- Ranked Categories for Selected Month -->
-                    <div style="margin-top: 1.75rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                    <div class="deferred-table-section" style="margin-top: 1.75rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
                         <div class="table-filter-bar" style="margin-bottom: 0.75rem;">
                             <span style="font-size:0.92rem; font-weight:600; color:var(--text-primary);">
                                 🏆 Top Categories in <span id="monthSubCatTitle" style="color: #a5b4fc;"></span>
@@ -2237,7 +2247,7 @@
                     </div>
 
                     <!-- Ranked Categories for Selected Year -->
-                    <div style="margin-top: 1.75rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                    <div class="deferred-table-section" style="margin-top: 1.75rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
                         <div class="table-filter-bar" style="margin-bottom: 0.75rem;">
                             <span style="font-size:0.92rem; font-weight:600; color:var(--text-primary);">
                                 🏆 Top Categories in <span id="annualRankedCatsTitle" style="color: #a5b4fc;">${annualSectionYear}</span>

@@ -3,8 +3,11 @@ import io
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from cachetools import TTLCache
 
 logger = logging.getLogger("net_worth_service")
+_SCHEMA_INITIALIZED = False
+_NET_WORTH_PNG_CACHE = TTLCache(maxsize=8, ttl=600)
 
 
 async def _retry_monarch_call(func, *args, max_retries: int = 4, initial_delay: float = 1.5, **kwargs):
@@ -182,8 +185,11 @@ async def calculate_and_save_net_worth_report(
     if email:
         os.environ["MM_EMAIL"] = email
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    global _SCHEMA_INITIALIZED
+    if not _SCHEMA_INITIALIZED:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        _SCHEMA_INITIALIZED = True
 
     async with AsyncSessionLocal() as db:
         if user_id:
@@ -276,6 +282,18 @@ def generate_net_worth_png(payload: Dict[str, Any]) -> Optional[bytes]:
     summary = payload.get("summary") or {}
     if not history:
         return None
+
+    cache_key = (
+        summary.get("updated_at"),
+        summary.get("start_date"),
+        summary.get("latest_date"),
+        summary.get("total_gain_percent"),
+        len(history),
+        history[-1].get("month") if isinstance(history[-1], dict) else None,
+        history[-1].get("end_balance") if isinstance(history[-1], dict) else None,
+    )
+    if cache_key in _NET_WORTH_PNG_CACHE:
+        return _NET_WORTH_PNG_CACHE[cache_key]
 
     months = [h["month"] for h in history]
     monthly_pcts = [float(h["gain_percent"]) for h in history]
@@ -384,4 +402,6 @@ def generate_net_worth_png(payload: Dict[str, Any]) -> Optional[bytes]:
     fig.savefig(buf, format="png", dpi=300, bbox_inches="tight", facecolor="#0B0F19")
     plt.close(fig)
     buf.seek(0)
-    return buf.getvalue()
+    png_bytes = buf.getvalue()
+    _NET_WORTH_PNG_CACHE[cache_key] = png_bytes
+    return png_bytes

@@ -5,14 +5,23 @@ import json
 import hmac
 import logging
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 import hashlib
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 from .database import engine, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
-from .services.orchestrator import process_transaction
+from .services.orchestrator import (
+    process_transaction,
+    merchant_star_cache,
+    get_cached_historical_merchants,
+    invalidate_mapping_caches,
+    invalidate_merchant_star_cache,
+)
 from .services.monarch import get_monarch_client, get_latest_credentials
 from .models import MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant, SpendingReport, NetWorthReport
 from sqlalchemy.future import select
@@ -110,6 +119,23 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
         return Response(status_code=404, content="Not Found")
 
 app.add_middleware(GhostSecurityMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+_STATIC_HTML_CACHE = {}
+
+def _read_static_html(path: str) -> str:
+    """Read and cache static HTML files in memory, invalidating automatically if file mtime changes."""
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        mtime = None
+    cached = _STATIC_HTML_CACHE.get(path)
+    if cached and cached[0] == mtime:
+        return cached[1]
+    import pathlib
+    content = pathlib.Path(path).read_text(encoding="utf-8")
+    _STATIC_HTML_CACHE[path] = (mtime, content)
+    return content
 
 @app.get("/s")
 async def activate(request: Request, s: str):
@@ -167,9 +193,17 @@ from cachetools import TTLCache
 # Structure: { job_id: { "status": "processing" | "completed" | "failed", "result": dict, "error": str, "inputs": dict, "failed_tx_id": int } }
 jobs = {}
 
-# Global memory-safe TTL cache for merchant starred status. Prevents DB lookups inside retry loop and subsequent identical merchants.
-# Holds up to 1000 merchants and expires entries after 5 minutes to allow for DB updates to propagate.
-merchant_star_cache = TTLCache(maxsize=1000, ttl=300)
+def _cleanup_old_jobs(max_jobs: int = 200):
+    """Prune oldest completed/failed jobs when job count exceeds max_jobs to bound memory usage."""
+    if len(jobs) <= max_jobs:
+        return
+    removable = [
+        jid for jid, j in jobs.items()
+        if isinstance(j, dict) and j.get("status") in ("completed", "failed")
+    ]
+    excess = len(jobs) - max_jobs
+    for jid in removable[:excess]:
+        jobs.pop(jid, None)
 
 # Batch processing store (multi-receipt uploads)
 # Structure: { batch_id: { "created_at": datetime, "status": str, "total": int, "items": [...] } }
@@ -205,6 +239,7 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
     Background task to process the transaction using a fresh DB session.
     """
     print(f"Starting background job {job_id}")
+    _cleanup_old_jobs()
     
     jobs[job_id] = {"status": "processing", "step": "Initializing...", "progress": 0}
     
@@ -237,7 +272,7 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
                             merchant_name = result["data"].get("merchant")
                             target_dict = result["data"]
                     
-                    if merchant_name and target_dict is not None:
+                    if merchant_name and target_dict is not None and "is_starred" not in target_dict:
                         m_key = merchant_name.strip().lower()
                         if m_key in merchant_star_cache:
                             target_dict["is_starred"] = merchant_star_cache[m_key]
@@ -679,6 +714,119 @@ async def get_batch_status(batch_id: str):
     }
 
 
+async def _retry_batch_failed_background(batch_id: str, indices_to_retry: List[int]):
+    """Background worker to retry failed items in a batch using their stored FailedTransaction records."""
+    batch = batch_store.get(batch_id)
+    if not batch:
+        return
+
+    semaphore = asyncio.Semaphore(2)
+    mm_client = None
+    try:
+        async with AsyncSessionLocal() as db:
+            creds = await get_latest_credentials(db)
+            if creds:
+                mm_client = await get_monarch_client(db, creds.id)
+    except Exception as e:
+        print(f"⚠️ Batch retry {batch_id}: Could not pre-auth Monarch client ({e}), will auth per-item")
+
+    from .services.orchestrator import process_manual_transaction, process_parsed_transaction
+
+    async def _retry_one(item_idx: int):
+        async with semaphore:
+            item = batch["items"][item_idx]
+            failed_tx_id = item.get("failed_tx_id")
+            if not failed_tx_id:
+                item["status"] = "failed"
+                item["error"] = "Missing failed transaction record"
+                item["progress"] = 100
+                return
+
+            item["status"] = "processing"
+            item["step"] = "Retrying..."
+            item["progress"] = 10
+
+            async def progress_callback(step_msg, percent=None):
+                item["step"] = step_msg
+                if percent is not None:
+                    item["progress"] = percent
+
+            try:
+                async with AsyncSessionLocal() as db:
+                    tx = await db.get(FailedTransaction, failed_tx_id)
+                    if not tx:
+                        raise ValueError("Failed transaction record no longer exists")
+
+                    if tx.parsed_data:
+                        retry_data = sanitize_failed_transaction_data(dict(tx.parsed_data))
+                        img_hash = tx.image_hash or f"retry_{tx.id}_{uuid.uuid4().hex[:6]}"
+                        result = await process_parsed_transaction(
+                            data=retry_data,
+                            image_hash=img_hash,
+                            db=db,
+                            progress_callback=progress_callback,
+                            user_currency_override=retry_data.get("currency") or tx.user_currency,
+                            force_override=True,
+                            mm_client=mm_client,
+                        )
+                    elif tx.source_type == "manual" and tx.manual_data:
+                        retry_data = sanitize_failed_transaction_data(dict(tx.manual_data))
+                        result = await process_manual_transaction(
+                            manual_data=retry_data,
+                            db=db,
+                            progress_callback=progress_callback,
+                            force_override=True,
+                            mm_client=mm_client,
+                        )
+                    elif tx.raw_content:
+                        result = await process_transaction(
+                            content=tx.raw_content,
+                            db=db,
+                            progress_callback=progress_callback,
+                            user_currency=tx.user_currency,
+                            force_override=True,
+                            mm_client=mm_client,
+                        )
+                    else:
+                        raise ValueError("No transaction data or image content found to retry")
+
+                    await db.delete(tx)
+                    await db.commit()
+
+                item["status"] = "completed"
+                item["progress"] = 100
+                item["step"] = "Synced to Monarch"
+                item["result"] = result
+                item.pop("failed_tx_id", None)
+            except Exception as e:
+                err_msg = getattr(e, "detail", str(e))
+                try:
+                    async with AsyncSessionLocal() as db:
+                        tx = await db.get(FailedTransaction, failed_tx_id)
+                        if tx:
+                            tx.retry_count = (tx.retry_count or 0) + 1
+                            tx.error_message = str(err_msg)
+                            await db.commit()
+                except Exception:
+                    pass
+                item["status"] = "failed"
+                item["progress"] = 100
+                item["error"] = str(err_msg)
+
+    await asyncio.gather(*[_retry_one(idx) for idx in indices_to_retry], return_exceptions=True)
+
+    items = batch["items"]
+    all_done = all(it["status"] in ("completed", "duplicate", "failed") for it in items)
+    if all_done:
+        failed_count = sum(1 for it in items if it["status"] == "failed")
+        if failed_count == len(items):
+            batch["status"] = "failed"
+        elif failed_count > 0:
+            batch["status"] = "completed_with_errors"
+        else:
+            batch["status"] = "completed"
+
+
 @app.post("/batch/{batch_id}/retry-failed")
 async def batch_retry_failed(batch_id: str, background_tasks: BackgroundTasks):
     """
@@ -693,7 +841,7 @@ async def batch_retry_failed(batch_id: str, background_tasks: BackgroundTasks):
         return {"status": "ok", "message": "No failed items to retry"}
 
     # For retries, we rely on FailedTransaction records since we don't keep image bytes in batch_store
-    retried = 0
+    indices_to_retry = []
     for item in failed_items:
         failed_tx_id = item.get("failed_tx_id")
         if failed_tx_id:
@@ -702,10 +850,12 @@ async def batch_retry_failed(batch_id: str, background_tasks: BackgroundTasks):
             item["progress"] = 0
             if "error" in item:
                 del item["error"]
-            retried += 1
+            indices_to_retry.append(item["index"])
 
+    retried = len(indices_to_retry)
     if retried > 0:
         batch["status"] = "processing"
+        background_tasks.add_task(_retry_batch_failed_background, batch_id, indices_to_retry)
 
     return {"status": "ok", "retried": retried}
 
@@ -3325,12 +3475,14 @@ async def create_or_star_merchant(payload: MerchantCreate, db: AsyncSession = De
             existing.is_starred = payload.is_starred
             await db.commit()
             await db.refresh(existing)
+            invalidate_merchant_star_cache(existing.name, existing.is_starred)
             return {"id": existing.id, "name": existing.name, "is_starred": existing.is_starred, "created": False}
         
         new_m = Merchant(name=clean_name, is_starred=payload.is_starred)
         db.add(new_m)
         await db.commit()
         await db.refresh(new_m)
+        invalidate_merchant_star_cache(new_m.name, new_m.is_starred)
         return {"id": new_m.id, "name": new_m.name, "is_starred": new_m.is_starred, "created": True}
     except Exception as e:
         await db.rollback()
@@ -3353,6 +3505,7 @@ async def toggle_merchant_star(name: str, payload: Optional[MerchantStarRequest]
                 existing.is_starred = not existing.is_starred
             await db.commit()
             await db.refresh(existing)
+            invalidate_merchant_star_cache(existing.name, existing.is_starred)
             return {"id": existing.id, "name": existing.name, "is_starred": existing.is_starred}
         else:
             is_starred = payload.is_starred if (payload and payload.is_starred is not None) else True
@@ -3360,6 +3513,7 @@ async def toggle_merchant_star(name: str, payload: Optional[MerchantStarRequest]
             db.add(new_m)
             await db.commit()
             await db.refresh(new_m)
+            invalidate_merchant_star_cache(new_m.name, new_m.is_starred)
             return {"id": new_m.id, "name": new_m.name, "is_starred": new_m.is_starred}
     except Exception as e:
         await db.rollback()
@@ -3379,9 +3533,12 @@ async def delete_merchant(name: str, db: AsyncSession = Depends(get_db)):
                 existing = res_id.scalar_one_or_none()
         
         if existing:
+            deleted_name = existing.name
             await db.delete(existing)
             await db.commit()
-            return {"success": True, "message": f"Merchant '{existing.name}' deleted"}
+            invalidate_merchant_star_cache(deleted_name, False)
+            return {"success": True, "message": f"Merchant '{deleted_name}' deleted"}
+        invalidate_merchant_star_cache(clean_name, False)
         return {"success": True, "message": "Merchant not found or already deleted"}
     except Exception as e:
         await db.rollback()
@@ -3401,10 +3558,7 @@ async def get_merchant_names(db: AsyncSession = Depends(get_db)):
     the backend to hint the Gemini AI during OCR inference.
     """
     try:
-        result = await db.execute(
-            select(MerchantMapping.monarch_merchant_name).distinct()
-        )
-        names = sorted([row[0] for row in result.fetchall() if row[0]])
+        names = await get_cached_historical_merchants(db)
         return {"merchant_names": names}
     except Exception as e:
         print(f"Error fetching merchant names: {e}")
@@ -3474,6 +3628,7 @@ async def save_mapping(request: Request, mapping: MappingRequest, db: AsyncSessi
             db.add(new_mapping)
             
         await db.commit()
+        invalidate_mapping_caches()
 
         if mapping.monarch_tx_id:
             # Try to get the monarch_category_id from local DB
@@ -3517,6 +3672,7 @@ async def delete_mapping(req: DeleteMappingRequest, db: AsyncSession = Depends(g
         if existing:
             await db.delete(existing)
             await db.commit()
+            invalidate_mapping_caches()
             return {"status": "success", "message": "Mapping deleted"}
         else:
              raise HTTPException(status_code=404, detail="Mapping not found")
@@ -3788,12 +3944,18 @@ async def get_failed_transactions(db: AsyncSession = Depends(get_db)):
     Excludes large raw_content binary bytes for performance.
     """
     try:
-        stmt = select(FailedTransaction).order_by(FailedTransaction.created_at.desc())
+        stmt = (
+            select(
+                FailedTransaction,
+                FailedTransaction.raw_content.is_not(None).label("has_image")
+            )
+            .options(defer(FailedTransaction.raw_content))
+            .order_by(FailedTransaction.created_at.desc())
+        )
         result = await db.execute(stmt)
-        failed_list = result.scalars().all()
         
         items = []
-        for tx in failed_list:
+        for tx, has_image in result.all():
             parsed = sanitize_failed_transaction_data(tx.parsed_data)
             manual = sanitize_failed_transaction_data(tx.manual_data)
             display_data = parsed or manual or {}
@@ -3804,7 +3966,7 @@ async def get_failed_transactions(db: AsyncSession = Depends(get_db)):
                 "retry_count": tx.retry_count or 0,
                 "created_at": tx.created_at.isoformat() if tx.created_at else None,
                 "updated_at": tx.updated_at.isoformat() if tx.updated_at else None,
-                "has_image": tx.raw_content is not None,
+                "has_image": bool(has_image),
                 "user_currency": tx.user_currency,
                 "merchant": display_data.get("merchant") or "Receipt (OCR Pending)",
                 "amount": display_data.get("amount"),
@@ -3958,7 +4120,11 @@ async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
     Retry all failed transactions sequentially.
     Returns summary of successes and failures.
     """
-    stmt = select(FailedTransaction).order_by(FailedTransaction.created_at.asc())
+    stmt = (
+        select(FailedTransaction)
+        .options(defer(FailedTransaction.raw_content))
+        .order_by(FailedTransaction.created_at.asc())
+    )
     result = await db.execute(stmt)
     failed_list = result.scalars().all()
     
@@ -3967,6 +4133,14 @@ async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
         
     from .services.orchestrator import process_transaction, process_manual_transaction, process_parsed_transaction
     
+    mm_client = None
+    try:
+        creds = await get_latest_credentials(db)
+        if creds:
+            mm_client = await get_monarch_client(db, creds.id)
+    except Exception as e:
+        print(f"⚠️ Retry all: Could not pre-auth Monarch client ({e}), will auth per-item")
+
     succeeded = 0
     failed = 0
     results = []
@@ -3983,24 +4157,32 @@ async def retry_all_failed_transactions(db: AsyncSession = Depends(get_db)):
                     image_hash=img_hash,
                     db=db,
                     user_currency_override=retry_data.get("currency") or tx.user_currency,
-                    force_override=True
+                    force_override=True,
+                    mm_client=mm_client,
                 )
             elif tx.source_type == "manual" and tx.manual_data:
                 retry_data = sanitize_failed_transaction_data(dict(tx.manual_data))
                 res = await process_manual_transaction(
                     manual_data=retry_data,
                     db=db,
-                    force_override=True
-                )
-            elif tx.raw_content:
-                res = await process_transaction(
-                    content=tx.raw_content,
-                    db=db,
-                    user_currency=tx.user_currency,
-                    force_override=True
+                    force_override=True,
+                    mm_client=mm_client,
                 )
             else:
-                raise ValueError("No data or content available to retry")
+                raw_res = await db.execute(
+                    select(FailedTransaction.raw_content).where(FailedTransaction.id == tx_id)
+                )
+                raw_bytes = raw_res.scalar_one_or_none()
+                if raw_bytes:
+                    res = await process_transaction(
+                        content=raw_bytes,
+                        db=db,
+                        user_currency=tx.user_currency,
+                        force_override=True,
+                        mm_client=mm_client,
+                    )
+                else:
+                    raise ValueError("No data or content available to retry")
                 
             await db.delete(tx)
             await db.commit()
@@ -4045,8 +4227,7 @@ async def clear_all_failed_transactions(db: AsyncSession = Depends(get_db)):
 @app.get("/fire", response_class=HTMLResponse)
 async def fire_page(request: Request):
     """Serve the Ignite FIRE dashboard page."""
-    import pathlib
-    fire_html = pathlib.Path("bridge_app/static/fire.html").read_text()
+    fire_html = _read_static_html("bridge_app/static/fire.html")
     
     # Inject authentication state
     is_auth_str = "true" if request.state.is_authenticated else "false"
@@ -4267,7 +4448,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     is_demo = (req and req.is_demo) or not request.state.is_authenticated
 
     if is_demo:
-        return _handle_demo_simulation(req)
+        return await run_in_threadpool(_handle_demo_simulation, req)
     # ── End Demo Mode ──────────────────────────────────────────────────────
 
     # 1. Get Monarch client
@@ -4280,25 +4461,31 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Monarch connection failed: {e}")
 
-    # 2. Fetch accounts
+    # 2 & 3. Fetch accounts and cashflow (last 12 months) concurrently
+    now = datetime.now()
+    end_date = now.strftime("%Y-%m-%d")
+    start_date = (now - timedelta(days=365)).strftime("%Y-%m-%d")
+    accounts_res, cashflow_res = await asyncio.gather(
+        mm.get_accounts(),
+        mm.get_cashflow_summary(start_date=start_date, end_date=end_date),
+        return_exceptions=True,
+    )
+
+    if isinstance(accounts_res, Exception):
+        raise HTTPException(status_code=502, detail=f"Failed to fetch accounts: {accounts_res}")
     try:
-        accounts_data = await mm.get_accounts()
-        total_portfolio, account_breakdown = filter_accounts(accounts_data)
+        total_portfolio, account_breakdown = filter_accounts(accounts_res)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Failed to fetch accounts: {e}")
 
-    # 3. Fetch cashflow (last 12 months)
     monthly_spend = 0
-    try:
-        now = datetime.now()
-        end_date = now.strftime("%Y-%m-%d")
-        start_date = (now - timedelta(days=365)).strftime("%Y-%m-%d")
-        cashflow_data = await mm.get_cashflow_summary(
-            start_date=start_date, end_date=end_date
-        )
-        monthly_spend = calc_monthly_spend(cashflow_data)
-    except Exception as e:
-        print(f"⚠️ Could not fetch cashflow: {e}")
+    if isinstance(cashflow_res, Exception):
+        print(f"⚠️ Could not fetch cashflow: {cashflow_res}")
+    else:
+        try:
+            monthly_spend = calc_monthly_spend(cashflow_res)
+        except Exception as e:
+            print(f"⚠️ Could not fetch cashflow: {e}")
 
     # 4. Load settings
     settings_result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
@@ -4327,7 +4514,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
 
     # 6. Run simulation
     try:
-        result = simulate(sim_input)
+        result = await run_in_threadpool(simulate, sim_input)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Simulation failed: {e}")
 
@@ -4348,8 +4535,7 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
 @app.get("/spending", response_class=HTMLResponse)
 async def spending_page(request: Request):
     """Serve the Spending Report dashboard page."""
-    import pathlib
-    spending_html = pathlib.Path("bridge_app/static/spending.html").read_text()
+    spending_html = _read_static_html("bridge_app/static/spending.html")
     
     # Inject authentication state
     is_auth_str = "true" if request.state.is_authenticated else "false"
@@ -4491,8 +4677,7 @@ async def get_spending_years_endpoint(db: AsyncSession = Depends(get_db)):
 @app.get("/networth", response_class=HTMLResponse)
 async def net_worth_page(request: Request):
     """Serve the Net Worth Performance Analytics dashboard page."""
-    import pathlib
-    net_worth_html = pathlib.Path("bridge_app/static/net_worth.html").read_text()
+    net_worth_html = _read_static_html("bridge_app/static/net_worth.html")
 
     is_auth_str = "true" if request.state.is_authenticated else "false"
     net_worth_html = net_worth_html.replace(
@@ -4638,7 +4823,7 @@ async def get_net_worth_chart_png_endpoint(
             "history": report.history or [],
         }
 
-    png_bytes = generate_net_worth_png(payload)
+    png_bytes = await run_in_threadpool(generate_net_worth_png, payload)
     if png_bytes is None:
         raise HTTPException(
             status_code=404, detail="Unable to generate chart from empty history"

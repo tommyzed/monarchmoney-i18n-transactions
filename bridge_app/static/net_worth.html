@@ -14,7 +14,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sriracha&display=swap"
         rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
     <style>
         /* ===== INIT_AUTH_STATE will be injected here ===== */
         /* INIT_AUTH_STATE */
@@ -577,6 +577,11 @@
         }
 
         /* Itemized Monthly Breakdown Table (Accessible & Container-Responsive) */
+        .table-section-deferred {
+            content-visibility: auto;
+            contain-intrinsic-size: auto none auto 500px;
+        }
+
         .table-wrapper {
             overflow-x: auto;
             max-inline-size: 100%;
@@ -983,7 +988,7 @@
         </div>
 
         <!-- Section 3.4: Itemized Monthly Breakdown Table -->
-        <section class="section-card">
+        <section class="section-card table-section-deferred">
             <div class="section-header">
                 <div class="section-title-group">
                     <h2 class="section-title">📋 Itemized Monthly Breakdown</h2>

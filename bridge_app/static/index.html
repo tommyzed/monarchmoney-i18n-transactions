@@ -939,8 +939,8 @@
             </div>
         </div>
         <br>
-        <h1 style="text-shadow: none;"><img src="LogoJul26x.png" alt="MM Bridge"
-                style="max-height: 150px; vertical-align: middle;"></h1>
+        <h1 style="text-shadow: none;"><img src="LogoJul26x.png" alt="MM Bridge" fetchpriority="high" width="323" height="150"
+                style="max-height: 150px; width: auto; height: auto; vertical-align: middle;"></h1>
         <p style="color: #666; line-height: 1.5;">Share a receipt image to automatically parse and sync it to Monarch
             Money.</p>
 
@@ -1117,7 +1117,7 @@
                 </svg>
             </a>
         </div>
-        <span style="font-style: italic;">20261026.2037 ©2025-26 EGO /dev/null</span>
+        <span style="font-style: italic;">20261026.2117 ©2025-26 EGO /dev/null</span>
     </div>
 
     <!-- History Log Modal -->
@@ -2455,6 +2455,7 @@
                 var img = document.createElement('img');
                 img.src = URL.createObjectURL(file);
                 img.alt = file.name;
+                img.loading = 'lazy';
                 thumb.appendChild(img);
 
                 var removeBtn = document.createElement('button');

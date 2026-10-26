@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -98,6 +99,10 @@ TAX_SHELTERED_KEYWORDS = [
     "health savings",
 ]
 
+_BROKERAGE_TAX_SHELTERED_RE = re.compile(
+    r"\b(ira|roth|401k|401\(k\)|403b|403\(b\)|457b?|sep\s+ira|simple\s+ira|pension|hsa|529)\b"
+)
+
 
 def is_taxable_earnings_account(account: Optional[Dict[str, Any]]) -> bool:
     """
@@ -129,12 +134,7 @@ def is_taxable_earnings_account(account: Optional[Dict[str, Any]]) -> bool:
 
     # Check display name for explicit tax-sheltered markers (especially for investment accounts)
     if type_name == "brokerage":
-        import re
-
-        if re.search(
-            r"\b(ira|roth|401k|401\(k\)|403b|403\(b\)|457b?|sep\s+ira|simple\s+ira|pension|hsa|529)\b",
-            display_name,
-        ):
+        if _BROKERAGE_TAX_SHELTERED_RE.search(display_name):
             return False
 
     return True
@@ -219,18 +219,16 @@ async def calculate_and_save_spending_report(
         try:
             mm = await get_monarch_client(db, resolved_user_id)
 
-            # 3. Read Categories (READ-ONLY)
-            cat_res = await _retry_monarch_call(mm.get_transaction_categories)
-            categories_map = {c["id"]: c for c in cat_res.get("categories", [])}
-
-            # 3b. Read Accounts (READ-ONLY)
-            accounts_res = await _retry_monarch_call(mm.get_accounts)
-            accounts_map = {acc["id"]: acc for acc in accounts_res.get("accounts", [])}
-
-            # 4. Read Cash Flow Aggregates (READ-ONLY)
-            cashflow_res = await _retry_monarch_call(
-                mm.get_cashflow, start_date=start_date, end_date=end_date
+            # 3. Read Categories, Accounts, and Cash Flow Aggregates concurrently (READ-ONLY)
+            cat_res, accounts_res, cashflow_res = await asyncio.gather(
+                _retry_monarch_call(mm.get_transaction_categories),
+                _retry_monarch_call(mm.get_accounts),
+                _retry_monarch_call(
+                    mm.get_cashflow, start_date=start_date, end_date=end_date
+                ),
             )
+            categories_map = {c["id"]: c for c in cat_res.get("categories", [])}
+            accounts_map = {acc["id"]: acc for acc in accounts_res.get("accounts", [])}
             summary_list = cashflow_res.get("summary", [])
             server_sum = summary_list[0].get("summary", {}) if summary_list else {}
 
@@ -269,17 +267,20 @@ async def calculate_and_save_spending_report(
 
             if total_count > limit:
                 remaining_offsets = range(limit, total_count, limit)
-                tasks = [
-                    _retry_monarch_call(
-                        mm.get_transactions,
-                        start_date=start_date,
-                        end_date=end_date,
-                        hidden_from_reports=hidden_filter,
-                        limit=limit,
-                        offset=off,
-                    )
-                    for off in remaining_offsets
-                ]
+                page_sem = asyncio.Semaphore(5)
+
+                async def _fetch_page(off: int):
+                    async with page_sem:
+                        return await _retry_monarch_call(
+                            mm.get_transactions,
+                            start_date=start_date,
+                            end_date=end_date,
+                            hidden_from_reports=hidden_filter,
+                            limit=limit,
+                            offset=off,
+                        )
+
+                tasks = [_fetch_page(off) for off in remaining_offsets]
                 pages = await asyncio.gather(*tasks)
                 for page in pages:
                     all_txs.extend(page.get("allTransactions", {}).get("results", []))
