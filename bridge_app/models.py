@@ -105,4 +105,18 @@ class SpendingReport(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class NetWorthReport(Base):
+    __tablename__ = "net_worth_reports"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)
+    start_date = Column(String, nullable=False, default="2024-01-01")
+    latest_date = Column(String, nullable=True)
+    summary = Column(JSON, nullable=True)
+    history = Column(JSON, nullable=True)
+    sync_status = Column(String, default="ready", nullable=False)  # "ready", "syncing", "error"
+    error_message = Column(String, nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+
 

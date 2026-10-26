@@ -1,7 +1,9 @@
 # Project Rules
 
-## Do Not Run Tests Automatically
-Do NOT run tests or execute test commands (e.g. `pytest`, virtualenv pytest, etc.) unless the user specifically and explicitly instructs you to do so in the request.
+## Subagent Delegation Hierarchy
+- You are the Lead Architect running on Gemini 4 Argon. Handle high-level system design, complex debugging, and final code auditing yourself.
+- Whenever invoking `invoke_subagent` for parallel builds, boilerplate generation, file searches, or test runs, ALWAYS target the `flash-worker` agent instead of `self`.
+- Be sure to review the subagents' work. You are in charge and are responsible for the success of the project!
 
 ## Commit Message Formatting Rules
 Whenever generating commit messages:

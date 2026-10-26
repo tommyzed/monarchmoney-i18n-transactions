@@ -14,7 +14,7 @@ from .database import engine, get_db, AsyncSessionLocal
 from contextlib import asynccontextmanager
 from .services.orchestrator import process_transaction
 from .services.monarch import get_monarch_client, get_latest_credentials
-from .models import MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant, SpendingReport
+from .models import MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant, SpendingReport, NetWorthReport
 from sqlalchemy.future import select
 from sqlalchemy import delete, func, or_
 from pydantic import BaseModel
@@ -45,8 +45,10 @@ async def lifespan(app: FastAPI):
     print("📦 LIFESPAN: Checking database connection (this might take a moment if connecting remotely)...")
     try:
         from sqlalchemy import text
-        async with engine.connect() as conn:
+        from .models import Base
+        async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
+            await conn.run_sync(Base.metadata.create_all)
         print("✅ LIFESPAN: Database connected.")
     except Exception as e:
         print(f"❌ LIFESPAN: Database connection failed: {e}")
@@ -4479,6 +4481,176 @@ async def get_spending_years_endpoint(db: AsyncSession = Depends(get_db)):
     if current_year not in years:
         years.insert(0, current_year)
     return {"years": sorted(list(set(years)), reverse=True)}
+
+
+# =============================================================================
+# 📈 NET WORTH REPORT Routes
+# =============================================================================
+
+@app.get("/net-worth", response_class=HTMLResponse)
+@app.get("/networth", response_class=HTMLResponse)
+async def net_worth_page(request: Request):
+    """Serve the Net Worth Performance Analytics dashboard page."""
+    import pathlib
+    net_worth_html = pathlib.Path("bridge_app/static/net_worth.html").read_text()
+
+    is_auth_str = "true" if request.state.is_authenticated else "false"
+    net_worth_html = net_worth_html.replace(
+        "/* INIT_AUTH_STATE */",
+        f"</style><script>window.IS_AUTHENTICATED = {is_auth_str};</script><style>",
+    )
+
+    return HTMLResponse(content=net_worth_html)
+
+
+@app.get("/api/net-worth")
+async def get_net_worth_report_endpoint(
+    request: Request,
+    start_date: str = "2024-01-01",
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch stored net worth report or compute on-demand if none exists yet."""
+    from .services.net_worth_service import (
+        calculate_and_save_net_worth_report,
+        get_latest_net_worth_report,
+    )
+
+    report = await get_latest_net_worth_report(db, start_date=start_date)
+
+    if not report or (report.summary is None and report.sync_status != "syncing"):
+        try:
+            return await calculate_and_save_net_worth_report(start_date=start_date)
+        except Exception as e:
+            logger.warning(f"Auto-calculation of net worth report failed: {e}")
+            if not report:
+                return {
+                    "status": "not_found",
+                    "start_date": start_date,
+                    "message": f"No net worth report found for {start_date}. Click Refresh Data to generate one.",
+                }
+
+    return {
+        "status": "ok",
+        "start_date": report.start_date,
+        "latest_date": report.latest_date,
+        "summary": report.summary,
+        "history": report.history or [],
+        "sync_status": report.sync_status,
+        "error_message": report.error_message,
+        "updated_at": report.updated_at.isoformat() if report.updated_at else None,
+    }
+
+
+@app.post("/api/net-worth/recalculate")
+async def recalculate_net_worth_report_endpoint(
+    background_tasks: BackgroundTasks,
+    request: Request,
+    start_date: str = "2024-01-01",
+    background: bool = False,
+    db: AsyncSession = Depends(get_db),
+):
+    """Recalculate the Net Worth Performance report from Monarch Money."""
+    from .services.net_worth_service import (
+        calculate_and_save_net_worth_report,
+        get_latest_net_worth_report,
+    )
+
+    if background:
+        report = await get_latest_net_worth_report(db, start_date=start_date)
+        if not report:
+            report = NetWorthReport(
+                start_date=start_date,
+                sync_status="syncing",
+            )
+            db.add(report)
+        else:
+            report.sync_status = "syncing"
+            report.error_message = None
+        await db.commit()
+
+        background_tasks.add_task(
+            calculate_and_save_net_worth_report,
+            start_date=start_date,
+        )
+        return {
+            "status": "syncing",
+            "start_date": start_date,
+            "message": f"Net worth recalculation started from {start_date}.",
+        }
+
+    try:
+        return await calculate_and_save_net_worth_report(start_date=start_date)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/net-worth/status")
+async def get_net_worth_status_endpoint(
+    start_date: str = "2024-01-01",
+    db: AsyncSession = Depends(get_db),
+):
+    """Check sync/recalculation status for the net worth report."""
+    from .services.net_worth_service import get_latest_net_worth_report
+
+    report = await get_latest_net_worth_report(db, start_date=start_date)
+    if not report:
+        return {"status": "not_found", "start_date": start_date, "sync_status": "none"}
+
+    return {
+        "status": "ok",
+        "start_date": report.start_date,
+        "sync_status": report.sync_status,
+        "error_message": report.error_message,
+        "updated_at": report.updated_at.isoformat() if report.updated_at else None,
+    }
+
+
+@app.get("/api/net-worth/chart.png")
+async def get_net_worth_chart_png_endpoint(
+    start_date: str = "2024-01-01",
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate and return a dark-mode high-resolution PNG chart of Net Worth performance."""
+    from .services.net_worth_service import (
+        calculate_and_save_net_worth_report,
+        generate_net_worth_png,
+        get_latest_net_worth_report,
+    )
+
+    try:
+        import matplotlib  # noqa: F401
+    except ImportError:
+        raise HTTPException(
+            status_code=501, detail="Matplotlib not installed on server"
+        )
+
+    report = await get_latest_net_worth_report(db, start_date=start_date)
+    if not report or not report.history:
+        try:
+            payload = await calculate_and_save_net_worth_report(start_date=start_date)
+        except Exception as e:
+            raise HTTPException(
+                status_code=404, detail=f"No net worth report data available: {e}"
+            )
+    else:
+        payload = {
+            "summary": report.summary or {},
+            "history": report.history or [],
+        }
+
+    png_bytes = generate_net_worth_png(payload)
+    if png_bytes is None:
+        raise HTTPException(
+            status_code=404, detail="Unable to generate chart from empty history"
+        )
+
+    return Response(
+        content=png_bytes,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": 'inline; filename="net_worth_performance.png"'
+        },
+    )
 
 
 app.mount("/", StaticFiles(directory="bridge_app/static", html=True), name="static")

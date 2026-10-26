@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>📈 Net Worth Performance — MM Bridge</title>
+    <meta name="description" content="Net Worth Performance Analytics Dashboard powered by Monarch Money.">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <style>
+        /* ===== INIT_AUTH_STATE will be injected here ===== */
+        /* INIT_AUTH_STATE */
+
+        :root {
+            --bg-canvas: #090D16;
+            --bg-card: #111827;
+            --bg-card-hover: #162033;
+            --bg-surface: #1E293B;
+            --border-color: #1F293D;
+            --border-color-light: #2D3B55;
+
+            --text-main: #F9FAFB;
+            --text-muted: #9CA3AF;
+            --text-dim: #64748B;
+
+            --accent-blue: #3B82F6;
+            --accent-blue-glow: rgba(59, 130, 246, 0.25);
+            --accent-green: #10B981;
+            --accent-green-bg: rgba(16, 185, 129, 0.12);
+            --accent-red: #EF4444;
+            --accent-red-bg: rgba(239, 68, 68, 0.12);
+            --accent-purple: #8B5CF6;
+
+            --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-canvas);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            min-height: 100dvh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: clamp(1rem, 0.8rem + 1vw, 2.5rem);
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+            min-height: 100dvh;
+        }
+
+        /* Header */
+        .dashboard-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1.25rem;
+            padding-bottom: 1.25rem;
+            padding-right: 52px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-left-col {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .header-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color-light);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 1.15rem;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .back-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-main);
+            border-color: var(--accent-blue);
+        }
+
+        .dashboard-title {
+            font-size: clamp(1.4rem, 1rem + 1.2vw, 2.25rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #FFFFFF 30%, #94A3B8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle-badges {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .pill-badge {
+            border-radius: 9999px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color-light);
+            padding: 0.35rem 0.85rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1rem;
+            border-radius: 8px;
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: #FFFFFF;
+            box-shadow: 0 4px 14px var(--accent-blue-glow);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2563EB;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        /* Fixed Upper-Right Hamburger Menu */
+        .menu-wrapper {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 500;
+        }
+
+        @media (max-width: 600px) {
+            .menu-wrapper {
+                top: 14px;
+                right: 14px;
+            }
+        }
+
+        .hamburger-btn {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color-light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        }
+
+        .hamburger-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .hamburger-bar {
+            width: 16px;
+            height: 2px;
+            background: var(--text-main);
+            border-radius: 2px;
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 210px;
+            background: #141C2E;
+            border: 1px solid var(--border-color-light);
+            border-radius: 12px;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+            padding: 0.45rem;
+            z-index: 501;
+        }
+
+        .menu-dropdown.show {
+            display: block;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: none;
+            background: transparent;
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s ease;
+        }
+
+        .menu-item:hover {
+            background: var(--bg-surface);
+        }
+
+        .menu-item.active-route {
+            background: rgba(59, 130, 246, 0.14);
+            color: #60A5FA;
+            font-weight: 600;
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: var(--border-color-light);
+            margin: 0.35rem 0;
+        }
+
+        /* KPI Summary Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .kpi-card {
+            position: relative;
+            overflow: hidden;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            transition: transform 0.2s ease, background 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            background: var(--bg-card-hover);
+        }
+
+        .kpi-card.accent-blue::after,
+        .kpi-card.accent-green::after,
+        .kpi-card.accent-purple::after {
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            content: '';
+            position: absolute;
+        }
+
+        .kpi-card.accent-blue::after {
+            background: var(--accent-blue);
+        }
+
+        .kpi-card.accent-green::after {
+            background: var(--accent-green);
+        }
+
+        .kpi-card.accent-purple::after {
+            background: var(--accent-purple);
+        }
+
+        .kpi-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            line-height: 1.2;
+        }
+
+        .kpi-value {
+            font-size: clamp(1.15rem, 1rem + 0.35vw, 1.45rem);
+            font-weight: 800;
+            font-family: var(--font-mono);
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        .kpi-subtext {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            margin-top: auto;
+            line-height: 1.25;
+        }
+
+        .trend-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.12rem 0.45rem;
+            border-radius: 9999px;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 600px) {
+            .dashboard-container {
+                gap: 1.15rem;
+                padding: 0.85rem;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+            }
+
+            .kpi-card {
+                padding: 0.7rem 0.75rem;
+                gap: 0.25rem;
+                border-radius: 8px;
+            }
+
+            .kpi-label {
+                font-size: 0.65rem;
+            }
+
+            .kpi-value {
+                font-size: 1.15rem;
+            }
+
+            .kpi-subtext {
+                font-size: 0.7rem;
+            }
+        }
+
+        .trend-positive {
+            color: var(--accent-green);
+            background: var(--accent-green-bg);
+        }
+
+        .trend-negative {
+            color: var(--accent-red);
+            background: var(--accent-red-bg);
+        }
+
+        /* Chart & Section Cards */
+        .charts-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.15rem;
+        }
+
+        .section-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .section-title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .section-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .section-badge {
+            border-radius: 9999px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color-light);
+            padding: 0.28rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 340px;
+        }
+
+        /* Itemized Monthly Breakdown Table (Accessible & Container-Responsive) */
+        .table-wrapper {
+            overflow-x: auto;
+            max-inline-size: 100%;
+            max-block-size: min(600px, 75dvh);
+            container-type: inline-size;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .table-wrapper:focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 2px;
+        }
+
+        table.breakdown-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.875rem;
+            --label-2: "Start Balance";
+            --label-3: "End Balance";
+            --label-4: "Monthly Gain ($)";
+            --label-5: "Monthly Change (%)";
+            --label-6: "Cumulative Growth (%)";
+        }
+
+        table.breakdown-table thead {
+            position: sticky;
+            inset-block-start: 0;
+            z-index: 2;
+            background: #182234;
+        }
+
+        table.breakdown-table th,
+        table.breakdown-table td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        table.breakdown-table thead th {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            text-align: right;
+            background: #182234;
+        }
+
+        table.breakdown-table thead th:first-child {
+            text-align: left;
+            position: sticky;
+            inset-inline-start: 0;
+            z-index: 3;
+        }
+
+        table.breakdown-table tbody tr {
+            transition: background 0.15s ease;
+        }
+
+        table.breakdown-table tbody tr:hover {
+            background: var(--bg-card-hover);
+        }
+
+        table.breakdown-table tbody th[scope="row"] {
+            position: sticky;
+            inset-inline-start: 0;
+            z-index: 1;
+            background: var(--bg-card);
+            text-align: left;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        table.breakdown-table tbody tr:hover th[scope="row"] {
+            background: var(--bg-card-hover);
+        }
+
+        table.breakdown-table tbody td {
+            text-align: right;
+            font-family: var(--font-mono);
+            color: var(--text-main);
+        }
+
+        .val-positive {
+            color: var(--accent-green) !important;
+            font-weight: 700;
+        }
+
+        .val-negative {
+            color: var(--accent-red) !important;
+            font-weight: 700;
+        }
+
+        @container (width < 680px) {
+            table.breakdown-table,
+            table.breakdown-table thead,
+            table.breakdown-table tbody,
+            table.breakdown-table tr,
+            table.breakdown-table th,
+            table.breakdown-table td {
+                display: block;
+            }
+
+            table.breakdown-table thead {
+                display: none;
+            }
+
+            table.breakdown-table tbody tr {
+                border: 1px solid var(--border-color-light);
+                border-radius: 8px;
+                padding: 0.75rem;
+                margin-block-end: 1rem;
+                background: var(--bg-card);
+            }
+
+            table.breakdown-table tbody th[scope="row"] {
+                position: sticky;
+                inset-block-start: 0;
+                z-index: 2;
+                background: var(--bg-surface);
+                padding: 0.5rem 0.75rem;
+                border-radius: 6px;
+                margin-block-end: 0.5rem;
+                border-bottom: none;
+            }
+
+            table.breakdown-table tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.45rem 0.25rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+
+            table.breakdown-table tbody td:last-child {
+                border-bottom: none;
+            }
+
+            table.breakdown-table td:nth-child(2)::before {
+                content: var(--label-2);
+                font-family: var(--font-sans);
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            table.breakdown-table td:nth-child(3)::before {
+                content: var(--label-3);
+                font-family: var(--font-sans);
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            table.breakdown-table td:nth-child(4)::before {
+                content: var(--label-4);
+                font-family: var(--font-sans);
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            table.breakdown-table td:nth-child(5)::before {
+                content: var(--label-5);
+                font-family: var(--font-sans);
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            table.breakdown-table td:nth-child(6)::before {
+                content: var(--label-6);
+                font-family: var(--font-sans);
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+        }
+
+        /* Empty / Loading Banner */
+        .status-banner {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color-light);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .status-banner.show {
+            display: flex;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-surface);
+            color: var(--text-main);
+            border: 1px solid var(--border-color-light);
+            border-radius: 10px;
+            padding: 0.75rem 1.15rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            transform: translateY(12px);
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Footer */
+        .app-footer {
+            margin-top: auto;
+            padding-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .app-footer-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .app-footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            opacity: 0.8;
+            transition: opacity 0.2s ease, color 0.2s ease;
+        }
+
+        .app-footer-links a:hover {
+            opacity: 1;
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Upper-Right Hamburger Menu -->
+    <div class="menu-wrapper">
+        <button class="hamburger-btn" id="menuToggle" aria-label="Open Menu">
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+        </button>
+        <div class="menu-dropdown" id="menuDropdown">
+            <button class="menu-item" id="menuRefreshBtn" onclick="triggerRefreshFromMenu(event)">
+                <span id="menuRefreshIcon">🔄</span>
+                <span id="menuRefreshText">Refresh Data</span>
+            </button>
+            <div class="menu-divider"></div>
+            <a href="/" class="menu-item">
+                <span>🏡</span>
+                <span>Receipt Sync</span>
+            </a>
+            <a href="/spending" class="menu-item">
+                <span>📊</span>
+                <span>Spending Report</span>
+            </a>
+            <a href="/net-worth" class="menu-item active-route">
+                <span>📈</span>
+                <span>Net Worth</span>
+            </a>
+            <a href="/fire" class="menu-item">
+                <span>🔥</span>
+                <span>FIRE Dashboard</span>
+            </a>
+            <div class="menu-divider"></div>
+            <a href="#" id="updateAppLink" class="menu-item">
+                <span>🔄</span>
+                <span>Update App</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Section 3.1: Dashboard Header + App Navigation -->
+        <header class="dashboard-header">
+            <div class="header-left-col">
+                <div class="header-title-row">
+                    <a href="/" class="back-btn" title="Back to Home">←</a>
+                    <h1 class="dashboard-title">Net Worth Performance</h1>
+                </div>
+                <div class="subtitle-badges">
+                    <span class="pill-badge" id="dateRangeBadge">Jan 2024 through Present</span>
+                    <span class="pill-badge" id="freshnessBadge" style="display: none;"></span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button type="button" class="btn-action btn-primary" id="refreshBtn" onclick="triggerRefresh()">
+                    <span id="refreshBtnIcon">🔄</span>
+                    <span id="refreshBtnText">Refresh Data</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="status-banner" id="statusBanner">
+            <span id="statusBannerText">Syncing Net Worth snapshots from Monarch Money...</span>
+        </div>
+
+        <!-- Section 3.2: Five KPI Summary Cards -->
+        <section class="kpi-grid" aria-label="Key Performance Indicators">
+            <!-- Card 1: Current Net Worth -->
+            <div class="kpi-card accent-blue">
+                <div class="kpi-label">Current Net Worth</div>
+                <div class="kpi-value" id="kpiCurrentNetWorth">$0</div>
+                <div class="kpi-subtext">
+                    <span class="trend-pill trend-positive" id="kpiTotalPctPill">+0.00%</span>
+                    <span>since Jan 1, 2024</span>
+                </div>
+            </div>
+
+            <!-- Card 2: Total Dollar Gain -->
+            <div class="kpi-card accent-green">
+                <div class="kpi-label">Total Dollar Gain</div>
+                <div class="kpi-value" id="kpiTotalDollarGain">+$0</div>
+                <div class="kpi-subtext" id="kpiStartingSubtext">Starting: $0</div>
+            </div>
+
+            <!-- Card 3: All-Time Peak -->
+            <div class="kpi-card accent-purple">
+                <div class="kpi-label">All-Time Peak</div>
+                <div class="kpi-value" id="kpiPeakNetWorth">$0</div>
+                <div class="kpi-subtext" id="kpiPeakMonthSubtext">Reached in —</div>
+            </div>
+
+            <!-- Card 4: Best Month -->
+            <div class="kpi-card">
+                <div class="kpi-label">Best Month</div>
+                <div class="kpi-value" id="kpiBestMonthGain" style="color: var(--accent-green);">+0.00%</div>
+                <div class="kpi-subtext" id="kpiBestMonthSubtext">Recorded in —</div>
+            </div>
+
+            <!-- Card 5: Worst Month -->
+            <div class="kpi-card">
+                <div class="kpi-label">Worst Month</div>
+                <div class="kpi-value" id="kpiWorstMonthGain" style="color: var(--accent-red);">-0.00%</div>
+                <div class="kpi-subtext" id="kpiWorstMonthSubtext">Recorded in —</div>
+            </div>
+
+            <!-- Card 6: Average Monthly Gain -->
+            <div class="kpi-card">
+                <div class="kpi-label">Average Monthly Gain</div>
+                <div class="kpi-value" id="kpiAvgMonthlyGain">+0.00%</div>
+                <div class="kpi-subtext">Monthly compounding</div>
+            </div>
+        </section>
+
+        <!-- Section 3.3: Interactive Charts Section (Chart.js v4) -->
+        <div class="charts-stack" id="interactiveChartsSection">
+            <!-- Chart 1: Monthly Net Worth Percentage Change -->
+            <section class="section-card">
+                <div class="section-header">
+                    <div class="section-title-group">
+                        <h2 class="section-title">📊 Monthly Net Worth Percentage Change</h2>
+                        <p class="section-subtitle">Percentage gain or loss for each calendar month relative to starting balance</p>
+                    </div>
+                    <span class="section-badge">Bar Chart • % Gain/Loss</span>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="monthlyBarChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Chart 2: Cumulative Net Worth Growth (%) -->
+            <section class="section-card">
+                <div class="section-header">
+                    <div class="section-title-group">
+                        <h2 class="section-title">📈 Cumulative Net Worth Growth (%)</h2>
+                        <p class="section-subtitle">Overall percentage portfolio growth since January 1, 2024</p>
+                    </div>
+                    <span class="section-badge">Area Chart • Cumulative %</span>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="cumulativeAreaChart"></canvas>
+                </div>
+            </section>
+        </div>
+
+        <!-- Section 3.4: Itemized Monthly Breakdown Table -->
+        <section class="section-card">
+            <div class="section-header">
+                <div class="section-title-group">
+                    <h2 class="section-title">📋 Itemized Monthly Breakdown</h2>
+                    <p class="section-subtitle">Complete historical snapshot balances, dollar changes, and monthly percentage trajectories</p>
+                </div>
+                <span class="section-badge" id="monthsTrackedBadge">0 Months Tracked</span>
+            </div>
+
+            <div tabindex="0" role="region" aria-labelledby="net-worth-table-caption" class="table-wrapper">
+                <table class="breakdown-table">
+                    <caption id="net-worth-table-caption" class="sr-only">Itemized Monthly Net Worth Breakdown</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Month</th>
+                            <th scope="col">Start Balance</th>
+                            <th scope="col">End Balance</th>
+                            <th scope="col">Monthly Gain ($)</th>
+                            <th scope="col">Monthly Change (%)</th>
+                            <th scope="col">Cumulative Growth (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="breakdownTableBody">
+                        <!-- Populated dynamically in reverse chronological order -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="app-footer-links">
+                <a href="https://www.linkedin.com/in/tomolick/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z" />
+                    </svg>
+                </a>
+                <a href="https://www.egodevnull.com" target="_blank" rel="noopener noreferrer" aria-label="Ego /dev/null">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+                        <defs>
+                            <mask id="eo-mask">
+                                <rect width="24" height="24" fill="white" />
+                                <g stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                                    <path d="M9 6H4v12h5" />
+                                    <path d="M4 12h4" />
+                                    <circle cx="16" cy="12" r="5" />
+                                    <line x1="11.5" y1="16.5" x2="20.5" y2="7.5" />
+                                </g>
+                            </mask>
+                        </defs>
+                        <rect width="24" height="24" rx="4" fill="currentColor" mask="url(#eo-mask)" />
+                    </svg>
+                </a>
+            </div>
+            <span style="font-style: italic;">©2025-26 EGO /dev/null</span>
+        </footer>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script>
+        let netWorthData = null;
+        let monthlyBarChartInstance = null;
+        let cumulativeAreaChartInstance = null;
+        let pollTimer = null;
+        let toastTimeout = null;
+
+        const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        function formatMonthHuman(monthStr) {
+            if (!monthStr || typeof monthStr !== 'string') return '';
+            const parts = monthStr.split('-');
+            if (parts.length < 2) return monthStr;
+            const year = parts[0];
+            const mIdx = parseInt(parts[1], 10) - 1;
+            if (mIdx >= 0 && mIdx < 12) {
+                return `${SHORT_MONTHS[mIdx]} ${year}`;
+            }
+            return monthStr;
+        }
+
+        function formatDateRange(firstMonth, lastMonth) {
+            const firstHuman = formatMonthHuman(firstMonth);
+            const lastHuman = formatMonthHuman(lastMonth);
+            if (firstHuman && lastHuman) {
+                return `${firstHuman} through ${lastHuman}`;
+            } else if (firstHuman) {
+                return `Since ${firstHuman}`;
+            }
+            return 'Jan 2024 through Present';
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toast.textContent = message;
+            toast.classList.add('show');
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3200);
+        }
+
+        function formatCurrency0(val) {
+            const num = Number(val) || 0;
+            const sign = num < 0 ? '-' : '';
+            return sign + '$' + Math.round(Math.abs(num)).toLocaleString('en-US');
+        }
+
+        function formatSignedCurrency0(val) {
+            const num = Number(val) || 0;
+            const sign = num >= 0 ? '+' : '-';
+            return sign + '$' + Math.round(Math.abs(num)).toLocaleString('en-US');
+        }
+
+        function formatCurrency2(val) {
+            const num = Number(val) || 0;
+            const sign = num < 0 ? '-' : '';
+            return sign + '$' + Math.abs(num).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function formatSignedCurrency2(val) {
+            const num = Number(val) || 0;
+            const sign = num >= 0 ? '+' : '-';
+            return sign + '$' + Math.abs(num).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function formatSignedPct(val, decimals = 2) {
+            const num = Number(val) || 0;
+            const sign = num >= 0 ? '+' : '';
+            return sign + num.toFixed(decimals) + '%';
+        }
+
+        function normalizeHistoryItem(item, firstStartNw) {
+            const month = item.month || '';
+            const startNw = Number(item.start_balance ?? item.start_nw ?? 0);
+            const endNw = Number(item.end_balance ?? item.end_nw ?? 0);
+            const gainDollars = Number(item.gain_amount ?? item.gain_dollars ?? item.monthly_gain_dollars ?? (endNw - startNw));
+            const gainPercent = Number(item.gain_percent ?? item.monthly_gain_percent ?? (startNw !== 0 ? (gainDollars / startNw) * 100 : 0));
+            const baseStart = firstStartNw || startNw || 1;
+            const cumDollars = Number(item.cumulative_gain_amount ?? item.cumulative_gain_dollars ?? (endNw - baseStart));
+            const cumPercent = Number(item.cumulative_gain_percent ?? (baseStart !== 0 ? ((endNw - baseStart) / baseStart) * 100 : 0));
+            return {
+                month,
+                start_nw: startNw,
+                end_nw: endNw,
+                gain_dollars: gainDollars,
+                gain_percent: gainPercent,
+                cumulative_gain_dollars: cumDollars,
+                cumulative_gain_percent: cumPercent,
+                end_date: item.end_date || ''
+            };
+        }
+
+        function extractKpisAndHistory(payload) {
+            const rawHistory = Array.isArray(payload.history)
+                ? payload.history
+                : (Array.isArray(payload.monthly_history) ? payload.monthly_history : []);
+
+            const sortedChronological = [...rawHistory].sort((a, b) => String(a.month).localeCompare(String(b.month)));
+            const firstStartNw = sortedChronological.length > 0
+                ? Number(sortedChronological[0].start_balance ?? sortedChronological[0].start_nw ?? 0)
+                : 0;
+
+            const history = sortedChronological.map(item => normalizeHistoryItem(item, firstStartNw));
+            const summary = payload.summary || payload.kpis || payload;
+
+            const firstItem = history[0] || null;
+            const lastItem = history[history.length - 1] || null;
+
+            const startingNw = Number(summary.starting_net_worth ?? summary.start_nw ?? (firstItem ? firstItem.start_nw : 0));
+            const currentNw = Number(summary.current_net_worth ?? summary.end_nw ?? (lastItem ? lastItem.end_nw : 0));
+            const totalDollarGain = Number(summary.total_gain_amount ?? summary.total_dollar_gain ?? summary.cumulative_gain_dollars ?? (currentNw - startingNw));
+            const totalPctGain = Number(
+                summary.total_gain_percent ??
+                summary.total_percent_gain ??
+                summary.total_pct_gain ??
+                summary.cumulative_gain_percent ??
+                (startingNw !== 0 ? (totalDollarGain / startingNw) * 100 : 0)
+            );
+
+            let peakNw = Number(summary.all_time_peak ?? summary.peak_net_worth ?? 0);
+            let peakMonth = summary.peak_month ?? summary.all_time_peak_month ?? '';
+            if ((!peakNw || !peakMonth) && history.length > 0) {
+                let bestPeak = history[0];
+                for (const h of history) {
+                    if (h.end_nw > bestPeak.end_nw) bestPeak = h;
+                }
+                if (!peakNw) peakNw = bestPeak.end_nw;
+                if (!peakMonth) peakMonth = bestPeak.month;
+            }
+
+            let bestMonthGain = summary.best_month_gain_percent ?? summary.best_month_percent ?? summary.best_month?.gain_percent;
+            let bestMonthName = summary.best_month_name ?? summary.best_month_month ?? (typeof summary.best_month === 'string' ? summary.best_month : summary.best_month?.month);
+            if ((bestMonthGain === undefined || !bestMonthName) && history.length > 0) {
+                let bestM = history[0];
+                for (const h of history) {
+                    if (h.gain_percent > bestM.gain_percent) bestM = h;
+                }
+                if (bestMonthGain === undefined) bestMonthGain = bestM.gain_percent;
+                if (!bestMonthName) bestMonthName = bestM.month;
+            }
+
+            let worstMonthGain = summary.worst_month_gain_percent ?? summary.worst_month_percent ?? summary.worst_month?.gain_percent;
+            let worstMonthName = summary.worst_month_name ?? summary.worst_month_month ?? (typeof summary.worst_month === 'string' ? summary.worst_month : summary.worst_month?.month);
+            if ((worstMonthGain === undefined || !worstMonthName) && history.length > 0) {
+                let worstM = history[0];
+                for (const h of history) {
+                    if (h.gain_percent < worstM.gain_percent) worstM = h;
+                }
+                if (worstMonthGain === undefined) worstMonthGain = worstM.gain_percent;
+                if (!worstMonthName) worstMonthName = worstM.month;
+            }
+
+            let avgMonthlyGain = summary.average_monthly_gain_percent ?? summary.avg_monthly_gain_percent ?? summary.average_monthly_gain;
+            if (avgMonthlyGain === undefined) {
+                if (history.length > 0) {
+                    const sumPct = history.reduce((acc, h) => acc + h.gain_percent, 0);
+                    avgMonthlyGain = sumPct / history.length;
+                } else {
+                    avgMonthlyGain = 0;
+                }
+            }
+
+            return {
+                history,
+                kpis: {
+                    startingNw,
+                    currentNw,
+                    totalDollarGain,
+                    totalPctGain,
+                    peakNw,
+                    peakMonth: peakMonth || '—',
+                    bestMonthGain: Number(bestMonthGain || 0),
+                    bestMonthName: bestMonthName || '—',
+                    worstMonthGain: Number(worstMonthGain || 0),
+                    worstMonthName: worstMonthName || '—',
+                    avgMonthlyGain: Number(avgMonthlyGain || 0)
+                }
+            };
+        }
+
+        function renderKpis(kpis, history, updatedAt) {
+            document.getElementById('kpiCurrentNetWorth').textContent = formatCurrency0(kpis.currentNw);
+
+            const pctPill = document.getElementById('kpiTotalPctPill');
+            pctPill.textContent = formatSignedPct(kpis.totalPctGain, 2);
+            pctPill.className = 'trend-pill ' + (kpis.totalPctGain >= 0 ? 'trend-positive' : 'trend-negative');
+
+            const gainEl = document.getElementById('kpiTotalDollarGain');
+            gainEl.textContent = formatSignedCurrency0(kpis.totalDollarGain);
+
+            document.getElementById('kpiStartingSubtext').textContent = `Starting: ${formatCurrency0(kpis.startingNw)}`;
+            document.getElementById('kpiPeakNetWorth').textContent = formatCurrency0(kpis.peakNw);
+            const peakHuman = formatMonthHuman(kpis.peakMonth) || kpis.peakMonth;
+            document.getElementById('kpiPeakMonthSubtext').textContent = `Reached in ${peakHuman}`;
+
+            const bestMonthEl = document.getElementById('kpiBestMonthGain');
+            bestMonthEl.textContent = formatSignedPct(kpis.bestMonthGain, 2);
+            bestMonthEl.style.color = kpis.bestMonthGain >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            const bestHuman = formatMonthHuman(kpis.bestMonthName) || kpis.bestMonthName;
+            document.getElementById('kpiBestMonthSubtext').textContent = `Recorded in ${bestHuman}`;
+
+            const worstMonthEl = document.getElementById('kpiWorstMonthGain');
+            if (worstMonthEl) {
+                worstMonthEl.textContent = formatSignedPct(kpis.worstMonthGain, 2);
+                worstMonthEl.style.color = kpis.worstMonthGain >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
+            const worstMonthSubtext = document.getElementById('kpiWorstMonthSubtext');
+            if (worstMonthSubtext) {
+                const worstHuman = formatMonthHuman(kpis.worstMonthName) || kpis.worstMonthName;
+                worstMonthSubtext.textContent = `Recorded in ${worstHuman}`;
+            }
+
+            const avgEl = document.getElementById('kpiAvgMonthlyGain');
+            avgEl.textContent = formatSignedPct(kpis.avgMonthlyGain, 2);
+
+            if (history.length > 0) {
+                const firstM = history[0].month;
+                const lastM = history[history.length - 1].month;
+                document.getElementById('dateRangeBadge').textContent = formatDateRange(firstM, lastM);
+            }
+
+            const freshBadge = document.getElementById('freshnessBadge');
+            if (updatedAt) {
+                const dt = new Date(updatedAt);
+                if (!isNaN(dt.getTime())) {
+                    freshBadge.style.display = 'inline-flex';
+                    freshBadge.textContent = `Updated ${dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                }
+            }
+        }
+
+        function renderInteractiveCharts(history) {
+            const labels = history.map(h => h.month);
+
+            // Chart 1: Monthly Net Worth Percentage Change (Bar Chart)
+            const barCtx = document.getElementById('monthlyBarChart').getContext('2d');
+            if (monthlyBarChartInstance) {
+                monthlyBarChartInstance.destroy();
+            }
+
+            monthlyBarChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Monthly Change (%)',
+                        data: history.map(h => Number(h.gain_percent.toFixed(2))),
+                        backgroundColor: history.map(h => h.gain_percent >= 0 ? '#10B981' : '#EF4444'),
+                        borderRadius: 4,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1E293B',
+                            titleColor: '#F9FAFB',
+                            bodyColor: '#E2E8F0',
+                            borderColor: '#374151',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function (context) {
+                                    const item = history[context.dataIndex];
+                                    if (!item) return '';
+                                    return [
+                                        `Monthly Change: ${formatSignedPct(item.gain_percent, 2)}`,
+                                        `Dollar Change: ${formatSignedCurrency2(item.gain_dollars)}`,
+                                        `End Net Worth: ${formatCurrency2(item.end_nw)}`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#9CA3AF',
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: { family: "'JetBrains Mono', monospace", size: 11 }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#9CA3AF',
+                                font: { family: "'JetBrains Mono', monospace", size: 11 },
+                                callback: function (value) {
+                                    return `${value}%`;
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.08)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Chart 2: Cumulative Net Worth Growth % (Area / Line Chart)
+            const areaCtx = document.getElementById('cumulativeAreaChart').getContext('2d');
+            if (cumulativeAreaChartInstance) {
+                cumulativeAreaChartInstance.destroy();
+            }
+
+            cumulativeAreaChartInstance = new Chart(areaCtx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Cumulative Growth (%)',
+                        data: history.map(h => Number(h.cumulative_gain_percent.toFixed(2))),
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#3B82F6',
+                        pointBorderColor: '#1E293B',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1E293B',
+                            titleColor: '#F9FAFB',
+                            bodyColor: '#E2E8F0',
+                            borderColor: '#374151',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function (context) {
+                                    const item = history[context.dataIndex];
+                                    if (!item) return '';
+                                    return [
+                                        `Cumulative Growth: ${formatSignedPct(item.cumulative_gain_percent, 2)}`,
+                                        `Total Dollar Gain: ${formatSignedCurrency2(item.cumulative_gain_dollars)}`,
+                                        `Portfolio Net Worth: ${formatCurrency2(item.end_nw)}`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#9CA3AF',
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: { family: "'JetBrains Mono', monospace", size: 11 }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#9CA3AF',
+                                font: { family: "'JetBrains Mono', monospace", size: 11 },
+                                callback: function (value) {
+                                    return `${value >= 0 ? '+' : ''}${value}%`;
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.08)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderBreakdownTable(history) {
+            const tbody = document.getElementById('breakdownTableBody');
+            const badge = document.getElementById('monthsTrackedBadge');
+            badge.textContent = `${history.length} Months Tracked`;
+
+            const reversed = [...history].reverse();
+            tbody.innerHTML = reversed.map(row => {
+                const dollarClass = row.gain_dollars >= 0 ? 'val-positive' : 'val-negative';
+                const pillClass = row.gain_percent >= 0 ? 'trend-positive' : 'trend-negative';
+                const cumClass = row.cumulative_gain_percent >= 0 ? 'val-positive' : 'val-negative';
+
+                return `
+                    <tr>
+                        <th scope="row">${row.month}</th>
+                        <td>${formatCurrency2(row.start_nw)}</td>
+                        <td>${formatCurrency2(row.end_nw)}</td>
+                        <td class="${dollarClass}">${formatSignedCurrency2(row.gain_dollars)}</td>
+                        <td><span class="trend-pill ${pillClass}">${formatSignedPct(row.gain_percent, 2)}</span></td>
+                        <td class="${cumClass}">${formatSignedPct(row.cumulative_gain_percent, 2)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function setSyncingUiState(syncing, message) {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const refreshText = document.getElementById('refreshBtnText');
+            const menuBtn = document.getElementById('menuRefreshBtn');
+            const menuText = document.getElementById('menuRefreshText');
+            const dot = document.getElementById('liveStatusDot');
+            const banner = document.getElementById('statusBanner');
+            const bannerText = document.getElementById('statusBannerText');
+
+            if (syncing) {
+                if (refreshBtn) refreshBtn.disabled = true;
+                if (refreshText) refreshText.textContent = 'Syncing...';
+                if (menuBtn) menuBtn.disabled = true;
+                if (menuText) menuText.textContent = 'Syncing...';
+                if (dot) dot.classList.add('syncing');
+                if (bannerText) bannerText.textContent = message || 'Syncing Net Worth snapshots from Monarch Money...';
+                if (banner) banner.classList.add('show');
+            } else {
+                if (refreshBtn) refreshBtn.disabled = false;
+                if (refreshText) refreshText.textContent = 'Refresh Data';
+                if (menuBtn) menuBtn.disabled = false;
+                if (menuText) menuText.textContent = 'Refresh Data';
+                if (dot) dot.classList.remove('syncing');
+                if (banner) banner.classList.remove('show');
+            }
+        }
+
+        async function loadNetWorthReport() {
+            try {
+                const res = await fetch('/api/net-worth');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const payload = await res.json();
+
+                if (payload.sync_status === 'syncing' || payload.status === 'syncing') {
+                    setSyncingUiState(true, 'Calculating Net Worth history from Monarch Money...');
+                    startStatusPolling();
+                } else {
+                    setSyncingUiState(false);
+                }
+
+                const extracted = extractKpisAndHistory(payload);
+                netWorthData = extracted;
+
+                if (extracted.history.length > 0) {
+                    renderKpis(extracted.kpis, extracted.history, payload.updated_at);
+                    renderInteractiveCharts(extracted.history);
+                    renderBreakdownTable(extracted.history);
+                } else if (payload.status === 'not_found') {
+                    const banner = document.getElementById('statusBanner');
+                    const bannerText = document.getElementById('statusBannerText');
+                    bannerText.textContent = payload.message || 'No Net Worth snapshot found yet. Click "Refresh Data" to sync with Monarch Money.';
+                    banner.classList.add('show');
+                }
+            } catch (err) {
+                console.error('Failed to load Net Worth report:', err);
+            }
+        }
+
+        function startStatusPolling() {
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/net-worth/status');
+                    if (!res.ok) return;
+                    const st = await res.json();
+                    if (st.sync_status === 'ready' || st.status === 'ready') {
+                        clearInterval(pollTimer);
+                        pollTimer = null;
+                        setSyncingUiState(false);
+                        showToast('✅ Net Worth data updated!');
+                        await loadNetWorthReport();
+                    } else if (st.sync_status === 'error' || st.status === 'error') {
+                        clearInterval(pollTimer);
+                        pollTimer = null;
+                        setSyncingUiState(false);
+                        showToast(`⚠️ Sync error: ${st.error_message || 'Unknown error'}`);
+                    }
+                } catch (err) {
+                    console.error('Status poll error:', err);
+                }
+            }, 2200);
+        }
+
+        async function triggerRefresh() {
+            setSyncingUiState(true, 'Refreshing Net Worth history from Monarch Money...');
+            try {
+                const res = await fetch('/api/net-worth/recalculate', { method: 'POST' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (data.sync_status === 'ready' || data.history) {
+                    setSyncingUiState(false);
+                    showToast('✅ Net Worth data refreshed!');
+                    await loadNetWorthReport();
+                } else {
+                    startStatusPolling();
+                }
+            } catch (err) {
+                console.error('Refresh error:', err);
+                setSyncingUiState(false);
+                showToast('⚠️ Could not start refresh.');
+            }
+        }
+
+        function triggerRefreshFromMenu(event) {
+            if (event) event.stopPropagation();
+            document.getElementById('menuDropdown').classList.remove('show');
+            triggerRefresh();
+        }
+
+        function initApp() {
+            if (new URLSearchParams(window.location.search).get('updated') === '1') {
+                showToast('✨ Updated to the latest version!');
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('updated');
+                cleanUrl.searchParams.delete('v');
+                window.history.replaceState({}, '', cleanUrl.toString());
+            }
+
+            const toggle = document.getElementById('menuToggle');
+            const dropdown = document.getElementById('menuDropdown');
+            if (toggle && dropdown) {
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('show');
+                });
+                document.addEventListener('click', () => {
+                    dropdown.classList.remove('show');
+                });
+            }
+
+            const updateAppBtn = document.getElementById('updateAppLink');
+            if (updateAppBtn) {
+                updateAppBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    showToast('Updating app...');
+                    try {
+                        if ('serviceWorker' in navigator) {
+                            const registrations = await navigator.serviceWorker.getRegistrations();
+                            for (const registration of registrations) {
+                                await registration.unregister();
+                            }
+                        }
+                        if ('caches' in window) {
+                            const cacheNames = await caches.keys();
+                            await Promise.all(cacheNames.map(name => caches.delete(name)));
+                        }
+                    } catch (err) {
+                        console.error('Failed to clear app cache:', err);
+                    }
+                    await new Promise(r => setTimeout(r, 200));
+                    const url = new URL('/net-worth', window.location.origin);
+                    url.searchParams.set('v', Date.now());
+                    url.searchParams.set('updated', '1');
+                    window.location.href = url.toString();
+                });
+            }
+
+            loadNetWorthReport();
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+
+</html>
