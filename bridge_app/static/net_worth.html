@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sriracha&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
@@ -148,23 +148,22 @@
         }
 
         .header-title {
-            font-size: clamp(1.2rem, 1rem + 0.8vw, 1.6rem);
-            font-weight: 800;
+            font-family: 'Sriracha', cursive;
+            font-size: 1.4rem;
             display: flex;
             align-items: center;
-            gap: 10px;
-            letter-spacing: -0.02em;
+            gap: 8px;
             color: var(--text-main);
         }
 
         .header-title .header-icon {
-            display: inline-block;
-            font-size: 1.3rem;
             -webkit-text-fill-color: initial;
+            background: none;
+            display: inline-block;
         }
 
         .header-title .header-text {
-            background: linear-gradient(135deg, #FFFFFF 30%, #94A3B8 100%);
+            background: linear-gradient(135deg, #10b981, #6ee7b7);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -845,7 +844,7 @@
                 <a href="/" class="back-btn" title="Back to Home">←</a>
                 <h1 class="header-title">
                     <span class="header-icon">📈</span>
-                    <span class="header-text">Net Worth Performance</span>
+                    <span class="header-text">Net Worth</span>
                 </h1>
             </div>
             <div style="position: relative;">
