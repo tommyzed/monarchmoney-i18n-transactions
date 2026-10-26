@@ -90,8 +90,6 @@ class MonarchMoney(object):
         self._timeout = timeout
         # Cookie jar for new cookie-based auth (Monarch security update 2025)
         self._cookie_jar: Optional[dict] = None
-        self._graphql_client: Optional[Client] = None
-        self._graphql_client_key: Optional[tuple] = None
 
     @staticmethod
     def _looks_like_jwt(token: str) -> bool:
@@ -3334,15 +3332,6 @@ class MonarchMoney(object):
                 "Make sure you call login() first or provide a session token!"
             )
 
-        cache_key = (
-            self._token,
-            self._timeout,
-            tuple(sorted(self._cookie_jar.items())) if self._cookie_jar else None,
-            tuple(sorted(self._headers.items())) if self._headers else None,
-        )
-        if getattr(self, "_graphql_client", None) is not None and getattr(self, "_graphql_client_key", None) == cache_key:
-            return self._graphql_client
-
         headers = dict(self._headers)
         client_session_args = {}
 
@@ -3369,13 +3358,14 @@ class MonarchMoney(object):
             timeout=self._timeout,
             client_session_args=client_session_args or None,
         )
-        self._graphql_client = Client(
+        # NOTE: A fresh Client is intentionally built per call. gql's execute_async()
+        # connects/closes the transport on every call and raises TransportAlreadyConnected
+        # if a shared Client is used concurrently (e.g. via asyncio.gather).
+        return Client(
             transport=transport,
             fetch_schema_from_transport=False,
             execute_timeout=self._timeout,
         )
-        self._graphql_client_key = cache_key
-        return self._graphql_client
 
     def _convert_to_csv_string(self, csv_content: List[BalanceHistoryRow]) -> str:
         """
