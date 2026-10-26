@@ -1539,11 +1539,6 @@ LOADING_HTML = """
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⏳</span>
                         <span>Pending Txns</span>
                     </a>
-                    <a href="intent://transactions?tags=239319736443617746&transactionVisibility=all_transactions#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%3Ftags%3D239319736443617746%26transactionVisibility%3Dall_transactions;end"
-                        target="_blank" class="deep-link-item">
-                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">💵</span>
-                        <span>Cash Txns</span>
-                    </a>
                     <div class="menu-divider"></div>
                     <a href="#" id="updateAppLink" class="deep-link-item">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔄</span>
