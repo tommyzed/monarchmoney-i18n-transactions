@@ -77,6 +77,80 @@ if UNLOCK_SECRET:
 else:
     COOKIE_VALUE = None
 
+GHOST_404_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>404 - Not Found</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #0f172a;
+                --card-bg: #1e293b;
+                --text-main: #f1f5f9;
+                --text-muted: #94a3b8;
+                --border: #334155;
+            }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .card {
+            max-width: 520px;
+            width: 100%;
+            text-align: center;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 1.25rem;
+            padding: 2.25rem 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+        }
+        .whale-img {
+            width: 100%;
+            max-height: 320px;
+            object-fit: cover;
+            border-radius: 0.875rem;
+            margin-bottom: 1.75rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+        p {
+            font-size: 1rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img src="/fail-whale.jpg" alt="Fail Whale" class="whale-img">
+        <h1>404 &mdash; Page Not Found</h1>
+        <p>The page you are looking for is currently taking flight or resting at sea.</p>
+    </div>
+</body>
+</html>"""
+
 class GhostSecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Default state
@@ -103,7 +177,7 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
                 response.headers["Cache-Control"] = "no-cache, must-revalidate"
             return response
 
-        if request.url.path.endswith((".png", ".jpg", ".css", ".js", ".gif")):
+        if request.url.path.endswith((".png", ".jpg", ".jpeg", ".webp", ".svg", ".css", ".js", ".gif")):
              return await call_next(request)
 
         # Allow FIRE dashboard demo access
@@ -116,7 +190,9 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
             return Response(status_code=401, content="Unauthorized - Security not configured on server")
 
         # GHOST MODE: Return 404 Not Found if unauthorized
-        return Response(status_code=404, content="Not Found")
+        if request.url.path.startswith("/api/"):
+            return Response(status_code=404, content="Not Found")
+        return HTMLResponse(status_code=404, content=GHOST_404_HTML)
 
 app.add_middleware(GhostSecurityMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -148,7 +224,7 @@ async def activate(request: Request, s: str):
         
     if not hmac.compare_digest(s, UNLOCK_SECRET):
         # Fake a 404 if secret is wrong to prevent guessing
-        return Response(status_code=404, content="Not Found")
+        return HTMLResponse(status_code=404, content=GHOST_404_HTML)
     
     html_content = """
     <html>
