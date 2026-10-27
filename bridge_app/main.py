@@ -90,6 +90,7 @@ GHOST_404_HTML = """<!DOCTYPE html>
             --text-main: #1e293b;
             --text-muted: #64748b;
             --border: #e2e8f0;
+            --input-bg: #ffffff;
         }
         @media (prefers-color-scheme: dark) {
             :root {
@@ -98,6 +99,7 @@ GHOST_404_HTML = """<!DOCTYPE html>
                 --text-main: #f1f5f9;
                 --text-muted: #94a3b8;
                 --border: #334155;
+                --input-bg: #0f172a;
             }
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -128,6 +130,22 @@ GHOST_404_HTML = """<!DOCTYPE html>
             border-radius: 0.875rem;
             margin-bottom: 1.75rem;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: transform 0.15s ease;
+        }
+        .whale-img:active {
+            transform: scale(0.97);
+        }
+        .bounce {
+            animation: gentle-wobble 0.3s ease;
+        }
+        @keyframes gentle-wobble {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.96) rotate(-1deg); }
+            100% { transform: scale(1); }
         }
         h1 {
             font-size: 1.75rem;
@@ -140,14 +158,153 @@ GHOST_404_HTML = """<!DOCTYPE html>
             color: var(--text-muted);
             line-height: 1.5;
         }
+        .secret-form {
+            display: none;
+            margin-top: 1.5rem;
+            width: 100%;
+            max-width: 360px;
+            margin-left: auto;
+            margin-right: auto;
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .input-row {
+            display: flex;
+            gap: 0.5rem;
+            width: 100%;
+        }
+        .secret-input {
+            flex: 1;
+            padding: 0.65rem 0.85rem;
+            font-size: 16px;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background: var(--input-bg);
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .secret-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        .secret-input.shake {
+            animation: shake 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .unlock-btn {
+            padding: 0.65rem 1.1rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #ffffff;
+            background: #2563eb;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.05s ease;
+            white-space: nowrap;
+        }
+        .unlock-btn:hover {
+            background: #1d4ed8;
+        }
+        .unlock-btn:active {
+            transform: scale(0.98);
+        }
+        .unlock-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .error-msg {
+            display: none;
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="card">
-        <img src="/fail-whale.jpg" alt="Fail Whale" class="whale-img">
+        <img src="/fail-whale.jpg" alt="Fail Whale" class="whale-img" id="whaleImg" onclick="handleWhaleClick()">
         <h1>404 &mdash; Page Not Found</h1>
         <p>The page you are looking for is currently taking flight or resting at sea.</p>
+        <form id="secretForm" class="secret-form" onsubmit="handleSecretSubmit(event)">
+            <div class="input-row">
+                <input type="password" id="secretInput" class="secret-input" placeholder="Enter unlock code" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required>
+                <button type="submit" id="unlockBtn" class="unlock-btn">Unlock</button>
+            </div>
+            <div id="errorMsg" class="error-msg"></div>
+        </form>
     </div>
+    <script>
+        let tapCount = 0;
+        let resetTimer = null;
+        const TARGET_TAPS = 7;
+
+        function handleWhaleClick() {
+            tapCount++;
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => { tapCount = 0; }, 4000);
+
+            const img = document.getElementById('whaleImg');
+            img.classList.remove('bounce');
+            void img.offsetWidth;
+            img.classList.add('bounce');
+
+            if (tapCount >= TARGET_TAPS) {
+                tapCount = 0;
+                const form = document.getElementById('secretForm');
+                form.style.display = 'block';
+                const input = document.getElementById('secretInput');
+                input.focus();
+                if ('vibrate' in navigator) {
+                    try { navigator.vibrate(50); } catch (e) {}
+                }
+            }
+        }
+
+        async function handleSecretSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('secretInput');
+            const btn = document.getElementById('unlockBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            const secret = input.value.trim();
+            if (!secret) return;
+
+            btn.disabled = true;
+            btn.textContent = '...';
+            errorMsg.style.display = 'none';
+
+            try {
+                const res = await fetch('/s?s=' + encodeURIComponent(secret), {
+                    credentials: 'same-origin'
+                });
+                if (res.ok) {
+                    btn.textContent = '✓ Unlocked';
+                    btn.style.backgroundColor = '#16a34a';
+                    window.location.replace('/');
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = 'Unlock';
+                    errorMsg.textContent = 'Incorrect code. Please try again.';
+                    errorMsg.style.display = 'block';
+                    input.classList.add('shake');
+                    setTimeout(() => input.classList.remove('shake'), 450);
+                    input.select();
+                }
+            } catch (err) {
+                window.location.href = '/s?s=' + encodeURIComponent(secret);
+            }
+        }
+    </script>
 </body>
 </html>"""
 
