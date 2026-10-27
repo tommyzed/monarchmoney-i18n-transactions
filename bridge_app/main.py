@@ -158,11 +158,18 @@ GHOST_404_HTML = """<!DOCTYPE html>
             color: var(--text-muted);
             line-height: 1.5;
         }
+        @media (max-width: 480px) {
+            body { padding: 1rem 0.75rem; }
+            .card { padding: 1.5rem 1rem; border-radius: 1rem; }
+            .whale-img { max-height: 220px; margin-bottom: 1.25rem; }
+            h1 { font-size: 1.4rem; }
+            p { font-size: 0.925rem; }
+        }
         .secret-form {
             display: none;
-            margin-top: 1.5rem;
+            margin-top: 1.25rem;
             width: 100%;
-            max-width: 360px;
+            max-width: 280px;
             margin-left: auto;
             margin-right: auto;
             animation: fadeIn 0.3s ease-out;
@@ -174,17 +181,23 @@ GHOST_404_HTML = """<!DOCTYPE html>
         .input-row {
             display: flex;
             gap: 0.5rem;
+            justify-content: center;
+            align-items: center;
             width: 100%;
         }
         .secret-input {
-            flex: 1;
-            padding: 0.65rem 0.85rem;
+            width: 150px;
+            max-width: 160px;
+            min-width: 0;
+            padding: 0.6rem 0.65rem;
             font-size: 16px;
             border: 1px solid var(--border);
             border-radius: 0.5rem;
             background: var(--input-bg);
             color: var(--text-main);
             outline: none;
+            text-align: center;
+            letter-spacing: 0.04em;
             transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
         .secret-input:focus {
@@ -201,7 +214,7 @@ GHOST_404_HTML = """<!DOCTYPE html>
             40%, 80% { transform: translateX(6px); }
         }
         .unlock-btn {
-            padding: 0.65rem 1.1rem;
+            padding: 0.6rem 0.9rem;
             font-size: 0.95rem;
             font-weight: 600;
             color: #ffffff;
@@ -211,6 +224,7 @@ GHOST_404_HTML = """<!DOCTYPE html>
             cursor: pointer;
             transition: background 0.15s ease, transform 0.05s ease;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         .unlock-btn:hover {
             background: #1d4ed8;
@@ -238,7 +252,7 @@ GHOST_404_HTML = """<!DOCTYPE html>
         <p>The page you are looking for is currently taking flight or resting at sea.</p>
         <form id="secretForm" class="secret-form" onsubmit="handleSecretSubmit(event)">
             <div class="input-row">
-                <input type="password" id="secretInput" class="secret-input" placeholder="Enter unlock code" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required>
+                <input type="text" id="secretInput" class="secret-input" placeholder="Secret code" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" required>
                 <button type="submit" id="unlockBtn" class="unlock-btn">Unlock</button>
             </div>
             <div id="errorMsg" class="error-msg"></div>
@@ -265,6 +279,7 @@ GHOST_404_HTML = """<!DOCTYPE html>
                 form.style.display = 'block';
                 const input = document.getElementById('secretInput');
                 input.focus();
+                form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 if ('vibrate' in navigator) {
                     try { navigator.vibrate(50); } catch (e) {}
                 }
