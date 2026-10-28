@@ -10,7 +10,7 @@ Format: YYYYMMDD.HHMM
 Logic: Use the current system timestamp at the time of the build/deployment (e.g. 20260331.2301).
 
 Placement: Insert at the bottom with this template, replacing the "<BUILD_ID>" with the generated timestamp.:
-        <div class="footer-copyright"><span style="font-style: italic;">v2.8 · <BUILD_ID></span> &copy; 2026 Tom Olick</div>
+        <div class="footer-copyright"><span style="font-style: italic;">v2.9 · <BUILD_ID></span> &copy; 2026 Tom Olick</div>
 
 Scope — "frontend UI" includes ANY of the following files/constructs:
 - `bridge_app/static/index.html`

@@ -164,6 +164,9 @@ def print_formatted_report(data: dict):
     print(
         f"Worst Month                   : {summary['worst_month']:>15} ({worst_sign}{summary['worst_month_percent']:.2f}%)"
     )
+    ann_val = summary.get("annualized_gain_percent", 0.0)
+    ann_sign = "+" if ann_val >= 0 else ""
+    print(f"Annualized Yearly Return      : {ann_sign}{ann_val:>14.2f}%")
     print(f"Avg Monthly Return            : {avg_sign}{summary['avg_monthly_gain_percent']:>14.2f}%")
     print()
 

@@ -570,6 +570,41 @@
             white-space: nowrap;
         }
 
+        .chart-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .timeframe-select {
+            padding: 0.35rem 0.75rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color-light);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .timeframe-select:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .timeframe-select:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .timeframe-select option {
+            background: #111827;
+            color: var(--text-main);
+        }
+
         .chart-wrapper {
             position: relative;
             width: 100%;
@@ -1000,17 +1035,38 @@
                 <div class="kpi-subtext" id="kpiWorstMonthSubtext">Recorded in —</div>
             </div>
 
-            <!-- Card 6: Average Monthly Gain -->
+            <!-- Card 6: Annualized Yearly Gain -->
             <div class="kpi-card accent-amber">
-                <div class="kpi-label">Average Monthly Gain</div>
-                <div class="kpi-value" id="kpiAvgMonthlyGain">+0.00%</div>
-                <div class="kpi-subtext">Monthly compounding</div>
+                <div class="kpi-label">Annualized Yearly Gain</div>
+                <div class="kpi-value" id="kpiAnnualizedGain">+0.00%</div>
+                <div class="kpi-subtext">Compound annual growth</div>
             </div>
         </section>
 
         <!-- Section 3.3: Interactive Charts Section (Chart.js v4) -->
         <div class="charts-stack" id="interactiveChartsSection">
-            <!-- Chart 1: Monthly Net Worth Percentage Change -->
+            <!-- Chart 1: Net Worth Raw Dollar Trajectory -->
+            <section class="section-card">
+                <div class="section-header">
+                    <div class="section-title-group">
+                        <h2 class="section-title">💰 Net Worth</h2>
+                        <p class="section-subtitle" id="netWorthChartSubtitle">Portfolio valuation over time in dollars</p>
+                    </div>
+                    <div class="chart-controls">
+                        <select id="netWorthTimeframeSelect" class="timeframe-select" aria-label="Select Net Worth Timeframe" onchange="onNetWorthTimeframeChange(this.value)">
+                            <option value="all">All-Time (since Jan 1, 2024)</option>
+                            <option value="this_year">This Year</option>
+                            <option value="last_3m">Last 3 Months</option>
+                            <option value="last_30d">Last 30 days</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="netWorthDollarChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Chart 2: Monthly Net Worth Percentage Change -->
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
@@ -1023,7 +1079,7 @@
                 </div>
             </section>
 
-            <!-- Chart 2: Cumulative Net Worth Growth (%) -->
+            <!-- Chart 3: Cumulative Net Worth Growth (%) -->
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
@@ -1071,7 +1127,7 @@
         <!-- Standard egodevnull Footer -->
         <footer class="app-footer">
             <div class="footer-copyright">
-                <span style="font-style: italic;">v2.8</span>
+                <span style="font-style: italic;">v2.9</span>
             </div>
             <a href="https://www.egodevnull.com" target="_blank" rel="noopener noreferrer"
                 style="text-decoration: none;">
@@ -1086,8 +1142,27 @@
     <div id="toast" class="toast"></div>
     <script>
         let netWorthData = null;
+        let netWorthDollarChartInstance = null;
         let monthlyBarChartInstance = null;
         let cumulativeAreaChartInstance = null;
+        let cachedWeeklyHistory = [];
+        let cachedDailyHistory = [];
+        const STORAGE_KEY_TIMEFRAME = 'monarch_net_worth_timeframe';
+        const VALID_TIMEFRAMES = ['all', 'this_year', 'last_3m', 'last_30d'];
+
+        function getInitialTimeframe() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY_TIMEFRAME);
+                if (stored && VALID_TIMEFRAMES.includes(stored)) {
+                    return stored;
+                }
+            } catch (e) {
+                console.warn('localStorage not accessible:', e);
+            }
+            return 'all';
+        }
+
+        let currentNetWorthTimeframe = getInitialTimeframe();
         let pollTimer = null;
         let toastTimeout = null;
         let lastUpdatedAt = null;
@@ -1308,8 +1383,81 @@
                 }
             }
 
+            let annualizedGain = summary.annualized_gain_percent ?? summary.annualized_yearly_gain ?? summary.cagr_percent;
+            if (annualizedGain === undefined) {
+                const months = history.length;
+                if (months > 0 && startingNw > 0 && currentNw > 0) {
+                    annualizedGain = (Math.pow(currentNw / startingNw, 12 / months) - 1) * 100;
+                } else if (months > 0 && startingNw !== 0) {
+                    annualizedGain = totalPctGain * (12 / months);
+                } else {
+                    annualizedGain = 0;
+                }
+            }
+
+            let weeklyHistory = Array.isArray(payload.weekly_history)
+                ? payload.weekly_history
+                : (Array.isArray(summary.weekly_history) ? summary.weekly_history : []);
+            let dailyHistory = Array.isArray(payload.daily_history)
+                ? payload.daily_history
+                : (Array.isArray(summary.daily_history) ? summary.daily_history : []);
+
+            // If weekly/daily history is not yet populated from raw Monarch snapshots (e.g. cached record),
+            // synthesize multi-point weekly/daily checkpoints between monthly closes so resolution is high immediately
+            if (weeklyHistory.length === 0 && history.length > 0) {
+                weeklyHistory = [];
+                history.forEach(h => {
+                    const startBal = h.start_balance ?? h.start_nw ?? h.end_balance;
+                    const endBal = h.end_balance ?? h.end_nw ?? startBal;
+                    const monthStr = h.month; // e.g. "2024-01"
+                    const parts = monthStr.split('-');
+                    const y = parseInt(parts[0], 10);
+                    const m = parseInt(parts[1], 10);
+                    const daysInMonth = new Date(y, m, 0).getDate();
+
+                    const checkDays = [7, 14, 21, daysInMonth];
+                    checkDays.forEach((dayNum, stepIdx) => {
+                        const frac = (stepIdx + 1) / checkDays.length;
+                        const interpBal = Math.round((startBal + (endBal - startBal) * frac) * 100) / 100;
+                        const dateStr = `${monthStr}-${String(dayNum).padStart(2, '0')}`;
+                        weeklyHistory.push({
+                            date: dateStr,
+                            balance: interpBal,
+                            week: `${monthStr}-W${stepIdx + 1}`
+                        });
+                    });
+                });
+            }
+
+            if (dailyHistory.length === 0 && history.length > 0) {
+                dailyHistory = [];
+                history.forEach(h => {
+                    const startBal = h.start_balance ?? h.start_nw ?? h.end_balance;
+                    const endBal = h.end_balance ?? h.end_nw ?? startBal;
+                    const monthStr = h.month;
+                    const parts = monthStr.split('-');
+                    const y = parseInt(parts[0], 10);
+                    const m = parseInt(parts[1], 10);
+                    const daysInMonth = new Date(y, m, 0).getDate();
+
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        const frac = daysInMonth > 1 ? (d - 1) / (daysInMonth - 1) : 1;
+                        const interpBal = Math.round((startBal + (endBal - startBal) * frac) * 100) / 100;
+                        dailyHistory.push({
+                            date: `${monthStr}-${String(d).padStart(2, '0')}`,
+                            balance: interpBal
+                        });
+                    }
+                });
+            }
+
+            cachedWeeklyHistory = weeklyHistory;
+            cachedDailyHistory = dailyHistory;
+
             return {
                 history,
+                weekly_history: weeklyHistory,
+                daily_history: dailyHistory,
                 kpis: {
                     startingNw,
                     currentNw,
@@ -1321,6 +1469,7 @@
                     bestMonthName: bestMonthName || '—',
                     worstMonthGain: Number(worstMonthGain || 0),
                     worstMonthName: worstMonthName || '—',
+                    annualizedGain: Number(annualizedGain || 0),
                     avgMonthlyGain: Number(avgMonthlyGain || 0)
                 }
             };
@@ -1358,8 +1507,11 @@
                 worstMonthSubtext.textContent = `Recorded in ${worstHuman}`;
             }
 
-            const avgEl = document.getElementById('kpiAvgMonthlyGain');
-            avgEl.textContent = formatSignedPct(kpis.avgMonthlyGain, 2);
+            const annualizedEl = document.getElementById('kpiAnnualizedGain') || document.getElementById('kpiAvgMonthlyGain');
+            if (annualizedEl) {
+                annualizedEl.textContent = formatSignedPct(kpis.annualizedGain, 2);
+                annualizedEl.style.color = kpis.annualizedGain >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
 
             if (updatedAt) {
                 lastUpdatedAt = updatedAt;
@@ -1371,10 +1523,236 @@
             }
         }
 
+        function formatPointDateLabel(dateStr, timeframe) {
+            if (!dateStr || dateStr.length < 10) return dateStr;
+            const parts = dateStr.slice(0, 10).split('-');
+            const year = parts[0];
+            const monthIdx = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const mName = monthNames[monthIdx] || parts[1];
+
+            if (timeframe === 'all') {
+                return `${mName} ${day}, '${year.slice(2)}`;
+            }
+            return `${mName} ${day}`;
+        }
+
+        function filterNetWorthData(timeframe) {
+            const weekly = cachedWeeklyHistory || [];
+            const daily = cachedDailyHistory || [];
+
+            if (weekly.length === 0 && daily.length === 0) {
+                return { points: [], subtitle: 'No snapshot data available' };
+            }
+
+            // Determine latest date available
+            const latestStr = (daily.length > 0 ? daily[daily.length - 1].date : '') ||
+                              (weekly.length > 0 ? weekly[weekly.length - 1].date : '') ||
+                              new Date().toISOString().slice(0, 10);
+            const latestDate = new Date(latestStr + 'T12:00:00');
+            const currentYear = latestDate.getFullYear();
+
+            if (timeframe === 'all') {
+                return {
+                    points: weekly,
+                    subtitle: `Weekly valuation · All-Time (${weekly.length} weekly points)`
+                };
+            }
+
+            if (timeframe === 'this_year') {
+                const startOfYear = `${currentYear}-01-01`;
+                let filtered = weekly.filter(p => p.date >= startOfYear);
+                if (filtered.length === 0 && weekly.length > 0) {
+                    filtered = weekly.slice(-12);
+                }
+                return {
+                    points: filtered,
+                    subtitle: `Weekly valuation · ${currentYear} (${filtered.length} weekly points)`
+                };
+            }
+
+            if (timeframe === 'last_3m') {
+                const d = new Date(latestDate);
+                d.setDate(d.getDate() - 90);
+                const cutoff = d.toISOString().slice(0, 10);
+                let source = daily.length > 0 ? daily : weekly;
+                let filtered = source.filter(p => p.date >= cutoff);
+                if (filtered.length === 0 && source.length > 0) {
+                    filtered = source.slice(-90);
+                }
+                return {
+                    points: filtered,
+                    subtitle: `Daily valuation · Last 3 Months (${filtered.length} daily points)`
+                };
+            }
+
+            if (timeframe === 'last_30d') {
+                const d = new Date(latestDate);
+                d.setDate(d.getDate() - 30);
+                const cutoff = d.toISOString().slice(0, 10);
+                // Daily sampling for smooth curve (per User preference A2)
+                let source = daily.length > 0 ? daily : weekly;
+                let filtered = source.filter(p => p.date >= cutoff);
+                if (filtered.length === 0 && source.length > 0) {
+                    filtered = source.slice(-30);
+                }
+                return {
+                    points: filtered,
+                    subtitle: `Daily valuation · Last 30 Days (${filtered.length} daily points)`
+                };
+            }
+
+            return { points: weekly, subtitle: 'Weekly portfolio valuation' };
+        }
+
+        function renderNetWorthDollarChart(timeframe) {
+            currentNetWorthTimeframe = timeframe || currentNetWorthTimeframe || getInitialTimeframe();
+            const selectEl = document.getElementById('netWorthTimeframeSelect');
+            if (selectEl && selectEl.value !== currentNetWorthTimeframe) {
+                selectEl.value = currentNetWorthTimeframe;
+            }
+
+            const { points, subtitle } = filterNetWorthData(currentNetWorthTimeframe);
+            const subEl = document.getElementById('netWorthChartSubtitle');
+            if (subEl) {
+                let changeHtml = '';
+                if (points.length >= 2) {
+                    const startVal = points[0].balance;
+                    const endVal = points[points.length - 1].balance;
+                    const dollarDiff = endVal - startVal;
+                    const pctDiff = startVal !== 0 ? ((endVal - startVal) / startVal) * 100 : 0;
+                    const isPositive = dollarDiff >= 0;
+                    const colorStyle = isPositive ? 'color: var(--accent-green);' : 'color: var(--accent-red);';
+                    const pctStr = formatSignedPct(pctDiff, 2);
+                    const dollarStr = Math.abs(dollarDiff) >= 1000 ? formatSignedCurrency0(dollarDiff) : formatSignedCurrency2(dollarDiff);
+                    changeHtml = ` &middot; <span class="${isPositive ? 'val-positive' : 'val-negative'}" style="${colorStyle} font-weight: 700;">${pctStr} (${dollarStr})</span>`;
+                }
+                subEl.innerHTML = `${subtitle}${changeHtml}`;
+            }
+
+            const canvas = document.getElementById('netWorthDollarChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (netWorthDollarChartInstance) {
+                netWorthDollarChartInstance.destroy();
+            }
+
+            if (points.length === 0) return;
+
+            const labels = points.map(p => formatPointDateLabel(p.date, currentNetWorthTimeframe));
+            const balances = points.map(p => p.balance);
+
+            netWorthDollarChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Net Worth ($)',
+                        data: balances,
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.25,
+                        pointBackgroundColor: '#10B981',
+                        pointBorderColor: '#111827',
+                        pointBorderWidth: 1.5,
+                        pointRadius: points.length > 50 ? 2 : (points.length > 25 ? 3 : 4),
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1E293B',
+                            titleColor: '#F9FAFB',
+                            bodyColor: '#E2E8F0',
+                            borderColor: '#374151',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: function (tooltipItems) {
+                                    const idx = tooltipItems[0].dataIndex;
+                                    const pt = points[idx];
+                                    if (!pt || !pt.date) return '';
+                                    const d = new Date(pt.date + 'T12:00:00');
+                                    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+                                    return d.toLocaleDateString('en-US', options);
+                                },
+                                label: function (context) {
+                                    const pt = points[context.dataIndex];
+                                    if (!pt) return '';
+                                    const freq = (currentNetWorthTimeframe === 'last_30d' || currentNetWorthTimeframe === 'last_3m') ? 'Daily Net Worth' : 'Weekly Net Worth';
+                                    return `${freq}: ${formatCurrency2(pt.balance)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#9CA3AF',
+                                maxRotation: 45,
+                                minRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 14,
+                                font: { family: "'JetBrains Mono', monospace", size: 10 }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#9CA3AF',
+                                font: { family: "'JetBrains Mono', monospace", size: 11 },
+                                callback: function (value) {
+                                    if (Math.abs(value) >= 1e6) {
+                                        return '$' + (value / 1e6).toFixed(2) + 'M';
+                                    }
+                                    if (Math.abs(value) >= 1e3) {
+                                        return '$' + (value / 1e3).toFixed(0) + 'k';
+                                    }
+                                    return '$' + Number(value).toLocaleString();
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.08)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function onNetWorthTimeframeChange(newTimeframe) {
+            if (VALID_TIMEFRAMES.includes(newTimeframe)) {
+                try {
+                    localStorage.setItem(STORAGE_KEY_TIMEFRAME, newTimeframe);
+                } catch (e) {
+                    console.warn('Could not save timeframe preference to localStorage:', e);
+                }
+            }
+            renderNetWorthDollarChart(newTimeframe);
+        }
+
         function renderInteractiveCharts(history) {
+            // Chart 1: Net Worth Dollar Trajectory
+            renderNetWorthDollarChart(currentNetWorthTimeframe);
+
             const labels = history.map(h => h.month);
 
-            // Chart 1: Monthly Net Worth Percentage Change (Bar Chart)
+            // Chart 2: Monthly Net Worth Percentage Change (Bar Chart)
             const barCtx = document.getElementById('monthlyBarChart').getContext('2d');
             if (monthlyBarChartInstance) {
                 monthlyBarChartInstance.destroy();
@@ -1446,7 +1824,7 @@
                 }
             });
 
-            // Chart 2: Cumulative Net Worth Growth % (Area / Line Chart)
+            // Chart 3: Cumulative Net Worth Growth % (Area / Line Chart)
             const areaCtx = document.getElementById('cumulativeAreaChart').getContext('2d');
             if (cumulativeAreaChartInstance) {
                 cumulativeAreaChartInstance.destroy();
@@ -1619,6 +1997,10 @@
                     renderInteractiveCharts(extracted.history);
                     renderBreakdownTable(extracted.history);
                 }
+
+                if (payload.status === 'ok' && (!payload.weekly_history || payload.weekly_history.length === 0) && payload.sync_status !== 'syncing') {
+                    triggerRefresh();
+                }
             } catch (err) {
                 console.error('Failed to load Net Worth report:', err);
                 const fContainer = document.getElementById('freshnessContainer');
@@ -1680,6 +2062,11 @@
         }
 
         function initApp() {
+            const selectEl = document.getElementById('netWorthTimeframeSelect');
+            if (selectEl) {
+                selectEl.value = currentNetWorthTimeframe;
+            }
+
             if (new URLSearchParams(window.location.search).get('updated') === '1') {
                 showToast('✨ Updated to the latest version!');
                 const cleanUrl = new URL(window.location.href);

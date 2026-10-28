@@ -82,8 +82,9 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
         -   **All-Time Peak**: Highest historical portfolio valuation and the month it was attained.
         -   **Best Month**: Record single-month percentage return and corresponding period.
         -   **Worst Month**: Largest single-month percentage drawdown and corresponding period.
-        -   **Average Monthly Gain**: Average month-over-month compounding percentage growth.
-    -   **Dual Interactive Chart.js Visualizations**:
+        -   **Annualized Yearly Gain**: Compound annual growth rate (CAGR) normalized across tracked months.
+    -   **Triple Interactive Chart.js Visualizations**:
+        -   **Net Worth Raw Dollar Valuation Area Chart**: Portfolio asset valuation trajectory in raw dollars with interactive timeframe controls (*All-Time* and *This Year* with weekly resolution; *Last 3 Months* and *Last 30 days* with daily resolution).
         -   **Month-over-Month (M/M) % Bar Chart**: Color-coded monthly percentage gain/loss (green for positive, red for negative) relative to the prior month with zero-line anchor and hover metrics.
         -   **Cumulative Growth Area Chart**: Smooth trajectory visualization tracking overall percentage portfolio growth since January 1, 2024 (or custom start date) with blue gradient fill.
     -   **Itemized Monthly Breakdown Table**: Reverse-chronological historical breakdown displaying start balance, end balance, monthly dollar gain, monthly % change, and cumulative growth % for every month tracked.
@@ -96,6 +97,12 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     -   **Currency-Specific Cash Accounts**: Support for `MM_ACCOUNT_CASH_EUR` and `MM_ACCOUNT_CASH_USD` environment variables, automatically routing cash receipts and manual submissions to their dedicated Monarch accounts based on transaction currency.
     -   **German (DE) Taxable Income Tracking**: Dedicated analytics isolating gross taxable income in spending reports and dashboards.
     -   **Performance Caching & Asset Optimization**: In-memory caching for historical forex rates, optimized static assets, and enhanced Service Worker offline strategies.
+*   **📊 v2.9: Multi-Timeframe Net Worth Valuation & Granular Sampling**:
+    -   **Raw Dollar Valuation Chart with Timeframe Controls**: Interactive timeframe switcher (*All-Time*, *This Year*, *Last 3 Months*, *Last 30 days*) sampling at weekly and daily granularity.
+    -   **Granular Slicing & Sampling**: Weekly sampling for *All-Time* and *This Year*; daily sampling for *Last 3 Months* and *Last 30 Days* with automatic interpolation fallback.
+    -   **Timeframe Performance Appended to Details**: Real-time percentage change and absolute dollar gain/loss dynamically color-coded (green for positive, red for negative).
+    -   **Sticky Local Storage Preferences**: User's chosen timeframe persists automatically across page reloads and browser sessions.
+    -   **Annualized Yearly Gain (CAGR)**: Normalized compound annual growth rate replacing simple average monthly returns.
 
 ## 🖼 Demos / Screenshots
 

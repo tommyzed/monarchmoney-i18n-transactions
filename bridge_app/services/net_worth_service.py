@@ -38,7 +38,12 @@ def compute_net_worth_analytics(
     analytics from raw Monarch aggregate snapshots.
     """
     if not snapshots:
-        return {"summary": {}, "history": []}
+        return {
+            "summary": {},
+            "history": [],
+            "weekly_history": [],
+            "daily_history": [],
+        }
 
     valid_snapshots = [
         s
@@ -51,7 +56,12 @@ def compute_net_worth_analytics(
     ]
 
     if not valid_snapshots:
-        return {"summary": {}, "history": []}
+        return {
+            "summary": {},
+            "history": [],
+            "weekly_history": [],
+            "daily_history": [],
+        }
 
     sorted_snapshots = sorted(valid_snapshots, key=lambda s: s["date"])
 
@@ -122,6 +132,53 @@ def compute_net_worth_analytics(
         else 0.0
     )
 
+    num_months = len(history)
+    if num_months > 0 and starting_net_worth > 0 and current_net_worth > 0:
+        annualized_gain_percent = round(
+            ((current_net_worth / starting_net_worth) ** (12.0 / num_months) - 1.0) * 100.0,
+            2,
+        )
+    elif num_months > 0 and starting_net_worth != 0:
+        annualized_gain_percent = round(total_gain_percent * (12.0 / num_months), 2)
+    else:
+        annualized_gain_percent = 0.0
+
+    # Weekly sampling: group by ISO calendar year and week (YYYY-Www)
+    weekly_groups: Dict[str, List[Dict[str, Any]]] = {}
+    for snap in sorted_snapshots:
+        date_str = str(snap["date"])[:10]
+        try:
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            year, week_num, _ = dt.isocalendar()
+            week_key = f"{year}-W{week_num:02d}"
+        except Exception:
+            week_key = date_str[:7]
+        weekly_groups.setdefault(week_key, []).append(snap)
+
+    weekly_history: List[Dict[str, Any]] = []
+    for week_key in sorted(weekly_groups.keys()):
+        w_snaps = weekly_groups[week_key]
+        latest_w_snap = max(w_snaps, key=lambda s: s["date"])
+        weekly_history.append(
+            {
+                "week": week_key,
+                "date": str(latest_w_snap["date"])[:10],
+                "balance": round(float(latest_w_snap["balance"]), 2),
+            }
+        )
+
+    # Daily sampling: deduplicate snapshots by date
+    daily_groups: Dict[str, Dict[str, Any]] = {}
+    for snap in sorted_snapshots:
+        d = str(snap["date"])[:10]
+        daily_groups[d] = {
+            "date": d,
+            "balance": round(float(snap["balance"]), 2),
+        }
+    daily_history: List[Dict[str, Any]] = [
+        daily_groups[d] for d in sorted(daily_groups.keys())
+    ]
+
     updated_at = updated_at_iso or datetime.now(timezone.utc).astimezone().isoformat(
         timespec="seconds"
     )
@@ -139,13 +196,18 @@ def compute_net_worth_analytics(
         "best_month_percent": best_entry["gain_percent"],
         "worst_month": worst_entry["month"],
         "worst_month_percent": worst_entry["gain_percent"],
+        "annualized_gain_percent": annualized_gain_percent,
         "avg_monthly_gain_percent": avg_monthly_gain_percent,
+        "weekly_history": weekly_history,
+        "daily_history": daily_history,
         "updated_at": updated_at,
     }
 
     return {
         "summary": summary,
         "history": history,
+        "weekly_history": weekly_history,
+        "daily_history": daily_history,
     }
 
 
@@ -247,6 +309,8 @@ async def calculate_and_save_net_worth_report(
                 "status": "ok",
                 "summary": report.summary,
                 "history": report.history,
+                "weekly_history": (report.summary or {}).get("weekly_history") or [],
+                "daily_history": (report.summary or {}).get("daily_history") or [],
                 "sync_status": report.sync_status,
                 "error_message": report.error_message,
                 "updated_at": (

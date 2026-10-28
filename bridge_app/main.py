@@ -1858,7 +1858,7 @@ LOADING_HTML = """
                     <div class="footer-brand" style="font-family: 'Inter', system-ui, -apple-system, sans-serif; font-weight: 700; font-size: 0.95rem; color: #112217;">ego<span style="color: #047857;">dev</span>null</div>
                 </a>
                 <div style="font-size: 0.82rem; color: #666; text-align: center;">
-                    <span style="font-style: italic;">v2.8 · 20261028.0121</span> &copy; 2026 Tom Olick
+                    <span style="font-style: italic;">v2.9 · 20261028.1756</span> &copy; 2026 Tom Olick
                 </div>
             </footer>
         </div>
@@ -4952,7 +4952,20 @@ async def get_net_worth_report_endpoint(
 
     report = await get_latest_net_worth_report(db, start_date=start_date)
 
-    if not report or (report.summary is None and report.sync_status != "syncing"):
+    has_weekly = bool(
+        report
+        and report.summary
+        and (
+            (report.summary.get("weekly_history") and len(report.summary["weekly_history"]) > 0)
+            or (report.summary.get("daily_history") and len(report.summary["daily_history"]) > 0)
+        )
+    )
+
+    if (
+        not report
+        or (report.summary is None and report.sync_status != "syncing")
+        or (report.sync_status != "syncing" and not has_weekly)
+    ):
         try:
             return await calculate_and_save_net_worth_report(start_date=start_date)
         except Exception as e:
@@ -4970,6 +4983,8 @@ async def get_net_worth_report_endpoint(
         "latest_date": report.latest_date,
         "summary": report.summary,
         "history": report.history or [],
+        "weekly_history": (report.summary or {}).get("weekly_history") or [],
+        "daily_history": (report.summary or {}).get("daily_history") or [],
         "sync_status": report.sync_status,
         "error_message": report.error_message,
         "updated_at": report.updated_at.isoformat() if report.updated_at else None,
