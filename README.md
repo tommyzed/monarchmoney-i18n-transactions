@@ -74,6 +74,28 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     -   **Parent Category Group Context**: Automatically stores and maps sub-categories to their parent category groups with group badges across all report tables.
     -   **Mobile-Optimized Tables & Tooltips**: Compact table layout for mobile screens with consolidated metadata rows, custom floating tooltips, and URL toggle (`?h=1`) for table hovers.
     -   **Performance & Reliability Hardening**: Race condition guards for rapid year switching, passive DOM scroll listeners, and full XSS sanitization for user-defined category/group names.
+*   **📈 v2.7: Net Worth Performance Analytics Dashboard**:
+    -   **Dedicated Web Analytics Dashboard (`/net-worth`, `/networth`)**: Real-time net worth tracking powered by Monarch Money daily aggregate snapshots and interactive Chart.js v4 visualizations (`bridge_app/static/net_worth.html`).
+    -   **Executive KPI Summary Cards**:
+        -   **Current Net Worth**: Live balance with starting baseline benchmark.
+        -   **Total Dollar Gain**: Cumulative dollar growth with percentage trend pill (`▲ +%` / `🔻 -%`) since starting date.
+        -   **All-Time Peak**: Highest historical portfolio valuation and the month it was attained.
+        -   **Best Month**: Record single-month percentage return and corresponding period.
+        -   **Worst Month**: Largest single-month percentage drawdown and corresponding period.
+        -   **Average Monthly Gain**: Average month-over-month compounding percentage growth.
+    -   **Dual Interactive Chart.js Visualizations**:
+        -   **Month-over-Month (M/M) % Bar Chart**: Color-coded monthly percentage gain/loss (green for positive, red for negative) relative to the prior month with zero-line anchor and hover metrics.
+        -   **Cumulative Growth Area Chart**: Smooth trajectory visualization tracking overall percentage portfolio growth since January 1, 2024 (or custom start date) with blue gradient fill.
+    -   **Itemized Monthly Breakdown Table**: Reverse-chronological historical breakdown displaying start balance, end balance, monthly dollar gain, monthly % change, and cumulative growth % for every month tracked.
+    -   **Dynamic Snapshot Freshness & Background Recalculation**: Visual freshness indicators (`🟢 Fresh`, `🟡 Moderate`, `🟠 Stale`) with relative age and exact timestamp tooltips, plus on-demand background resync (`POST /api/net-worth/recalculate`) with live status polling.
+    -   **High-Resolution Dark-Mode PNG Chart Export**: Server-side Matplotlib dual-subplot chart generator (`GET /api/net-worth/chart.png`) with in-memory TTL caching for instant high-DPI visual exports.
+    -   **CLI Net Worth Report Generator (`scripts/net_worth_report.py`)**: Standalone terminal tool to compute net worth analytics, output formatted terminal tables, export structured JSON (`--json`), persist to database (`--save-db`), or render high-res chart images (`--png`).
+*   **🛡️ v2.8: Ghost Mode Fail Whale & Security Enhancements**:
+    -   **Interactive Fail Whale 404 Page**: Unauthorized traffic without the ghost cookie encounters a branded, dark-mode 404 page featuring the Fail Whale (`bridge_app/static/fail-whale.jpg`).
+    -   **In-Page Secret Unlock**: Authenticated users can tap or click the Fail Whale to reveal an interactive secret pass-code form directly on the 404 page, eliminating the need to type URL query parameters manually.
+    -   **Currency-Specific Cash Accounts**: Support for `MM_ACCOUNT_CASH_EUR` and `MM_ACCOUNT_CASH_USD` environment variables, automatically routing cash receipts and manual submissions to their dedicated Monarch accounts based on transaction currency.
+    -   **German (DE) Taxable Income Tracking**: Dedicated analytics isolating gross taxable income in spending reports and dashboards.
+    -   **Performance Caching & Asset Optimization**: In-memory caching for historical forex rates, optimized static assets, and enhanced Service Worker offline strategies.
 
 ## 🖼 Demos / Screenshots
 
@@ -102,9 +124,10 @@ The system is a lightweight **FastAPI** application backed by **PostgreSQL**.
     *   **Manual Flow**: Form Data -> Hashing -> Conversion -> Push.
 2.  **Monarch Service**: Handles authentication (including MFA and session cookies), session persistence, and GraphQL interactions.
 3.  **Gemini Service**: Interacts with Google's GenAI SDK for image parsing. Accepts an optional list of historical merchant names to hint the model toward canonical names.
-4.  **Currency Service**: Fetches historical forex rates (via Frankfurter API).
+4.  **Currency Service**: Fetches historical forex rates (via Frankfurter API) with intelligent in-memory TTL caching.
 5.  **FIRE Engine**: Runs Monte Carlo simulations and safe withdrawal rate analysis against live portfolio data.
 6.  **Spending Service**: Read-only cash flow and transaction aggregation engine computing annual summaries, category breakdowns, monthly trends, and database caching.
+7.  **Net Worth Service**: Queries Monarch Money aggregate snapshots, calculates monthly and cumulative performance trajectories, tracks best/worst/peak metrics, handles background snapshot caching, and renders dark-mode high-resolution PNG charts.
 
 ## 🚀 Getting Started
 
@@ -148,6 +171,10 @@ export MM_EMAIL="<your_monarch_email>"
 export MM_PWD="<your_monarch_password>"
 export MM_ACCOUNT="Euro Transactions" # The name of the manual cash account in Monarch
 
+# Optional: Currency-Specific Cash Accounts
+export MM_ACCOUNT_CASH_EUR="<eur_cash_account_id>" # Monarch account ID for Euro cash transactions
+export MM_ACCOUNT_CASH_USD="<usd_cash_account_id>" # Monarch account ID for USD cash transactions
+
 # Security (Ghost Mode)
 export UNLOCK_SECRET="<random_secret>" # Set this to a secret string
 ```
@@ -171,10 +198,11 @@ venv/bin/uvicorn bridge_app.main:app --host 0.0.0.0 --port 8000 --reload
 To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
 
 1.  **Configure**: Set `UNLOCK_SECRET` in your `.env` file.
-2.  **Activate**: On your phone, visit:
-    `http://<your-server>:8000/s?s=<YOUR_SECRET>`
+2.  **Activate**: You can unlock your device in one of two ways:
+    *   **Direct URL**: Visit `http://<your-server>:8000/s?s=<YOUR_SECRET>` on your device.
+    *   **Interactive Fail Whale Unlock**: Visit any page without the cookie to see the custom Fail Whale 404 page. Interacting with the Fail Whale (clicking or tapping 5 times, or clicking the subtle indicator) reveals an in-page secret code prompt to unlock directly in your browser.
 3.  **Unlock**: You will see a "Device Activated" screen. This sets a secure cookie valid for 10 years.
-4.  **Ghosting**: Any subsequent request *without* this cookie (e.g. random scanners) will receive a `404 Not Found`, making the server appear non-existent.
+4.  **Ghosting**: Any subsequent request *without* this cookie (e.g. random scanners) will receive a `404 Not Found` with the Fail Whale error page, making the server appear non-existent.
 
 ## 📱 Mobile Usage
 
@@ -193,6 +221,7 @@ To prevent unauthorized access, the app uses a "Ghost Cookie" mechanism.
 
 ## 🛠 Management Scripts
 
+*   **`python scripts/net_worth_report.py`**: Generates a read-only Net Worth Performance analytics report from Monarch Money snapshots (supports `--start-date`, `--json`, `--save-db`, `--png`, and `--email`).
 *   **`python scripts/spending_report.py`**: Generates a read-only spending and cash flow report in your terminal (supports `--year`, `--start-date`, `--end-date`, `--top`, `--json`, `--save-db`, `--include-hidden`).
 *   **`python scripts/cookie_login.py`**: Authenticates and stores session cookies securely for Monarch Money access.
 *   **`python scripts/reset_transactions.py`**: Clears the local "processed" cache. Useful if you want to re-upload a receipt that was previously marked as duplicate.
@@ -211,18 +240,28 @@ bridge_app/
 ├── database.py          # Database connection & session info
 ├── models.py            # SQLAlchemy database models
 ├── services/            # Business logic modules
-│   ├── currency.py      # Historical forex exchange rates
+│   ├── currency.py      # Historical forex exchange rates & caching
 │   ├── fire_engine.py   # FIRE Monte Carlo simulation engine
 │   ├── gemini.py        # OCR logic & AI merchant hinting
 │   ├── monarch.py       # Monarch API interaction & session management
+│   ├── net_worth_service.py # Net worth trajectory & analytics engine
 │   ├── orchestrator.py  # Pipeline coordination
 │   └── spending_service.py # Annual spending & cash flow aggregation
 └── static/              # Frontend assets
+    ├── fail-whale.jpg   # 🐳 Ghost mode 404 visual asset
     ├── fire.html        # 🔥 Ignite FIRE dashboard
     ├── index.html       # PWA entry point
+    ├── net_worth.html   # 📈 Net Worth Performance analytics dashboard
     ├── spending.html    # 📊 Spending & Cash Flow report dashboard
     ├── sw.js            # Service Worker (Offline & Share Target)
     └── manifest.json    # App Manifest
+
+scripts/
+├── net_worth_report.py  # 📈 CLI net worth analytics & chart generator
+├── spending_report.py   # 📊 CLI cash flow & spending report generator
+├── cookie_login.py      # Interactive session & cookie authenticator
+├── sync_categories.py   # Sync Monarch categories to local DB
+└── interactive_login.py # Initial credentials setup & login
 ```
 
 ## 🙏 Acknowledgements

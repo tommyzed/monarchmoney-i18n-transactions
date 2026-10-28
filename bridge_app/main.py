@@ -1853,7 +1853,14 @@ LOADING_HTML = """
                 <button id="viewFailedBtn" onclick="openFailedModal(event)" style="flex: 1; min-width: 140px; background: linear-gradient(to right, #e11d48, #be123c); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">⚠️ View Failed Txns</button>
                 <a href="/" style="flex: 1; min-width: 100px; background: #4b5563; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center;">Return 🏡</a>
             </div>
-            <span style="font-style: italic; display: block; margin-top: 1.5rem; font-size: 0.8rem; color: #666; text-align: center; width: 100%;">20261024.1232 ©2025-26 EGO /dev/null</span>
+            <footer style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(5, 150, 105, 0.1); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%;">
+                <a href="https://www.egodevnull.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                    <div class="footer-brand" style="font-family: 'Inter', system-ui, -apple-system, sans-serif; font-weight: 700; font-size: 0.95rem; color: #112217;">ego<span style="color: #047857;">dev</span>null</div>
+                </a>
+                <div style="font-size: 0.82rem; color: #666; text-align: center;">
+                    <span style="font-style: italic;">v2.8 · 20261028.0121</span> &copy; 2026 Tom Olick
+                </div>
+            </footer>
         </div>
 
         <!-- Mapping Modal -->
