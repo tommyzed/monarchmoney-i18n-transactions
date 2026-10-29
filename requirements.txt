@@ -3,6 +3,7 @@ uvicorn>=0.23.0
 python-multipart
 sqlalchemy
 asyncpg
+aiosqlite
 greenlet
 google-genai
 monarchmoney

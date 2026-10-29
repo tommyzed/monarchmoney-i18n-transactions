@@ -1,7 +1,7 @@
 import asyncio
 from httpx import AsyncClient, ASGITransport
 from bridge_app.main import app, save_mapping, MappingRequest
-from bridge_app.database import AsyncSessionLocal
+from bridge_app.database import AsyncSessionLocal, engine, Base
 from bridge_app.models import MerchantMapping, Category
 from sqlalchemy.future import select
 from fastapi import Request, HTTPException
@@ -12,11 +12,15 @@ import hashlib
 
 async def test_edit_mapping_endpoints():
     print("Testing Edit Mapping Endpoints...")
+
+    # Ensure tables exist in test DB
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     
-    # Calculate cookie for auth
-    secret = "12342060006" # From debug output
-    cookie_value = hashlib.sha256(secret.encode()).hexdigest()
-    cookies = {"device_token": cookie_value}
+    # Use the app's configured auth cookie
+    from bridge_app import main
+    cookie_value = main.COOKIE_VALUE or ""
+    cookies = {"device_token": cookie_value} if cookie_value else {}
     
     print(f"Using auth cookie: device_token={cookie_value[:5]}...")
 
@@ -66,7 +70,7 @@ async def test_edit_mapping_endpoints():
             
         # 4. Verify DB
         async with AsyncSessionLocal() as db:
-            stmt = select(MerchantMapping).where(MerchantMapping.receipt_merchant_name == "Test Cafe")
+            stmt = select(MerchantMapping).where(MerchantMapping.receipt_merchant_name == "test cafe")
             result = await db.execute(stmt)
             mapping = result.scalar_one_or_none()
             
@@ -77,6 +81,10 @@ async def test_edit_mapping_endpoints():
                     print(f"❌ DB Verification Failed: Check values locally. Got {mapping.monarch_merchant_name}, {mapping.category_name}")
             else:
                 print("❌ DB Verification Failed: Mapping not found")
+
+            # Cleanup
+            await db.execute(select(Category).where(Category.category_name == "Test Food"))
+            await db.commit()
 
 async def test_save_mapping_unauthenticated():
     print("Testing save_mapping endpoint direct call when unauthenticated...")

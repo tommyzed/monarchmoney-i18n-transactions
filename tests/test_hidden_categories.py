@@ -1,19 +1,19 @@
 import asyncio
-from bridge_app.database import AsyncSessionLocal
+from bridge_app.database import AsyncSessionLocal, engine, Base
 from bridge_app.models import Category
-from bridge_app.main import app
+from bridge_app.main import app, COOKIE_VALUE
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.future import select
 
 import hashlib
 import os
 
-# Set SECRET before import ideally, but we will run with env var
-# We need to know the secret to make the cookie
-SECRET = os.environ.get("UNLOCK_SECRET", "test")
-
 async def test_hidden_categories():
-    print(f"Testing Hidden Categories Logic with SECRET={SECRET}...")
+    print("Testing Hidden Categories Logic...")
+
+    # Ensure tables exist in test DB
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     
     async with AsyncSessionLocal() as db:
         # 1. Create a visible and a hidden category
@@ -27,10 +27,7 @@ async def test_hidden_categories():
         
     # 2. Query the API
     transport = ASGITransport(app=app)
-    
-    # Calculate cookie
-    cookie_value = hashlib.sha256(SECRET.encode()).hexdigest()
-    cookies = {"device_token": cookie_value}
+    cookies = {"device_token": COOKIE_VALUE} if COOKIE_VALUE else {}
     
     async with AsyncClient(transport=transport, base_url="http://test", cookies=cookies) as ac:
         response = await ac.get("/api/categories")

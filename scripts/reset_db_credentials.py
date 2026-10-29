@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Add project root to path
 sys.path.append(os.getcwd())
 
-from bridge_app.database import get_db
+from bridge_app.database import get_db, DATABASE_URL
 from bridge_app.models import Credentials
 from sqlalchemy import delete
 
@@ -14,7 +14,8 @@ from sqlalchemy import delete
 load_dotenv()
 
 async def reset_credentials():
-    print("Resetting Credentials Table...")
+    target = DATABASE_URL.split('@')[-1]
+    print(f"Resetting Credentials Table on: {target}...")
     
     async for session in get_db():
         try:

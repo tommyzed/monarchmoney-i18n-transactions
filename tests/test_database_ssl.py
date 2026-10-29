@@ -1,4 +1,5 @@
 import os
+import sys
 import urllib.parse
 import ssl
 import importlib
@@ -13,9 +14,16 @@ def restore_database_module():
     # Restore environment
     os.environ.clear()
     os.environ.update(orig_env)
-    # Reload database module without any patches to restore original engine and session local
+    
+    # Restore the canonical test engine and session local
+    from tests.conftest import TEST_ENGINE, TEST_SESSION_LOCAL
     import bridge_app.database
-    importlib.reload(bridge_app.database)
+    bridge_app.database.engine = TEST_ENGINE
+    bridge_app.database.AsyncSessionLocal = TEST_SESSION_LOCAL
+    if "bridge_app.main" in sys.modules:
+        import bridge_app.main
+        bridge_app.main.engine = TEST_ENGINE
+        bridge_app.main.AsyncSessionLocal = TEST_SESSION_LOCAL
 
 def test_database_ssl_config_require():
     with patch.dict(os.environ, {"DATABASE_URL": "postgresql://user:pass@host/db?sslmode=require"}):
