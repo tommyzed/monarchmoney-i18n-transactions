@@ -1050,10 +1050,12 @@
                 <div class="section-header">
                     <div class="section-title-group">
                         <h2 class="section-title">💰 Net Worth</h2>
-                        <p class="section-subtitle" id="netWorthChartSubtitle">Portfolio valuation over time in dollars</p>
+                        <p class="section-subtitle" id="netWorthChartSubtitle">Portfolio valuation over time in dollars
+                        </p>
                     </div>
                     <div class="chart-controls">
-                        <select id="netWorthTimeframeSelect" class="timeframe-select" aria-label="Select Net Worth Timeframe" onchange="onNetWorthTimeframeChange(this.value)">
+                        <select id="netWorthTimeframeSelect" class="timeframe-select"
+                            aria-label="Select Net Worth Timeframe" onchange="onNetWorthTimeframeChange(this.value)">
                             <option value="all">All-Time (since Jan 1, 2024)</option>
                             <option value="this_year">This Year</option>
                             <option value="last_3m">Last 3 Months</option>
@@ -1126,13 +1128,13 @@
 
         <!-- Standard egodevnull Footer -->
         <footer class="app-footer">
-            <div class="footer-copyright">
-                <span style="font-style: italic;">v2.9</span>
-            </div>
             <a href="https://www.egodevnull.com" target="_blank" rel="noopener noreferrer"
                 style="text-decoration: none;">
                 <div class="footer-brand">ego<span>dev</span>null</div>
             </a>
+            <div class="footer-copyright">
+                <span style="font-style: italic;">v2.9 · 20261028.1756</span>
+            </div>
             <div class="footer-copyright">
                 &copy; 2026
             </div>
@@ -1548,8 +1550,8 @@
 
             // Determine latest date available
             const latestStr = (daily.length > 0 ? daily[daily.length - 1].date : '') ||
-                              (weekly.length > 0 ? weekly[weekly.length - 1].date : '') ||
-                              new Date().toISOString().slice(0, 10);
+                (weekly.length > 0 ? weekly[weekly.length - 1].date : '') ||
+                new Date().toISOString().slice(0, 10);
             const latestDate = new Date(latestStr + 'T12:00:00');
             const currentYear = latestDate.getFullYear();
 
