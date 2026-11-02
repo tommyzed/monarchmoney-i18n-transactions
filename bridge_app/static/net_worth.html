@@ -1615,8 +1615,7 @@
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title" id="cumulativeChartTitle">📈 Cumulative Growth (%) — Real True ROI vs.
-                            Net Worth &amp; Monthly Inflation</h2>
+                        <h2 class="section-title" id="cumulativeChartTitle">📈 Cumulative Growth</h2>
                         <p class="section-subtitle" id="cumulativeChartSubtitle">Real True ROI &amp; Nominal Net Worth
                             Growth [Left Axis] · Cumulative CPI &amp; US Inflation of that period [Right Axis]</p>
                     </div>
@@ -3475,11 +3474,11 @@
 
             const cumTitleEl = document.getElementById('cumulativeChartTitle');
             if (cumTitleEl) {
-                cumTitleEl.textContent = `📈 Cumulative Growth (%) — Real True ROI vs. Net Worth & ${inflationPeriodWord === 'Month' ? 'Monthly' : (inflationPeriodWord === 'Quarter' ? 'Quarterly' : 'Annual')} Inflation`;
+                cumTitleEl.textContent = `📈 Cumulative Growth`;
             }
             const cumSubEl = document.getElementById('cumulativeChartSubtitle');
             if (cumSubEl) {
-                cumSubEl.textContent = `Real True ROI & Nominal Net Worth Growth [Left Axis] · Cumulative CPI & ${inflationPeriodWord === 'Month' ? 'Monthly' : (inflationPeriodWord === 'Quarter' ? 'Quarterly' : 'Annual')} US Inflation [Right Axis]`;
+                cumSubEl.textContent = `Real True ROI & Nominal Net Worth Growth · Cumulative CPI & ${inflationPeriodWord === 'Month' ? 'Monthly' : (inflationPeriodWord === 'Quarter' ? 'Quarterly' : 'Annual')} US Inflation`;
             }
 
             const baseCpi = history.length > 0 ? getUsCpiForMonth(history[0].month || history[0].period) : 308.417;
