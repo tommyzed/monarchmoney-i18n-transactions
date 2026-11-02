@@ -41,6 +41,7 @@
 
             --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             --font-mono: 'JetBrains Mono', monospace;
+            --header-actual-height: 62px;
         }
 
         * {
@@ -56,6 +57,7 @@
             min-height: 100dvh;
             margin: 0;
             overflow-x: hidden;
+            overflow-x: clip;
             position: relative;
         }
 
@@ -183,15 +185,28 @@
 
         /* Controls Bar */
         .controls-bar {
+            position: sticky;
+            top: var(--header-actual-height, 62px);
+            z-index: 90;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 16px;
-            background: var(--bg-card);
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--border-color);
             padding: 0.85rem 1.25rem;
             border-radius: 12px;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+            transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .controls-bar.is-stuck {
+            border-color: rgba(96, 165, 250, 0.3);
+            box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.55);
+            background: rgba(15, 23, 42, 0.96);
         }
 
         .controls-left {
@@ -439,6 +454,14 @@
             background: #F59E0B;
         }
 
+        .kpi-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.35rem;
+            width: 100%;
+        }
+
         .kpi-label {
             font-size: 0.7rem;
             font-weight: 700;
@@ -446,6 +469,212 @@
             letter-spacing: 0.05em;
             color: var(--text-muted);
             line-height: 1.2;
+        }
+
+        .kpi-info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            margin: -2px -2px 0 0;
+            border-radius: 50%;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .kpi-info-btn:hover,
+        .kpi-info-btn:focus-visible {
+            color: #60A5FA;
+            background: rgba(59, 130, 246, 0.15);
+            border-color: rgba(96, 165, 250, 0.35);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.25);
+            outline: none;
+        }
+
+        /* KPI Info Modal */
+        .kpi-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(3, 7, 18, 0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+        }
+
+        .kpi-modal-backdrop.open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .kpi-modal-card {
+            background: var(--bg-card);
+            border: 1px solid #334155;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            transform: translateY(10px) scale(0.98);
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+        }
+
+        .kpi-modal-backdrop.open .kpi-modal-card {
+            transform: translateY(0) scale(1);
+        }
+
+        .kpi-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 1.1rem 1.35rem;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(17, 24, 39, 0.6);
+        }
+
+        .kpi-modal-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .kpi-modal-icon {
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .kpi-modal-title {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .kpi-modal-close {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            font-size: 1.3rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .kpi-modal-close:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--border-color);
+        }
+
+        .kpi-modal-body {
+            padding: 1.25rem 1.35rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+        }
+
+        .kpi-modal-section {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(51, 65, 85, 0.6);
+            border-radius: 10px;
+            padding: 0.95rem 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        .kpi-modal-section-title {
+            font-size: 0.76rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #60A5FA;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .kpi-modal-section-content {
+            font-size: 0.86rem;
+            line-height: 1.55;
+            color: #E2E8F0;
+        }
+
+        .kpi-modal-section-content p {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .kpi-modal-section-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .kpi-modal-section-content ul {
+            margin: 0.35rem 0 0 1.15rem;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .kpi-formula-box {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            background: rgba(3, 7, 18, 0.65);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 6px;
+            padding: 0.5rem 0.7rem;
+            color: #93C5FD;
+            margin: 0.35rem 0;
+            overflow-x: auto;
+        }
+
+        .kpi-modal-footer {
+            padding: 0.85rem 1.35rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            background: rgba(17, 24, 39, 0.6);
+        }
+
+        .kpi-modal-gotit-btn {
+            background: #2563EB;
+            color: #FFFFFF;
+            border: 1px solid #3B82F6;
+            border-radius: 8px;
+            padding: 0.45rem 1.1rem;
+            font-size: 0.84rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+
+        .kpi-modal-gotit-btn:hover {
+            background: #1D4ED8;
         }
 
         .kpi-value {
@@ -483,6 +712,16 @@
                 padding: 0.85rem;
             }
 
+            .controls-bar {
+                padding: 0.65rem 0.85rem;
+                gap: 8px;
+                border-radius: 10px;
+            }
+
+            .controls-left {
+                gap: 6px;
+            }
+
             .kpi-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 0.5rem;
@@ -515,6 +754,54 @@
         .trend-negative {
             color: var(--accent-red);
             background: var(--accent-red-bg);
+        }
+
+        .trend-warning {
+            color: #FBBF24;
+            background: rgba(245, 158, 11, 0.14);
+        }
+
+        .control-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .control-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .kpi-section-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .kpi-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .kpi-section-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .kpi-section-subtitle {
+            font-size: 0.76rem;
+            color: var(--text-muted);
         }
 
         /* Chart & Section Cards */
@@ -638,9 +925,12 @@
             font-size: 0.875rem;
             --label-2: "Start Balance";
             --label-3: "End Balance";
-            --label-4: "Monthly Gain ($)";
-            --label-5: "Monthly Change (%)";
-            --label-6: "Cumulative Growth (%)";
+            --label-4: "Yield (Div/Int)";
+            --label-5: "Market Change";
+            --label-6: "Spending";
+            --label-7: "True ROI (TWR %)";
+            --label-8: "Net ΔNW ($)";
+            --label-9: "Cum. TWR (%)";
         }
 
         table.breakdown-table thead {
@@ -793,6 +1083,30 @@
 
             table.breakdown-table td:nth-child(6)::before {
                 content: var(--label-6);
+                font-family: var(--font-sans);
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            table.breakdown-table td:nth-child(7)::before {
+                content: var(--label-7);
+                font-family: var(--font-sans);
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            table.breakdown-table td:nth-child(8)::before {
+                content: var(--label-8);
+                font-family: var(--font-sans);
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            table.breakdown-table td:nth-child(9)::before {
+                content: var(--label-9);
                 font-family: var(--font-sans);
                 font-size: 0.78rem;
                 color: var(--text-muted);
@@ -982,7 +1296,35 @@
         <!-- Controls Bar -->
         <section class="controls-bar" aria-label="Dashboard Controls">
             <div class="controls-left" id="controlsLeft">
-                <!-- Controls will be added here -->
+                <div class="control-group">
+                    <label class="control-label" for="scopeFilterSelect">Scope</label>
+                    <select id="scopeFilterSelect" class="timeframe-select" aria-label="Portfolio Scope Filter"
+                        onchange="onDashboardFilterChange()">
+                        <option value="total">Total Portfolio (All Assets)</option>
+                        <option value="taxable">Taxable / Accessible (Cash + Taxable)</option>
+                        <option value="retirement">Retirement Accounts (Tax-Advantaged)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" for="granularitySelect">View</label>
+                    <select id="granularitySelect" class="timeframe-select" aria-label="Time Granularity Filter"
+                        onchange="onDashboardFilterChange()">
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" for="startPeriodSelect">Period</label>
+                    <select id="startPeriodSelect" class="timeframe-select" aria-label="Start Period Filter"
+                        onchange="onDashboardFilterChange()">
+                        <option value="all">All-Time (since Jan 2024)</option>
+                        <option value="trailing_12m">Trailing 12 Months</option>
+                        <option value="ytd">This Year (YTD)</option>
+                        <option value="last_3m">Last 3 Months</option>
+                        <option value="last_30d">Last 30 Days</option>
+                    </select>
+                </div>
             </div>
             <div class="action-group">
                 <div id="freshnessContainer">
@@ -999,47 +1341,229 @@
         <section class="kpi-grid" aria-label="Key Performance Indicators">
             <!-- Card 1: Current Net Worth -->
             <div class="kpi-card accent-blue">
-                <div class="kpi-label">Current Net Worth</div>
+                <div class="kpi-header">
+                    <div class="kpi-label" id="kpiCurrentNetWorthLabel">Current Net Worth</div>
+                    <button type="button" class="kpi-info-btn" aria-label="Info about Current Net Worth"
+                        onclick="openKpiModal('current_net_worth', event)"
+                        title="How Current Net Worth is calculated &amp; how to use it">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </button>
+                </div>
                 <div class="kpi-value" id="kpiCurrentNetWorth">$0</div>
                 <div class="kpi-subtext" id="kpiStartingSubtext">Starting: $0</div>
             </div>
 
             <!-- Card 2: Total Dollar Gain -->
             <div class="kpi-card accent-green">
-                <div class="kpi-label">Total Dollar Gain</div>
+                <div class="kpi-header">
+                    <div class="kpi-label">Total Dollar Gain</div>
+                    <button type="button" class="kpi-info-btn" aria-label="Info about Total Dollar Gain"
+                        onclick="openKpiModal('total_dollar_gain', event)"
+                        title="How Total Dollar Gain is calculated &amp; how to use it">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </button>
+                </div>
                 <div class="kpi-value" id="kpiTotalDollarGain">+$0</div>
                 <div class="kpi-subtext">
                     <span class="trend-pill trend-positive" id="kpiTotalPctPill">+0.00%</span>
-                    <span>since Jan 1, 2024</span>
+                    <span id="kpiTotalSinceLabel">since Jan 1, 2024</span>
                 </div>
             </div>
 
             <!-- Card 3: All-Time Peak -->
             <div class="kpi-card accent-purple">
-                <div class="kpi-label">All-Time Peak</div>
+                <div class="kpi-header">
+                    <div class="kpi-label">Period Peak</div>
+                    <button type="button" class="kpi-info-btn" aria-label="Info about Period Peak"
+                        onclick="openKpiModal('period_peak', event)"
+                        title="How Period Peak is calculated &amp; how to use it">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </button>
+                </div>
                 <div class="kpi-value" id="kpiPeakNetWorth">$0</div>
                 <div class="kpi-subtext" id="kpiPeakMonthSubtext">Reached in —</div>
             </div>
 
             <!-- Card 4: Best Month -->
             <div class="kpi-card accent-emerald">
-                <div class="kpi-label">Best Month</div>
+                <div class="kpi-header">
+                    <div class="kpi-label">Best Month</div>
+                    <button type="button" class="kpi-info-btn" aria-label="Info about Best Month"
+                        onclick="openKpiModal('best_month', event)"
+                        title="How Best Month is calculated &amp; how to use it">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </button>
+                </div>
                 <div class="kpi-value" id="kpiBestMonthGain" style="color: var(--accent-green);">+0.00%</div>
                 <div class="kpi-subtext" id="kpiBestMonthSubtext">Recorded in —</div>
             </div>
 
             <!-- Card 5: Worst Month -->
             <div class="kpi-card accent-red">
-                <div class="kpi-label">Worst Month</div>
+                <div class="kpi-header">
+                    <div class="kpi-label">Worst Month</div>
+                    <button type="button" class="kpi-info-btn" aria-label="Info about Worst Month"
+                        onclick="openKpiModal('worst_month', event)"
+                        title="How Worst Month is calculated &amp; how to use it">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </button>
+                </div>
                 <div class="kpi-value" id="kpiWorstMonthGain" style="color: var(--accent-red);">-0.00%</div>
                 <div class="kpi-subtext" id="kpiWorstMonthSubtext">Recorded in —</div>
             </div>
 
             <!-- Card 6: Annualized Yearly Gain -->
             <div class="kpi-card accent-amber">
-                <div class="kpi-label">Annualized Yearly Gain</div>
+                <div class="kpi-header">
+                    <div class="kpi-label">Annualized Net Growth</div>
+                    <button type="button" class="kpi-info-btn" aria-label="Info about Annualized Net Growth"
+                        onclick="openKpiModal('annualized_gain', event)"
+                        title="How Annualized Net Growth is calculated &amp; how to use it">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </button>
+                </div>
                 <div class="kpi-value" id="kpiAnnualizedGain">+0.00%</div>
-                <div class="kpi-subtext">Compound annual growth</div>
+                <div class="kpi-subtext">Compound annual ΔNW (incl. flows)</div>
+            </div>
+        </section>
+
+        <!-- Section 3.2b: Retirement ROI & Sustainability Strip -->
+        <section class="kpi-section-block" aria-label="Retirement ROI and Sustainability">
+            <div class="kpi-section-header">
+                <h2 class="kpi-section-title">🏖️ Retirement ROI &amp; Sustainability</h2>
+            </div>
+            <div class="kpi-grid">
+                <!-- Retirement Card 1: True Investment ROI (TWR) -->
+                <div class="kpi-card accent-emerald">
+                    <div class="kpi-header">
+                        <div class="kpi-label">True Investment ROI (TWR)</div>
+                        <button type="button" class="kpi-info-btn" aria-label="Info about True Investment ROI (TWR)"
+                            onclick="openKpiModal('twr_roi', event)"
+                            title="How True Investment ROI (TWR) is calculated &amp; how to use it">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="kpi-value" id="kpiTwrAnnualized">+0.00%</div>
+                    <div class="kpi-subtext">
+                        <span class="trend-pill trend-positive" id="kpiTwrTotalPill">+0.00% cum.</span>
+                        <span>Ann. · Excludes withdrawals</span>
+                    </div>
+                </div>
+
+                <!-- Retirement Card 2: Withdrawal Rate (12M SWR) -->
+                <div class="kpi-card accent-amber">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Withdrawal Rate (12M SWR)</div>
+                        <button type="button" class="kpi-info-btn" aria-label="Info about Withdrawal Rate (12M SWR)"
+                            onclick="openKpiModal('withdrawal_rate', event)"
+                            title="How Withdrawal Rate (12M SWR) is calculated &amp; how to use it">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="kpi-value" id="kpiWithdrawalRate">0.00%</div>
+                    <div class="kpi-subtext">
+                        <span class="trend-pill trend-positive" id="kpiWithdrawalBadge">🟢 Safe ≤3.5%</span>
+                        <span id="kpiWithdrawalSubtext">$0/yr net withdrawal</span>
+                    </div>
+                </div>
+
+                <!-- Retirement Card 3: Income Coverage (12M) -->
+                <div class="kpi-card accent-blue">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Income Coverage (12M)</div>
+                        <button type="button" class="kpi-info-btn" aria-label="Info about Income Coverage (12M)"
+                            onclick="openKpiModal('income_coverage', event)"
+                            title="How Income Coverage (12M) is calculated &amp; how to use it">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="kpi-value" id="kpiIncomeCoverage">0.0%</div>
+                    <div class="kpi-subtext" id="kpiIncomeCoverageSubtext">$0 yield / $0 spent (Yield: 0.00%)</div>
+                </div>
+
+                <!-- Retirement Card 4: Max Drawdown & Sequence Risk -->
+                <div class="kpi-card accent-red">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Max Drawdown from Peak</div>
+                        <button type="button" class="kpi-info-btn"
+                            aria-label="Info about Max Drawdown and Sequence Risk"
+                            onclick="openKpiModal('max_drawdown', event)"
+                            title="How Max Drawdown &amp; Sequence Risk is calculated &amp; how to use it">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="kpi-value" id="kpiMaxDrawdown" style="color: var(--accent-green);">0.00%</div>
+                    <div class="kpi-subtext" id="kpiMaxDrawdownSubtext">No drawdown · 0 mos withdrawing at a loss</div>
+                </div>
+
+                <!-- Retirement Card 5: Cash Buffer & Runway -->
+                <div class="kpi-card accent-purple">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Cash Buffer &amp; Runway</div>
+                        <button type="button" class="kpi-info-btn" aria-label="Info about Cash Buffer and Runway"
+                            onclick="openKpiModal('cash_buffer', event)"
+                            title="How Cash Buffer &amp; Runway is calculated &amp; how to use it">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="kpi-value" id="kpiCashBuffer">0.0 mos</div>
+                    <div class="kpi-subtext" id="kpiRunwaySubtext">99+ yrs runway @ $0/mo · $0 cash</div>
+                </div>
             </div>
         </section>
 
@@ -1049,18 +1573,9 @@
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title">💰 Net Worth</h2>
+                        <h2 class="section-title" id="netWorthDollarTitle">💰 Net Worth ($)</h2>
                         <p class="section-subtitle" id="netWorthChartSubtitle">Portfolio valuation over time in dollars
                         </p>
-                    </div>
-                    <div class="chart-controls">
-                        <select id="netWorthTimeframeSelect" class="timeframe-select"
-                            aria-label="Select Net Worth Timeframe" onchange="onNetWorthTimeframeChange(this.value)">
-                            <option value="all">All-Time (since Jan 1, 2024)</option>
-                            <option value="this_year">This Year</option>
-                            <option value="last_3m">Last 3 Months</option>
-                            <option value="last_30d">Last 30 days</option>
-                        </select>
                     </div>
                 </div>
                 <div class="chart-wrapper">
@@ -1072,8 +1587,9 @@
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title">📊 Month / Month %</h2>
-                        <p class="section-subtitle">% gain or loss for each month relative to the previous month</p>
+                        <h2 class="section-title" id="monthlyBarChartTitle">📊 Month / Month %</h2>
+                        <p class="section-subtitle" id="monthlyBarChartSubtitle">% gain or loss for each month relative
+                            to the previous month</p>
                     </div>
                 </div>
                 <div class="chart-wrapper">
@@ -1081,16 +1597,61 @@
                 </div>
             </section>
 
-            <!-- Chart 3: Cumulative Net Worth Growth (%) -->
+            <!-- Chart B: Investment Income Stream -->
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title">📈 Cumulative Growth (%)</h2>
-                        <p class="section-subtitle">Overall percentage portfolio growth since January 1, 2024</p>
+                        <h2 class="section-title">💵 Passive Investment Income vs. Spending</h2>
+                        <p class="section-subtitle" id="investmentIncomeSubtitle">Realized dividends, interest, and
+                            capital gains compared against living expenses</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="investmentIncomeChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Chart 3: Cumulative Net Worth Growth & TWR (%) -->
+            <section class="section-card">
+                <div class="section-header">
+                    <div class="section-title-group">
+                        <h2 class="section-title" id="cumulativeChartTitle">📈 Cumulative Growth (%) — Real True ROI vs.
+                            Net Worth &amp; Monthly Inflation</h2>
+                        <p class="section-subtitle" id="cumulativeChartSubtitle">Real True ROI &amp; Nominal Net Worth
+                            Growth [Left Axis] · Cumulative CPI &amp; US Inflation of that period [Right Axis]</p>
                     </div>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="cumulativeAreaChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Chart 4: % Change from All-Time High -->
+            <section class="section-card">
+                <div class="section-header">
+                    <div class="section-title-group">
+                        <h2 class="section-title" id="athChartTitle">📉 % Change from All-Time High</h2>
+                        <p class="section-subtitle" id="athChartSubtitle">Portfolio valuation relative to the all-time
+                            peak (always ≤ 0%)</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="drawdownChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Chart D: Portfolio Composition by Account Type -->
+            <section class="section-card">
+                <div class="section-header">
+                    <div class="section-title-group">
+                        <h2 class="section-title" id="compositionChartTitle">🏦 Portfolio Composition: Taxable,
+                            Retirement &amp; Cash</h2>
+                        <p class="section-subtitle" id="compositionChartSubtitle">Monthly asset allocation across
+                            Taxable Investments, Retirement (Tax-Advantaged), and Cash</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="compositionChart"></canvas>
                 </div>
             </section>
         </div>
@@ -1099,24 +1660,28 @@
         <section class="section-card table-section-deferred">
             <div class="section-header">
                 <div class="section-title-group">
-                    <h2 class="section-title">📋 Itemized Monthly Breakdown</h2>
-                    <p class="section-subtitle">Complete historical snapshot balances, dollar changes, and monthly
-                        percentage trajectories</p>
+                    <h2 class="section-title">📋 Itemized Performance &amp; Cash-Flow Breakdown</h2>
+                    <p class="section-subtitle">Historical balances, realized yield, market price change, living
+                        withdrawals, and Time-Weighted Return (TWR %)</p>
                 </div>
                 <span class="section-badge" id="monthsTrackedBadge">0 Months Tracked</span>
             </div>
 
             <div tabindex="0" role="region" aria-labelledby="net-worth-table-caption" class="table-wrapper">
                 <table class="breakdown-table">
-                    <caption id="net-worth-table-caption" class="sr-only">Itemized Monthly Net Worth Breakdown</caption>
+                    <caption id="net-worth-table-caption" class="sr-only">Itemized Net Worth &amp; Retirement ROI
+                        Breakdown</caption>
                     <thead>
                         <tr>
-                            <th scope="col">Month</th>
+                            <th scope="col">Period</th>
                             <th scope="col">Start Balance</th>
                             <th scope="col">End Balance</th>
-                            <th scope="col">Monthly Gain ($)</th>
-                            <th scope="col">Monthly Change (%)</th>
-                            <th scope="col">Cumulative Growth (%)</th>
+                            <th scope="col">Yield (Div/Int)</th>
+                            <th scope="col">Market Change</th>
+                            <th scope="col">Spending</th>
+                            <th scope="col">True ROI (TWR %)</th>
+                            <th scope="col">Net ΔNW ($)</th>
+                            <th scope="col">Cum. TWR (%)</th>
                         </tr>
                     </thead>
                     <tbody id="breakdownTableBody">
@@ -1133,7 +1698,7 @@
                 <div class="footer-brand">ego<span>dev</span>null</div>
             </a>
             <div class="footer-copyright">
-                <span style="font-style: italic;">v2.9 · 20261028.1756</span>
+                <span style="font-style: italic;">v2.10 · 20261102.2249</span>
             </div>
             <div class="footer-copyright">
                 &copy; 2026
@@ -1142,29 +1707,379 @@
     </div>
 
     <div id="toast" class="toast"></div>
+
+    <!-- KPI Educational Info Modal -->
+    <div id="kpiInfoModal" class="kpi-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="kpiModalTitle"
+        onclick="if (event.target === event.currentTarget) closeKpiModal()">
+        <div class="kpi-modal-card">
+            <div class="kpi-modal-header">
+                <div class="kpi-modal-title-wrap">
+                    <span class="kpi-modal-icon" id="kpiModalIcon">📊</span>
+                    <h3 class="kpi-modal-title" id="kpiModalTitle">Metric Info</h3>
+                </div>
+                <button type="button" class="kpi-modal-close" aria-label="Close modal"
+                    onclick="closeKpiModal()">&times;</button>
+            </div>
+            <div class="kpi-modal-body">
+                <div class="kpi-modal-section">
+                    <div class="kpi-modal-section-title">📐 How It Is Calculated</div>
+                    <div class="kpi-modal-section-content" id="kpiModalCalc"></div>
+                </div>
+                <div class="kpi-modal-section">
+                    <div class="kpi-modal-section-title">💡 How to Use It</div>
+                    <div class="kpi-modal-section-content" id="kpiModalUsage"></div>
+                </div>
+            </div>
+            <div class="kpi-modal-footer">
+                <button type="button" class="kpi-modal-gotit-btn" onclick="closeKpiModal()">Got it</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let netWorthData = null;
+        let rawPayloadCache = null;
         let netWorthDollarChartInstance = null;
         let monthlyBarChartInstance = null;
+        let investmentIncomeChartInstance = null;
         let cumulativeAreaChartInstance = null;
+        let drawdownChartInstance = null;
+        let compositionChartInstance = null;
         let cachedWeeklyHistory = [];
         let cachedDailyHistory = [];
-        const STORAGE_KEY_TIMEFRAME = 'monarch_net_worth_timeframe';
-        const VALID_TIMEFRAMES = ['all', 'this_year', 'last_3m', 'last_30d'];
+        let currentFilteredView = null;
 
-        function getInitialTimeframe() {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEY_TIMEFRAME);
-                if (stored && VALID_TIMEFRAMES.includes(stored)) {
-                    return stored;
-                }
-            } catch (e) {
-                console.warn('localStorage not accessible:', e);
+        const STORAGE_KEY_SCOPE = 'monarch_net_worth_scope';
+        const STORAGE_KEY_GRANULARITY = 'monarch_net_worth_granularity';
+        const STORAGE_KEY_PERIOD = 'monarch_net_worth_period';
+
+        const US_CPI_INDEX = {
+            '2023-09': 307.789, '2023-10': 307.671, '2023-11': 307.051, '2023-12': 306.746,
+            '2024-01': 308.417, '2024-02': 310.326, '2024-03': 312.332, '2024-04': 313.548,
+            '2024-05': 314.069, '2024-06': 314.175, '2024-07': 314.540, '2024-08': 314.796,
+            '2024-09': 315.301, '2024-10': 315.664, '2024-11': 315.493, '2024-12': 315.605,
+            '2025-01': 317.671, '2025-02': 319.082, '2025-03': 319.799, '2025-04': 320.795,
+            '2025-05': 321.465, '2025-06': 322.561, '2025-07': 323.048, '2025-08': 323.976,
+            '2025-09': 324.800, '2025-10': 324.461, '2025-11': 324.122, '2025-12': 324.054,
+            '2026-01': 325.252, '2026-02': 326.785, '2026-03': 330.213, '2026-04': 333.020,
+            '2026-05': 335.123, '2026-06': 333.952, '2026-07': 333.918, '2026-08': 334.980,
+            '2026-09': 336.940, '2026-10': 337.800, '2026-11': 338.200, '2026-12': 338.600
+        };
+
+        function getUsCpiForMonth(key) {
+            if (!key) return 308.417;
+            let normKey = String(key).trim();
+            if (/^\d{4}-Q[1-4]$/i.test(normKey)) {
+                const yr = normKey.slice(0, 4);
+                const q = parseInt(normKey.slice(-1), 10);
+                const qMonth = String(q * 3).padStart(2, '0');
+                normKey = `${yr}-${qMonth}`;
+            } else if (/^\d{4}$/.test(normKey)) {
+                normKey = `${normKey}-12`;
+            } else if (normKey.length > 7) {
+                normKey = normKey.slice(0, 7);
             }
-            return 'all';
+
+            if (US_CPI_INDEX[normKey] !== undefined) {
+                return US_CPI_INDEX[normKey];
+            }
+
+            const sortedKeys = Object.keys(US_CPI_INDEX).sort();
+            const firstKey = sortedKeys[0];
+            const lastKey = sortedKeys[sortedKeys.length - 1];
+            if (normKey < firstKey) {
+                return US_CPI_INDEX[firstKey];
+            }
+            const [lastYr, lastMo] = lastKey.split('-').map(Number);
+            const [targetYr, targetMo] = normKey.split('-').map(Number);
+            if (!isNaN(targetYr) && !isNaN(targetMo)) {
+                const monthsAfter = (targetYr - lastYr) * 12 + (targetMo - lastMo);
+                if (monthsAfter > 0) {
+                    return US_CPI_INDEX[lastKey] * Math.pow(1.0022, monthsAfter);
+                }
+            }
+            return US_CPI_INDEX[lastKey];
         }
 
-        let currentNetWorthTimeframe = getInitialTimeframe();
+        function getPeriodInflationRate(key, granularity) {
+            if (!key) return 0;
+            const rawKey = String(key).trim();
+            if (granularity === 'quarterly' || /^\d{4}-Q[1-4]$/i.test(rawKey)) {
+                const yr = parseInt(rawKey.slice(0, 4), 10);
+                let q = 4;
+                if (/^\d{4}-Q[1-4]$/i.test(rawKey)) {
+                    q = parseInt(rawKey.slice(-1), 10);
+                } else if (rawKey.length >= 7) {
+                    const mo = parseInt(rawKey.slice(5, 7), 10);
+                    q = Math.ceil((mo || 12) / 3);
+                }
+                const currCpi = getUsCpiForMonth(`${yr}-Q${q}`);
+                const prevQ = q === 1 ? 4 : (q - 1);
+                const prevYr = q === 1 ? (yr - 1) : yr;
+                const prevCpi = getUsCpiForMonth(`${prevYr}-Q${prevQ}`);
+                return prevCpi > 0 ? ((currCpi / prevCpi) - 1) * 100 : 0;
+            }
+            if (granularity === 'yearly' || /^\d{4}$/.test(rawKey)) {
+                const yr = parseInt(rawKey.slice(0, 4), 10);
+                const currCpi = getUsCpiForMonth(rawKey.length >= 7 ? rawKey.slice(0, 7) : `${yr}-12`);
+                const prevCpi = getUsCpiForMonth(`${yr - 1}-12`);
+                return prevCpi > 0 ? ((currCpi / prevCpi) - 1) * 100 : 0;
+            }
+            const normKey = rawKey.slice(0, 7);
+            const [yr, mo] = normKey.split('-').map(Number);
+            if (!yr || !mo) return 0;
+            const prevMo = mo === 1 ? 12 : (mo - 1);
+            const prevYr = mo === 1 ? (yr - 1) : yr;
+            const prevKey = `${prevYr}-${String(prevMo).padStart(2, '0')}`;
+            const currCpi = getUsCpiForMonth(normKey);
+            const prevCpi = getUsCpiForMonth(prevKey);
+            return prevCpi > 0 ? ((currCpi / prevCpi) - 1) * 100 : 0;
+        }
+
+        const KPI_INFO_REGISTRY = {
+            current_net_worth: {
+                icon: '💰',
+                title: 'Current Net Worth',
+                calc: `
+                    <p>Your latest portfolio balance for the selected <strong>Scope</strong> from Monarch Money's daily account balance snapshots:</p>
+                    <div class="kpi-formula-box">Net Worth = Σ (Scoped Account Balances) at Latest Snapshot Date</div>
+                    <ul>
+                        <li><strong>Total Net Worth:</strong> All investable brokerage, retirement, and depository/cash accounts.</li>
+                        <li><strong>Taxable &amp; Accessible:</strong> Liquid cash/depository plus non-retirement taxable brokerage accounts.</li>
+                        <li><strong>Retirement Accounts:</strong> Tax-advantaged accounts (401k, IRA, Roth, 403b, HSA, Pension).</li>
+                        <li>The <em>Starting</em> subtext displays the opening balance at the start of your selected <strong>Period</strong> filter.</li>
+                    </ul>
+                `,
+                usage: `
+                    <p>Use this as your primary balance sheet anchor before evaluating withdrawal sustainability or asset allocation:</p>
+                    <ul>
+                        <li>Switch the <strong>Scope</strong> filter to compare how much of your wealth is immediately accessible (<em>Taxable &amp; Accessible</em>) vs. locked behind retirement age rules (<em>Retirement Accounts</em>).</li>
+                        <li>Compare against the <em>Starting</em> baseline to quickly see your raw wealth expansion over the active timeframe.</li>
+                    </ul>
+                `
+            },
+            total_dollar_gain: {
+                icon: '📈',
+                title: 'Total Dollar Gain',
+                calc: `
+                    <p>Measures the absolute dollar and percentage change in net worth between the beginning and end of your selected <strong>Period</strong>:</p>
+                    <div class="kpi-formula-box">Total Dollar Gain = Ending NW − Starting NW<br>Total % Gain = (Total Dollar Gain ÷ Starting NW) × 100</div>
+                    <p>Because this tracks raw account balances, it includes market price appreciation, reinvested dividends/interest, <em>and</em> external cash flows (deposits, savings, or living withdrawals).</p>
+                `,
+                usage: `
+                    <p>Answers the bottom-line question: <em>"Am I wealthier in raw dollars today than at the start of this period?"</em></p>
+                    <ul>
+                        <li><strong>Positive in retirement:</strong> Means your investment returns and yields exceeded your living withdrawals—your nest egg is still growing after expenses.</li>
+                        <li><strong>Compare with True Investment ROI (TWR):</strong> If Total Dollar Gain is lower than TWR, the difference represents the net cash withdrawals you took to fund living expenses.</li>
+                    </ul>
+                `
+            },
+            period_peak: {
+                icon: '🏔️',
+                title: 'Period Peak',
+                calc: `
+                    <p>The highest end-of-month valuation (high-water mark) recorded within your currently selected <strong>Scope</strong> and <strong>Period</strong>:</p>
+                    <div class="kpi-formula-box">Period Peak = max(Monthly Ending Net Worth in Selected Window)</div>
+                    <p>The subtext identifies the exact month when that high-water mark was reached.</p>
+                `,
+                usage: `
+                    <p>Provides psychological and risk context for where your current portfolio stands relative to its best historical level:</p>
+                    <ul>
+                        <li>When <strong>Current Net Worth equals Period Peak</strong>, your portfolio is at a high-water mark—an opportune time to top up your cash buffer or rebalance equity gains.</li>
+                        <li>When below peak, use the gap alongside the <em>Max Drawdown</em> card to gauge how far the portfolio is from full recovery.</li>
+                    </ul>
+                `
+            },
+            best_month: {
+                icon: '🚀',
+                title: 'Best Month',
+                calc: `
+                    <p>Identifies the single strongest calendar month within the selected <strong>Period</strong> based on monthly net worth percentage growth:</p>
+                    <div class="kpi-formula-box">Monthly % Gain = ((Month End NW − Month Start NW) ÷ Month Start NW) × 100</div>
+                    <p>The subtext also reports the month's <strong>Modified Dietz TWR %</strong> so you can distinguish genuine market rallies from months with large cash deposits.</p>
+                `,
+                usage: `
+                    <p>Measures upside volatility and bull-market participation:</p>
+                    <ul>
+                        <li>Check the subtext's <strong>TWR %</strong>: if Monthly % Gain is high but TWR % is modest, that month's spike was driven by a cash deposit or transfer rather than market performance.</li>
+                        <li>Illustrates why staying invested matters—missing just a handful of best rebound months severely reduces long-term compounding.</li>
+                    </ul>
+                `
+            },
+            worst_month: {
+                icon: '📉',
+                title: 'Worst Month',
+                calc: `
+                    <p>Identifies the steepest single-month percentage decline within the selected <strong>Period</strong>:</p>
+                    <div class="kpi-formula-box">Worst Month = min(Monthly % Change across Selected Window)</div>
+                    <p>Like Best Month, the subtext displays the month name alongside its cash-flow-adjusted <strong>TWR %</strong>.</p>
+                `,
+                usage: `
+                    <p>Acts as a real-world stress test of your portfolio's downside volatility:</p>
+                    <ul>
+                        <li>Compare the headline % drop with the subtext's <strong>TWR %</strong> to see how much of the drop came from market losses vs. large one-off spending or tax payments.</li>
+                        <li>If a single bad month feels uncomfortable in dollar terms, consider increasing your depository cash buffer or reducing equity concentration.</li>
+                    </ul>
+                `
+            },
+            annualized_gain: {
+                icon: '⏱️',
+                title: 'Annualized Net Growth',
+                calc: `
+                    <p>Normalizes your cumulative net worth change over <em>N</em> months into a Compound Annual Growth Rate (CAGR):</p>
+                    <div class="kpi-formula-box">Annualized Net Growth = ((Ending NW ÷ Starting NW) ^ (12 ÷ N) − 1) × 100</div>
+                    <p>For periods shorter than 12 months, it reports the un-extrapolated period growth rate to avoid distorting short-term fluctuations.</p>
+                `,
+                usage: `
+                    <p>Lets you compare multi-year net worth trajectory against inflation and financial plan targets:</p>
+                    <ul>
+                        <li><strong>&gt; 3%–4% per year in retirement:</strong> Your total wealth is outpacing historical inflation even after accounting for your living withdrawals.</li>
+                        <li><strong>0% to 3% per year:</strong> Capital is roughly preserved in nominal terms while funding your lifestyle.</li>
+                        <li><strong>Negative:</strong> You are actively drawing down principal—check your <em>Cash Buffer &amp; Runway</em> card to verify longevity.</li>
+                    </ul>
+                `
+            },
+            twr_roi: {
+                icon: '🏖️',
+                title: 'True Investment ROI (TWR)',
+                calc: `
+                    <p>Computes your portfolio's pure investment return using chain-linked monthly <strong>Modified Dietz Time-Weighted Return (TWR)</strong>, stripping out external cash flows:</p>
+                    <div class="kpi-formula-box">Monthly Return $ = ΔNW − Net External Flow (Other Income − Spending)<br>Monthly TWR = Monthly Return $ ÷ (Start NW + 0.5 × Net External Flow)<br>Cumulative TWR = [ Π (1 + Monthly TWR_i) − 1 ] × 100<br>Real True ROI % = [ (1 + Nominal TWR) ÷ (CPI_t ÷ CPI_0) − 1 ] × 100</div>
+                    <p>The big KPI number shows the <strong>nominal annualized TWR</strong> (for windows ≥ 12 months) and cumulative TWR pill, while the <strong>Cumulative Growth (%)</strong> chart below plots <strong>Real True ROI (TWR %)</strong> deflated by official U.S. BLS CPI-U consumer price index data alongside cumulative U.S. inflation.</p>
+                `,
+                usage: `
+                    <p>This is the gold-standard metric for evaluating <strong>how hard your investments are working</strong>, unaffected by how much you spent or deposited:</p>
+                    <ul>
+                        <li>Benchmark directly against a 60/40 balanced index or the S&amp;P 500 over the same timeframe.</li>
+                        <li>Use the <strong>Cumulative Growth (%)</strong> chart to verify your <strong>Real True ROI</strong> and <strong>Real Net Worth Growth</strong> remain above 0% (growing faster than the U.S. CPI inflation hurdle so your real purchasing power expands in retirement).</li>
+                    </ul>
+                `
+            },
+            withdrawal_rate: {
+                icon: '🎯',
+                title: 'Withdrawal Rate (12M SWR)',
+                calc: `
+                    <p>Measures your trailing 12-month annualized net portfolio withdrawal as a percentage of your current investable base:</p>
+                    <div class="kpi-formula-box">Net Withdrawal = max(0, Living Spending − Non-Portfolio Income)<br>12M SWR % = (Annualized Net Withdrawal ÷ Investable Portfolio Base) × 100</div>
+                    <p><strong>Spending Assumption:</strong> The withdrawal numerator is derived from the exact same historical <strong>trailing 12-month living spending</strong> assumption used in <em>Cash Buffer &amp; Runway</em>—summing actual Monarch Money expense transactions over the last 12 months (excluding internal transfers, credit card payments, and hidden items) to smooth out seasonal spikes.</p>
+                `,
+                usage: `
+                    <p>Benchmarks your spending pace against the classic Trinity Study / 4% Safe Withdrawal Rate framework:</p>
+                    <ul>
+                        <li><strong>🟢 Safe (≤ 3.5%):</strong> Historically supports 30–50+ year retirement horizons with high probability of capital growth.</li>
+                        <li><strong>🟡 Caution (3.5% – 5.0%):</strong> Sustainable in normal markets, but warrants trimming discretionary spending during bear-market drawdowns.</li>
+                        <li><strong>🔴 High (&gt; 5.0%):</strong> Elevated risk of principal depletion unless temporary (e.g., bridging to Social Security/pension).</li>
+                    </ul>
+                `
+            },
+            income_coverage: {
+                icon: '💵',
+                title: 'Income Coverage (12M)',
+                calc: `
+                    <p>Compares your trailing 12-month passive investment cash yields (interest, dividends, and realized capital gains distributions) against your living spending:</p>
+                    <div class="kpi-formula-box">Income Coverage % = (Annualized Inv. Income ÷ Annualized Spending) × 100<br>Portfolio Yield % = (Annualized Inv. Income ÷ Investable Base) × 100</div>
+                    <p>Sourced directly from Monarch Money transactions categorized under Interest, Dividends, and Capital Gains.</p>
+                `,
+                usage: `
+                    <p>Shows how much of your lifestyle is funded organically by portfolio cash yield without selling shares:</p>
+                    <ul>
+                        <li><strong>≥ 100%:</strong> Pure yield financial independence—dividends and interest alone cover 100% of living expenses without touching principal shares.</li>
+                        <li><strong>50% – 99%:</strong> Strong yield cushion; only a small fraction of spending requires selling appreciated assets.</li>
+                        <li><strong>&lt; 50%:</strong> Total-return posture (typical for growth-oriented portfolios where returns come primarily from price appreciation).</li>
+                    </ul>
+                `
+            },
+            max_drawdown: {
+                icon: '🛡️',
+                title: 'Max Drawdown & Sequence Risk',
+                calc: `
+                    <p>Tracks your deepest percentage decline from your true cumulative All-Time High (ATH) peak, plus how many months you withdrew living expenses during a down market:</p>
+                    <div class="kpi-formula-box">Monthly Drawdown % = min(0, ((Month End NW − Running ATH Peak) ÷ Running ATH Peak) × 100)<br>Max Drawdown % = min(Monthly Drawdown % across Selected Period)</div>
+                    <p>The subtext counts <strong>months withdrawing at a loss</strong> (months where investment return was negative while living spending was positive).</p>
+                `,
+                usage: `
+                    <p>Monitors <strong>Sequence of Returns Risk</strong>—the #1 threat to early retirees:</p>
+                    <ul>
+                        <li>Selling equities during a deep drawdown locks in permanent losses and shrinks the share base available for the recovery.</li>
+                        <li>When this card shows an active drawdown, consider funding living expenses from your <strong>Cash (Depository)</strong> buffer rather than selling equities until the portfolio recovers.</li>
+                    </ul>
+                `
+            },
+            cash_buffer: {
+                icon: '🏦',
+                title: 'Cash Buffer & Runway',
+                calc: `
+                    <p>Combines your liquid depository cash cushion (in months of living expenses) with total portfolio longevity (in years):</p>
+                    <div class="kpi-formula-box">Cash Buffer (mos) = Depository Cash Balance ÷ Assumed Monthly Living Spend<br>Portfolio Runway (yrs) = Investable Portfolio Base ÷ Annual Net Withdrawal</div>
+                    <p><strong>How the Spending Assumption Is Derived:</strong></p>
+                    <ul>
+                        <li><strong>Historical Trailing 12-Month Baseline:</strong> Rather than guessing, this metric uses your <strong>actual historical living spending over the trailing 12 months</strong> (or active filtered period) recorded in Monarch Money.</li>
+                        <li><strong>Included &amp; Excluded Transactions:</strong> Sums all itemized outflow transactions in Monarch under living expense category groups (housing, food, utilities, healthcare, travel, shopping, etc.) while strictly excluding internal account transfers, credit card bill payments, investment buy orders, and hidden transactions.</li>
+                        <li><strong>Seasonality Smoothing:</strong> A rolling 12-month average (<code>Annualized Spending ÷ 12</code>) is used so lumpy annual costs—such as property taxes, insurance premiums, vacations, and holiday spending—are evenly represented without distorting any single month.</li>
+                        <li>If non-portfolio income exceeds spending (zero net withdrawal), portfolio runway caps at <strong>99+ yrs</strong>.</li>
+                    </ul>
+                `,
+                usage: `
+                    <p>Guides your bucket strategy, bear-market defense, and retirement readiness:</p>
+                    <ul>
+                        <li><strong>12 – 24+ months Cash Buffer:</strong> Ideal retirement "Bucket 1" cushion—lets you pause equity sales for 1–2 years during a stock market crash so your equities can recover untouched.</li>
+                        <li><strong>6 – 12 months Cash Buffer:</strong> Solid emergency reserve for routine market volatility.</li>
+                        <li><strong>&lt; 6 months Cash Buffer:</strong> Consider harvesting equity gains during bull markets to replenish liquid cash reserves.</li>
+                        <li><strong>Pre-Retirement vs. Post-Retirement Adjustments:</strong> Because the runway assumes your historical spending pace continues unchanged, mentally adjust if your post-retirement budget will differ (e.g., if a mortgage payoff or lower commuting costs will reduce monthly spend, your true runway will be longer; if healthcare or travel spending will rise, your true runway will be shorter).</li>
+                    </ul>
+                `
+            }
+        };
+
+        function openKpiModal(metricKey, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const info = KPI_INFO_REGISTRY[metricKey];
+            const modal = document.getElementById('kpiInfoModal');
+            if (!info || !modal) return;
+
+            const iconEl = document.getElementById('kpiModalIcon');
+            const titleEl = document.getElementById('kpiModalTitle');
+            const calcEl = document.getElementById('kpiModalCalc');
+            const usageEl = document.getElementById('kpiModalUsage');
+
+            let calcHtml = info.calc || '';
+            const ret = currentFilteredView?.retirement || netWorthData?.retirement;
+            if (metricKey === 'cash_buffer' && ret) {
+                const mosCount = ret.trailingMonthsUsed || 12;
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
+                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (Trailing ${mosCount}M Historical Data):</div>
+                        <div>• Assumed Monthly Spend: <strong>${formatCurrency0(ret.avgMonthlySpending || 0)}/mo</strong> (${formatCurrency0(ret.annSpending || 0)}/yr)</div>
+                        <div>• Assumed Net Portfolio Outflow: <strong>${formatCurrency0(ret.annNetWithdrawal || 0)}/yr</strong> (${formatCurrency0(ret.avgMonthlyNetWithdrawal || 0)}/mo)</div>
+                        <div>• Depository Cash Reserves: <strong>${formatCurrency0(ret.cashBalance || 0)}</strong> · Investable Base: <strong>${formatCurrency0(ret.investableBase || 0)}</strong></div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            }
+
+            if (iconEl) iconEl.textContent = info.icon || '📊';
+            if (titleEl) titleEl.textContent = info.title || 'Metric Info';
+            if (calcEl) calcEl.innerHTML = calcHtml;
+            if (usageEl) usageEl.innerHTML = info.usage || '';
+
+            modal.classList.add('open');
+        }
+
+        function closeKpiModal() {
+            const modal = document.getElementById('kpiInfoModal');
+            if (modal) {
+                modal.classList.remove('open');
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeKpiModal();
+            }
+        });
+
         let pollTimer = null;
         let toastTimeout = null;
         let lastUpdatedAt = null;
@@ -1237,6 +2152,12 @@
         const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         function formatMonthHuman(monthStr) {
             if (!monthStr || typeof monthStr !== 'string') return '';
+            if (/^\d{4}-Q[1-4]$/.test(monthStr)) {
+                return monthStr.replace(/^(\d{4})-(Q[1-4])$/, '$2 $1');
+            }
+            if (/^\d{4}$/.test(monthStr)) {
+                return monthStr;
+            }
             const parts = monthStr.split('-');
             if (parts.length < 2) return monthStr;
             const year = parts[0];
@@ -1294,6 +2215,18 @@
             return sign + num.toFixed(decimals) + '%';
         }
 
+        function formatCompactAxisDollar(value) {
+            const sign = value < 0 ? '-' : '';
+            const absVal = Math.abs(value);
+            if (absVal >= 1e6) {
+                return sign + '$' + (absVal / 1e6).toFixed(2) + 'M';
+            }
+            if (absVal >= 1e3) {
+                return sign + '$' + (absVal / 1e3).toFixed(0) + 'k';
+            }
+            return sign + '$' + Math.round(absVal).toLocaleString('en-US');
+        }
+
         function normalizeHistoryItem(item, firstStartNw) {
             const month = item.month || '';
             const startNw = Number(item.start_balance ?? item.start_nw ?? 0);
@@ -1303,16 +2236,500 @@
             const baseStart = firstStartNw || startNw || 1;
             const cumDollars = Number(item.cumulative_gain_amount ?? item.cumulative_gain_dollars ?? (endNw - baseStart));
             const cumPercent = Number(item.cumulative_gain_percent ?? (baseStart !== 0 ? ((endNw - baseStart) / baseStart) * 100 : 0));
+
+            const interest = Number(item.interest ?? 0);
+            const dividends = Number(item.dividends ?? 0);
+            const capitalGains = Number(item.capital_gains ?? 0);
+            const invIncome = Number(item.inv_income ?? (interest + dividends + capitalGains));
+            const otherIncome = Number(item.other_income ?? 0);
+            const spending = Number(item.spending ?? 0);
+            const netExternalFlow = Number(item.net_external_flow ?? (otherIncome - spending));
+            const totalReturnDollars = Number(item.total_return_dollars ?? (gainDollars - netExternalFlow));
+            const priceChangeDollars = Number(item.price_change_dollars ?? (totalReturnDollars - invIncome));
+            const twrPercent = Number(item.twr_percent ?? gainPercent);
+            const cumTwrPercent = Number(item.cumulative_twr_percent ?? cumPercent);
+            const drawdownPercent = Number(item.drawdown_percent ?? 0);
+
             return {
+                ...item,
                 month,
+                period: month,
                 start_nw: startNw,
                 end_nw: endNw,
                 gain_dollars: gainDollars,
                 gain_percent: gainPercent,
                 cumulative_gain_dollars: cumDollars,
                 cumulative_gain_percent: cumPercent,
+                interest,
+                dividends,
+                capital_gains: capitalGains,
+                inv_income: invIncome,
+                other_income: otherIncome,
+                spending,
+                net_external_flow: netExternalFlow,
+                total_return_dollars: totalReturnDollars,
+                price_change_dollars: priceChangeDollars,
+                twr_percent: twrPercent,
+                cumulative_twr_percent: cumTwrPercent,
+                drawdown_percent: drawdownPercent,
+                balances_by_type: item.balances_by_type || {},
                 end_date: item.end_date || ''
             };
+        }
+
+        function populateStartPeriodOptions(rawHistory) {
+            const selectEl = document.getElementById('startPeriodSelect');
+            if (!selectEl || !Array.isArray(rawHistory) || rawHistory.length === 0) return;
+
+            let currentVal = selectEl.value || 'all';
+            try {
+                const storedPeriod = localStorage.getItem(STORAGE_KEY_PERIOD);
+                if (storedPeriod) {
+                    currentVal = storedPeriod;
+                }
+            } catch (e) {
+                // ignore storage errors
+            }
+            const years = Array.from(new Set(
+                rawHistory
+                    .map(h => String(h.month || '').slice(0, 4))
+                    .filter(y => /^\d{4}$/.test(y))
+            )).sort();
+
+            const dynamicValues = new Set();
+            years.forEach((yr, idx) => {
+                if (idx > 0) {
+                    dynamicValues.add(`${yr}-01`);
+                }
+            });
+
+            // Remove previously added dynamic year options
+            Array.from(selectEl.querySelectorAll('option[data-dynamic-year="1"]')).forEach(opt => opt.remove());
+
+            dynamicValues.forEach(val => {
+                const yr = val.slice(0, 4);
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = `Since Jan ${yr}`;
+                opt.setAttribute('data-dynamic-year', '1');
+                selectEl.appendChild(opt);
+            });
+
+            if (Array.from(selectEl.options).some(o => o.value === currentVal)) {
+                selectEl.value = currentVal;
+            } else {
+                selectEl.value = 'all';
+            }
+        }
+
+        function computeFilteredView(rawHistory, retirementAnalytics, scope, startPeriod, granularity) {
+            const normScope = (!scope || scope === 'all' || scope === 'investable' || scope === 'liquid') ? 'total' : scope;
+            const sortedRaw = [...(rawHistory || [])].sort((a, b) => String(a.month).localeCompare(String(b.month)));
+            const hasTypeBreakdown = Boolean(
+                retirementAnalytics?.has_type_breakdown ||
+                sortedRaw.some(item => (item.investable_end_balance || 0) !== 0 || (item.liquid_end_balance || 0) !== 0 || (item.taxable_end_balance || 0) !== 0 || (item.retirement_end_balance || 0) !== 0)
+            );
+
+            // Step 1: Map each month to the selected scope
+            const scopedMonths = sortedRaw.map(item => {
+                const interest = Number(item.interest ?? 0);
+                const dividends = Number(item.dividends ?? 0);
+                const capitalGains = Number(item.capital_gains ?? 0);
+                const invIncome = Number(item.inv_income ?? (interest + dividends + capitalGains));
+                const otherIncome = Number(item.other_income ?? 0);
+                const spending = Number(item.spending ?? 0);
+                const netExternalFlow = Number(item.net_external_flow ?? (otherIncome - spending));
+
+                let startNw = Number(item.investable_start_balance ?? item.start_balance ?? item.start_nw ?? 0);
+                let endNw = Number(item.investable_end_balance ?? item.end_balance ?? item.end_nw ?? 0);
+                let gainDollars = Number(item.investable_gain_amount ?? item.gain_amount ?? item.gain_dollars ?? (endNw - startNw));
+                let totalReturnDollars = Number(item.investable_total_return_dollars ?? item.total_return_dollars ?? (gainDollars - netExternalFlow));
+                let priceChangeDollars = Number(item.investable_price_change_dollars ?? item.price_change_dollars ?? (totalReturnDollars - invIncome));
+                let twrPercent = Number(item.investable_twr_percent ?? item.twr_percent ?? (startNw !== 0 ? (gainDollars / startNw) * 100 : 0));
+
+                if (normScope === 'taxable') {
+                    const fallbackTaxable = Number(item.balances_by_type?.depository || 0) + Number(item.balances_by_type?.taxable_brokerage || 0);
+                    startNw = Number(item.taxable_start_balance ?? fallbackTaxable);
+                    endNw = Number(item.taxable_end_balance ?? fallbackTaxable);
+                    gainDollars = endNw - startNw;
+                    totalReturnDollars = gainDollars - netExternalFlow;
+                    priceChangeDollars = totalReturnDollars - invIncome;
+                    const denom = startNw + 0.5 * netExternalFlow;
+                    if (denom > 0) {
+                        twrPercent = (totalReturnDollars / denom) * 100;
+                    } else if (startNw !== 0) {
+                        twrPercent = (gainDollars / startNw) * 100;
+                    } else {
+                        twrPercent = 0;
+                    }
+                } else if (normScope === 'retirement') {
+                    const fallbackRet = Number(item.balances_by_type?.retirement || 0);
+                    startNw = Number(item.retirement_start_balance ?? fallbackRet);
+                    endNw = Number(item.retirement_end_balance ?? fallbackRet);
+                    gainDollars = endNw - startNw;
+                    totalReturnDollars = gainDollars;
+                    priceChangeDollars = totalReturnDollars - invIncome;
+                    twrPercent = startNw !== 0 ? (gainDollars / startNw) * 100 : 0;
+                }
+
+                const gainPercent = startNw !== 0 ? (gainDollars / startNw) * 100 : 0;
+
+                return {
+                    ...item,
+                    month: item.month || '',
+                    period: item.month || '',
+                    start_nw: startNw,
+                    end_nw: endNw,
+                    gain_dollars: gainDollars,
+                    gain_percent: gainPercent,
+                    interest,
+                    dividends,
+                    capital_gains: capitalGains,
+                    inv_income: invIncome,
+                    other_income: otherIncome,
+                    spending,
+                    net_external_flow: netExternalFlow,
+                    total_return_dollars: totalReturnDollars,
+                    price_change_dollars: priceChangeDollars,
+                    twr_percent: twrPercent,
+                    balances_by_type: item.balances_by_type || {},
+                    end_date: item.end_date || ''
+                };
+            });
+
+            // Step 1b: Track true cumulative All-Time High (ATH) across the entire scope history
+            let allTimePeak = 0;
+            let allTimePeakMonth = '';
+            const scopedMonthsWithAth = scopedMonths.map(m => {
+                if (m.start_nw > allTimePeak) {
+                    allTimePeak = m.start_nw;
+                    allTimePeakMonth = m.month;
+                }
+                if (m.end_nw > allTimePeak) {
+                    allTimePeak = m.end_nw;
+                    allTimePeakMonth = m.month;
+                }
+                const athPct = allTimePeak > 0
+                    ? Math.min(0, ((m.end_nw - allTimePeak) / allTimePeak) * 100)
+                    : 0;
+
+                return {
+                    ...m,
+                    ath_peak: allTimePeak,
+                    ath_peak_month: allTimePeakMonth,
+                    ath_change_percent: athPct
+                };
+            });
+
+            // Step 2: Filter months by startPeriod
+            let filteredMonths = scopedMonthsWithAth;
+            if (startPeriod === 'trailing_12m') {
+                filteredMonths = scopedMonthsWithAth.slice(-12);
+            } else if (startPeriod === 'last_3m') {
+                filteredMonths = scopedMonthsWithAth.slice(-3);
+            } else if (startPeriod === 'last_30d') {
+                filteredMonths = scopedMonthsWithAth.slice(-1);
+            } else if (startPeriod === 'ytd') {
+                const latestYear = scopedMonthsWithAth.length > 0
+                    ? String(scopedMonthsWithAth[scopedMonthsWithAth.length - 1].month).slice(0, 4)
+                    : String(new Date().getFullYear());
+                filteredMonths = scopedMonthsWithAth.filter(m => m.month >= `${latestYear}-01`);
+            } else if (startPeriod && startPeriod !== 'all') {
+                filteredMonths = scopedMonthsWithAth.filter(m => m.month >= startPeriod);
+            }
+            if (filteredMonths.length === 0 && scopedMonthsWithAth.length > 0) {
+                filteredMonths = scopedMonthsWithAth;
+            }
+
+            // Step 3: Re-chain cumulative growth %, cumulative TWR %, and record ATH metrics
+            const baseStartNw = filteredMonths.length > 0 ? filteredMonths[0].start_nw : 0;
+            let runningTwrFactor = 1.0;
+            let maxAthDropPercent = 0;
+            let maxAthDropMonth = '';
+            let maxAthPeakMonth = '';
+            let monthsWithdrawingAtLoss = 0;
+
+            filteredMonths = filteredMonths.map(m => {
+                const cumDollars = m.end_nw - baseStartNw;
+                const cumPercent = baseStartNw !== 0 ? (cumDollars / baseStartNw) * 100 : 0;
+                runningTwrFactor *= (1 + (m.twr_percent / 100));
+                const cumTwrPercent = (runningTwrFactor - 1) * 100;
+
+                const ddPct = m.ath_change_percent;
+                if (ddPct < maxAthDropPercent) {
+                    maxAthDropPercent = ddPct;
+                    maxAthDropMonth = m.month;
+                    maxAthPeakMonth = m.ath_peak_month;
+                }
+                if (m.total_return_dollars < 0 && m.spending > 0) {
+                    monthsWithdrawingAtLoss += 1;
+                }
+
+                return {
+                    ...m,
+                    cumulative_gain_dollars: cumDollars,
+                    cumulative_gain_percent: cumPercent,
+                    cumulative_twr_percent: cumTwrPercent,
+                    drawdown_percent: ddPct
+                };
+            });
+
+            // Step 4: Aggregate into granularity buckets ('monthly', 'quarterly', 'yearly')
+            let aggregatedSeries = filteredMonths;
+            if (granularity === 'quarterly' || granularity === 'yearly') {
+                const bucketsMap = new Map();
+                filteredMonths.forEach(m => {
+                    const yr = m.month.slice(0, 4);
+                    const mo = parseInt(m.month.slice(5, 7), 10) || 1;
+                    const q = Math.ceil(mo / 3);
+                    const key = granularity === 'quarterly' ? `${yr}-Q${q}` : yr;
+                    if (!bucketsMap.has(key)) {
+                        bucketsMap.set(key, []);
+                    }
+                    bucketsMap.get(key).push(m);
+                });
+
+                aggregatedSeries = [];
+                bucketsMap.forEach((group, key) => {
+                    const firstM = group[0];
+                    const lastM = group[group.length - 1];
+                    const startNw = firstM.start_nw;
+                    const endNw = lastM.end_nw;
+                    const gainDollars = endNw - startNw;
+                    const gainPercent = startNw !== 0 ? (gainDollars / startNw) * 100 : 0;
+
+                    let interest = 0;
+                    let dividends = 0;
+                    let capitalGains = 0;
+                    let invIncome = 0;
+                    let otherIncome = 0;
+                    let spending = 0;
+                    let netExternalFlow = 0;
+                    let totalReturnDollars = 0;
+                    let priceChangeDollars = 0;
+                    let bucketTwrFactor = 1.0;
+                    let worstAthPct = 0;
+
+                    group.forEach(item => {
+                        interest += item.interest;
+                        dividends += item.dividends;
+                        capitalGains += item.capital_gains;
+                        invIncome += item.inv_income;
+                        otherIncome += item.other_income;
+                        spending += item.spending;
+                        netExternalFlow += item.net_external_flow;
+                        totalReturnDollars += item.total_return_dollars;
+                        priceChangeDollars += item.price_change_dollars;
+                        bucketTwrFactor *= (1 + (item.twr_percent / 100));
+                        if (item.ath_change_percent < worstAthPct) {
+                            worstAthPct = item.ath_change_percent;
+                        }
+                    });
+
+                    const twrPercent = (bucketTwrFactor - 1) * 100;
+                    aggregatedSeries.push({
+                        month: key,
+                        period: key,
+                        start_nw: startNw,
+                        end_nw: endNw,
+                        gain_dollars: gainDollars,
+                        gain_percent: gainPercent,
+                        cumulative_gain_dollars: lastM.cumulative_gain_dollars,
+                        cumulative_gain_percent: lastM.cumulative_gain_percent,
+                        interest,
+                        dividends,
+                        capital_gains: capitalGains,
+                        inv_income: invIncome,
+                        other_income: otherIncome,
+                        spending,
+                        net_external_flow: netExternalFlow,
+                        total_return_dollars: totalReturnDollars,
+                        price_change_dollars: priceChangeDollars,
+                        twr_percent: twrPercent,
+                        cumulative_twr_percent: lastM.cumulative_twr_percent,
+                        ath_peak: lastM.ath_peak,
+                        ath_peak_month: lastM.ath_peak_month,
+                        ath_change_percent: lastM.ath_change_percent,
+                        worst_ath_change_percent: worstAthPct,
+                        drawdown_percent: lastM.ath_change_percent,
+                        balances_by_type: lastM.balances_by_type || {},
+                        end_date: lastM.end_date || '',
+                        months_count: group.length
+                    });
+                });
+            }
+
+            // Step 5: Compute KPIs & Retirement Metrics for the filtered view
+            const firstItem = filteredMonths[0] || null;
+            const lastItem = filteredMonths[filteredMonths.length - 1] || null;
+            const startingNw = firstItem ? firstItem.start_nw : 0;
+            const currentNw = lastItem ? lastItem.end_nw : 0;
+            const totalDollarGain = currentNw - startingNw;
+            const totalPctGain = startingNw !== 0 ? (totalDollarGain / startingNw) * 100 : 0;
+
+            let bestPeak = firstItem;
+            let bestM = firstItem;
+            let worstM = firstItem;
+            for (const h of filteredMonths) {
+                if (bestPeak && h.end_nw > bestPeak.end_nw) bestPeak = h;
+                if (bestM && h.gain_percent > bestM.gain_percent) bestM = h;
+                if (worstM && h.gain_percent < worstM.gain_percent) worstM = h;
+            }
+
+            const monthsCount = filteredMonths.length;
+            let annualizedGain = 0;
+            if (monthsCount > 0 && startingNw > 0 && currentNw > 0) {
+                annualizedGain = (Math.pow(currentNw / startingNw, 12 / monthsCount) - 1) * 100;
+            } else if (monthsCount > 0 && startingNw !== 0) {
+                annualizedGain = totalPctGain * (12 / monthsCount);
+            }
+
+            const avgMonthlyGain = monthsCount > 0
+                ? filteredMonths.reduce((acc, h) => acc + h.gain_percent, 0) / monthsCount
+                : 0;
+
+            const twrTotalPercent = lastItem ? lastItem.cumulative_twr_percent : 0;
+            let twrAnnualizedPercent = 0;
+            if (monthsCount > 0 && (1 + twrTotalPercent / 100) > 0) {
+                twrAnnualizedPercent = (Math.pow(1 + twrTotalPercent / 100, 12 / monthsCount) - 1) * 100;
+            }
+
+            // Trailing 12M (within filtered window) for SWR & Income Coverage
+            const trailingSlice = filteredMonths.slice(-12);
+            const tCount = trailingSlice.length;
+            const tSpending = trailingSlice.reduce((s, m) => s + m.spending, 0);
+            const tOtherInc = trailingSlice.reduce((s, m) => s + m.other_income, 0);
+            const tInvIncome = trailingSlice.reduce((s, m) => s + m.inv_income, 0);
+            const tNetWithdrawal = Math.max(0, tSpending - tOtherInc);
+            const annScale = tCount > 0 ? (12 / tCount) : 1;
+            const annSpending = tSpending * annScale;
+            const annNetWithdrawal = tNetWithdrawal * annScale;
+            const annInvIncome = tInvIncome * annScale;
+            const avgMonthlySpending = annSpending / 12;
+            const avgMonthlyNetWithdrawal = annNetWithdrawal / 12;
+
+            const lastBt = lastItem?.balances_by_type || {};
+            const cashBal = lastBt.depository !== undefined
+                ? Number(lastBt.depository)
+                : Number(retirementAnalytics?.cash_balance ?? 0);
+            const invBal = lastBt.brokerage !== undefined
+                ? Number(lastBt.brokerage)
+                : Number(retirementAnalytics?.investments_balance ?? 0);
+            const investableBase = (lastItem && Number(lastItem.investable_end_balance) > 0)
+                ? Number(lastItem.investable_end_balance)
+                : ((cashBal + invBal) > 0 ? (cashBal + invBal) : (Number(retirementAnalytics?.investable_net_worth) || currentNw));
+
+            const withdrawalRatePercent = investableBase > 0
+                ? (annNetWithdrawal / investableBase) * 100
+                : Number(retirementAnalytics?.withdrawal_rate_percent ?? 0);
+            let withdrawalStatus = 'safe';
+            if (withdrawalRatePercent > 5.0) {
+                withdrawalStatus = 'high';
+            } else if (withdrawalRatePercent > 3.5) {
+                withdrawalStatus = 'caution';
+            }
+
+            const incomeCoveragePercent = tSpending > 0
+                ? (tInvIncome / tSpending) * 100
+                : (tInvIncome > 0 ? 100 : Number(retirementAnalytics?.income_coverage_percent ?? 0));
+            const yieldOnInvestablePercent = investableBase > 0
+                ? (annInvIncome / investableBase) * 100
+                : Number(retirementAnalytics?.yield_on_investable_percent ?? 0);
+
+            const cashBufferMonths = avgMonthlySpending > 0
+                ? (cashBal / avgMonthlySpending)
+                : Number(retirementAnalytics?.cash_buffer_months ?? 0);
+            const runwayYears = annNetWithdrawal > 0
+                ? Math.min(99.9, investableBase / annNetWithdrawal)
+                : (annSpending > 0 ? Math.min(99.9, investableBase / annSpending) : Number(retirementAnalytics?.runway_years ?? 99.9));
+
+            return {
+                scope,
+                startPeriod,
+                granularity,
+                filteredMonths,
+                history: aggregatedSeries,
+                kpis: {
+                    startingNw,
+                    currentNw,
+                    totalDollarGain,
+                    totalPctGain,
+                    peakNw: bestPeak ? bestPeak.end_nw : currentNw,
+                    peakMonth: bestPeak ? bestPeak.month : '—',
+                    bestMonthGain: bestM ? bestM.gain_percent : 0,
+                    bestMonthTwr: bestM ? bestM.twr_percent : 0,
+                    bestMonthName: bestM ? bestM.month : '—',
+                    worstMonthGain: worstM ? worstM.gain_percent : 0,
+                    worstMonthTwr: worstM ? worstM.twr_percent : 0,
+                    worstMonthName: worstM ? worstM.month : '—',
+                    annualizedGain,
+                    avgMonthlyGain,
+                    sinceMonth: firstItem ? firstItem.month : '2024-01'
+                },
+                retirement: {
+                    hasTypeBreakdown,
+                    twrTotalPercent,
+                    twrAnnualizedPercent,
+                    withdrawalRatePercent,
+                    withdrawalStatus,
+                    annNetWithdrawal,
+                    annSpending,
+                    avgMonthlySpending,
+                    avgMonthlyNetWithdrawal,
+                    trailingMonthsUsed: tCount,
+                    annInvIncome,
+                    investableBase,
+                    incomeCoveragePercent,
+                    yieldOnInvestablePercent,
+                    maxDrawdownPercent: maxAthDropPercent,
+                    maxDrawdownMonth: maxAthDropMonth || '—',
+                    maxDrawdownPeakMonth: maxAthPeakMonth || '—',
+                    currentDrawdownPercent: lastItem ? (lastItem.ath_change_percent ?? lastItem.drawdown_percent ?? 0) : 0,
+                    monthsWithdrawingAtLoss,
+                    cashBalance: cashBal,
+                    cashBufferMonths,
+                    runwayYears
+                }
+            };
+        }
+
+        function synthesizePointsFromMonthly(monthlySeries) {
+            const weekly = [];
+            const daily = [];
+            (monthlySeries || []).forEach(h => {
+                const startBal = Number(h.start_nw ?? h.start_balance ?? h.end_nw ?? 0);
+                const endBal = Number(h.end_nw ?? h.end_balance ?? startBal);
+                const monthStr = h.month;
+                const parts = String(monthStr).split('-');
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                if (!y || !m) return;
+                const daysInMonth = new Date(y, m, 0).getDate();
+
+                const checkDays = [7, 14, 21, daysInMonth];
+                checkDays.forEach((dayNum, stepIdx) => {
+                    const frac = (stepIdx + 1) / checkDays.length;
+                    const interpBal = Math.round((startBal + (endBal - startBal) * frac) * 100) / 100;
+                    const dateStr = `${monthStr}-${String(dayNum).padStart(2, '0')}`;
+                    weekly.push({
+                        date: dateStr,
+                        balance: interpBal,
+                        week: `${monthStr}-W${stepIdx + 1}`,
+                        interpolated: true
+                    });
+                });
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const frac = daysInMonth > 1 ? (d - 1) / (daysInMonth - 1) : 1;
+                    const interpBal = Math.round((startBal + (endBal - startBal) * frac) * 100) / 100;
+                    daily.push({
+                        date: `${monthStr}-${String(d).padStart(2, '0')}`,
+                        balance: interpBal,
+                        interpolated: true
+                    });
+                }
+            });
+            return { weekly, daily };
         }
 
         function extractKpisAndHistory(payload) {
@@ -1327,75 +2744,7 @@
 
             const history = sortedChronological.map(item => normalizeHistoryItem(item, firstStartNw));
             const summary = payload.summary || payload.kpis || payload;
-
-            const firstItem = history[0] || null;
-            const lastItem = history[history.length - 1] || null;
-
-            const startingNw = Number(summary.starting_net_worth ?? summary.start_nw ?? (firstItem ? firstItem.start_nw : 0));
-            const currentNw = Number(summary.current_net_worth ?? summary.end_nw ?? (lastItem ? lastItem.end_nw : 0));
-            const totalDollarGain = Number(summary.total_gain_amount ?? summary.total_dollar_gain ?? summary.cumulative_gain_dollars ?? (currentNw - startingNw));
-            const totalPctGain = Number(
-                summary.total_gain_percent ??
-                summary.total_percent_gain ??
-                summary.total_pct_gain ??
-                summary.cumulative_gain_percent ??
-                (startingNw !== 0 ? (totalDollarGain / startingNw) * 100 : 0)
-            );
-
-            let peakNw = Number(summary.all_time_peak ?? summary.peak_net_worth ?? 0);
-            let peakMonth = summary.peak_month ?? summary.all_time_peak_month ?? '';
-            if ((!peakNw || !peakMonth) && history.length > 0) {
-                let bestPeak = history[0];
-                for (const h of history) {
-                    if (h.end_nw > bestPeak.end_nw) bestPeak = h;
-                }
-                if (!peakNw) peakNw = bestPeak.end_nw;
-                if (!peakMonth) peakMonth = bestPeak.month;
-            }
-
-            let bestMonthGain = summary.best_month_gain_percent ?? summary.best_month_percent ?? summary.best_month?.gain_percent;
-            let bestMonthName = summary.best_month_name ?? summary.best_month_month ?? (typeof summary.best_month === 'string' ? summary.best_month : summary.best_month?.month);
-            if ((bestMonthGain === undefined || !bestMonthName) && history.length > 0) {
-                let bestM = history[0];
-                for (const h of history) {
-                    if (h.gain_percent > bestM.gain_percent) bestM = h;
-                }
-                if (bestMonthGain === undefined) bestMonthGain = bestM.gain_percent;
-                if (!bestMonthName) bestMonthName = bestM.month;
-            }
-
-            let worstMonthGain = summary.worst_month_gain_percent ?? summary.worst_month_percent ?? summary.worst_month?.gain_percent;
-            let worstMonthName = summary.worst_month_name ?? summary.worst_month_month ?? (typeof summary.worst_month === 'string' ? summary.worst_month : summary.worst_month?.month);
-            if ((worstMonthGain === undefined || !worstMonthName) && history.length > 0) {
-                let worstM = history[0];
-                for (const h of history) {
-                    if (h.gain_percent < worstM.gain_percent) worstM = h;
-                }
-                if (worstMonthGain === undefined) worstMonthGain = worstM.gain_percent;
-                if (!worstMonthName) worstMonthName = worstM.month;
-            }
-
-            let avgMonthlyGain = summary.average_monthly_gain_percent ?? summary.avg_monthly_gain_percent ?? summary.average_monthly_gain;
-            if (avgMonthlyGain === undefined) {
-                if (history.length > 0) {
-                    const sumPct = history.reduce((acc, h) => acc + h.gain_percent, 0);
-                    avgMonthlyGain = sumPct / history.length;
-                } else {
-                    avgMonthlyGain = 0;
-                }
-            }
-
-            let annualizedGain = summary.annualized_gain_percent ?? summary.annualized_yearly_gain ?? summary.cagr_percent;
-            if (annualizedGain === undefined) {
-                const months = history.length;
-                if (months > 0 && startingNw > 0 && currentNw > 0) {
-                    annualizedGain = (Math.pow(currentNw / startingNw, 12 / months) - 1) * 100;
-                } else if (months > 0 && startingNw !== 0) {
-                    annualizedGain = totalPctGain * (12 / months);
-                } else {
-                    annualizedGain = 0;
-                }
-            }
+            const retirementAnalytics = payload.retirement_analytics || summary.retirement_analytics || null;
 
             let weeklyHistory = Array.isArray(payload.weekly_history)
                 ? payload.weekly_history
@@ -1405,84 +2754,91 @@
                 : (Array.isArray(summary.daily_history) ? summary.daily_history : []);
 
             // If weekly/daily history is not yet populated from raw Monarch snapshots (e.g. cached record),
-            // synthesize multi-point weekly/daily checkpoints between monthly closes so resolution is high immediately
+            // synthesize multi-point weekly/daily checkpoints between monthly closes and mark interpolated: true
             if (weeklyHistory.length === 0 && history.length > 0) {
-                weeklyHistory = [];
-                history.forEach(h => {
-                    const startBal = h.start_balance ?? h.start_nw ?? h.end_balance;
-                    const endBal = h.end_balance ?? h.end_nw ?? startBal;
-                    const monthStr = h.month; // e.g. "2024-01"
-                    const parts = monthStr.split('-');
-                    const y = parseInt(parts[0], 10);
-                    const m = parseInt(parts[1], 10);
-                    const daysInMonth = new Date(y, m, 0).getDate();
-
-                    const checkDays = [7, 14, 21, daysInMonth];
-                    checkDays.forEach((dayNum, stepIdx) => {
-                        const frac = (stepIdx + 1) / checkDays.length;
-                        const interpBal = Math.round((startBal + (endBal - startBal) * frac) * 100) / 100;
-                        const dateStr = `${monthStr}-${String(dayNum).padStart(2, '0')}`;
-                        weeklyHistory.push({
-                            date: dateStr,
-                            balance: interpBal,
-                            week: `${monthStr}-W${stepIdx + 1}`
-                        });
-                    });
-                });
+                weeklyHistory = synthesizePointsFromMonthly(history).weekly;
             }
-
             if (dailyHistory.length === 0 && history.length > 0) {
-                dailyHistory = [];
-                history.forEach(h => {
-                    const startBal = h.start_balance ?? h.start_nw ?? h.end_balance;
-                    const endBal = h.end_balance ?? h.end_nw ?? startBal;
-                    const monthStr = h.month;
-                    const parts = monthStr.split('-');
-                    const y = parseInt(parts[0], 10);
-                    const m = parseInt(parts[1], 10);
-                    const daysInMonth = new Date(y, m, 0).getDate();
-
-                    for (let d = 1; d <= daysInMonth; d++) {
-                        const frac = daysInMonth > 1 ? (d - 1) / (daysInMonth - 1) : 1;
-                        const interpBal = Math.round((startBal + (endBal - startBal) * frac) * 100) / 100;
-                        dailyHistory.push({
-                            date: `${monthStr}-${String(d).padStart(2, '0')}`,
-                            balance: interpBal
-                        });
-                    }
-                });
+                dailyHistory = synthesizePointsFromMonthly(history).daily;
             }
 
             cachedWeeklyHistory = weeklyHistory;
             cachedDailyHistory = dailyHistory;
 
+            populateStartPeriodOptions(history);
+
+            const scope = document.getElementById('scopeFilterSelect')?.value || 'total';
+            const granularity = document.getElementById('granularitySelect')?.value || 'monthly';
+            const startPeriod = document.getElementById('startPeriodSelect')?.value || 'all';
+
+            const filteredView = computeFilteredView(history, retirementAnalytics, scope, startPeriod, granularity);
+            currentFilteredView = filteredView;
+
             return {
-                history,
+                rawHistory: history,
+                retirementAnalytics,
+                history: filteredView.history,
+                filteredMonths: filteredView.filteredMonths,
                 weekly_history: weeklyHistory,
                 daily_history: dailyHistory,
-                kpis: {
-                    startingNw,
-                    currentNw,
-                    totalDollarGain,
-                    totalPctGain,
-                    peakNw,
-                    peakMonth: peakMonth || '—',
-                    bestMonthGain: Number(bestMonthGain || 0),
-                    bestMonthName: bestMonthName || '—',
-                    worstMonthGain: Number(worstMonthGain || 0),
-                    worstMonthName: worstMonthName || '—',
-                    annualizedGain: Number(annualizedGain || 0),
-                    avgMonthlyGain: Number(avgMonthlyGain || 0)
-                }
+                kpis: filteredView.kpis,
+                retirement: filteredView.retirement
             };
         }
 
-        function renderKpis(kpis, history, updatedAt) {
+        function onDashboardFilterChange() {
+            const scope = document.getElementById('scopeFilterSelect')?.value || 'total';
+            const granularity = document.getElementById('granularitySelect')?.value || 'monthly';
+            const startPeriod = document.getElementById('startPeriodSelect')?.value || 'all';
+
+            try {
+                localStorage.setItem(STORAGE_KEY_SCOPE, scope);
+                localStorage.setItem(STORAGE_KEY_GRANULARITY, granularity);
+                localStorage.setItem(STORAGE_KEY_PERIOD, startPeriod);
+            } catch (e) {
+                console.warn('Could not save dashboard filter preferences to localStorage:', e);
+            }
+
+            if (!netWorthData || !netWorthData.rawHistory) return;
+
+            const filteredView = computeFilteredView(
+                netWorthData.rawHistory,
+                netWorthData.retirementAnalytics,
+                scope,
+                startPeriod,
+                granularity
+            );
+            currentFilteredView = filteredView;
+            netWorthData.history = filteredView.history;
+            netWorthData.filteredMonths = filteredView.filteredMonths;
+            netWorthData.kpis = filteredView.kpis;
+            netWorthData.retirement = filteredView.retirement;
+
+            renderKpis(filteredView.kpis, filteredView.history, lastUpdatedAt, filteredView.retirement);
+            renderInteractiveCharts(filteredView.history, filteredView.filteredMonths);
+            renderBreakdownTable(filteredView.history, granularity);
+        }
+
+        function renderKpis(kpis, history, updatedAt, retirement) {
+            const scope = document.getElementById('scopeFilterSelect')?.value || 'total';
+            const nwLabelEl = document.getElementById('kpiCurrentNetWorthLabel');
+            if (nwLabelEl) {
+                if (scope === 'taxable') nwLabelEl.textContent = 'Taxable / Accessible Capital';
+                else if (scope === 'retirement') nwLabelEl.textContent = 'Retirement Accounts';
+                else nwLabelEl.textContent = 'Total Portfolio';
+            }
+
             document.getElementById('kpiCurrentNetWorth').textContent = formatCurrency0(kpis.currentNw);
 
             const pctPill = document.getElementById('kpiTotalPctPill');
             pctPill.textContent = formatSignedPct(kpis.totalPctGain, 2);
             pctPill.className = 'trend-pill ' + (kpis.totalPctGain >= 0 ? 'trend-positive' : 'trend-negative');
+
+            const sinceEl = document.getElementById('kpiTotalSinceLabel');
+            if (sinceEl) {
+                const humanSince = formatMonthHuman(kpis.sinceMonth) || 'Jan 2024';
+                sinceEl.textContent = `since ${humanSince}`;
+            }
 
             const gainEl = document.getElementById('kpiTotalDollarGain');
             gainEl.textContent = formatSignedCurrency0(kpis.totalDollarGain);
@@ -1496,7 +2852,8 @@
             bestMonthEl.textContent = formatSignedPct(kpis.bestMonthGain, 2);
             bestMonthEl.style.color = kpis.bestMonthGain >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
             const bestHuman = formatMonthHuman(kpis.bestMonthName) || kpis.bestMonthName;
-            document.getElementById('kpiBestMonthSubtext').textContent = `Recorded in ${bestHuman}`;
+            const bestTwrSuffix = kpis.bestMonthTwr !== undefined ? ` · TWR ${formatSignedPct(kpis.bestMonthTwr, 2)}` : '';
+            document.getElementById('kpiBestMonthSubtext').textContent = `${bestHuman}${bestTwrSuffix}`;
 
             const worstMonthEl = document.getElementById('kpiWorstMonthGain');
             if (worstMonthEl) {
@@ -1506,13 +2863,90 @@
             const worstMonthSubtext = document.getElementById('kpiWorstMonthSubtext');
             if (worstMonthSubtext) {
                 const worstHuman = formatMonthHuman(kpis.worstMonthName) || kpis.worstMonthName;
-                worstMonthSubtext.textContent = `Recorded in ${worstHuman}`;
+                const worstTwrSuffix = kpis.worstMonthTwr !== undefined ? ` · TWR ${formatSignedPct(kpis.worstMonthTwr, 2)}` : '';
+                worstMonthSubtext.textContent = `${worstHuman}${worstTwrSuffix}`;
             }
 
             const annualizedEl = document.getElementById('kpiAnnualizedGain') || document.getElementById('kpiAvgMonthlyGain');
             if (annualizedEl) {
                 annualizedEl.textContent = formatSignedPct(kpis.annualizedGain, 2);
                 annualizedEl.style.color = kpis.annualizedGain >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
+
+            // Render Retirement ROI & Sustainability Strip
+            const ret = retirement || currentFilteredView?.retirement;
+            if (ret) {
+                const twrAnnEl = document.getElementById('kpiTwrAnnualized');
+                if (twrAnnEl) {
+                    twrAnnEl.textContent = formatSignedPct(ret.twrAnnualizedPercent, 2);
+                    twrAnnEl.style.color = ret.twrAnnualizedPercent >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+                }
+                const twrPillEl = document.getElementById('kpiTwrTotalPill');
+                if (twrPillEl) {
+                    twrPillEl.textContent = `${formatSignedPct(ret.twrTotalPercent, 2)} cum.`;
+                    twrPillEl.className = 'trend-pill ' + (ret.twrTotalPercent >= 0 ? 'trend-positive' : 'trend-negative');
+                }
+
+                const swrEl = document.getElementById('kpiWithdrawalRate');
+                if (swrEl) {
+                    swrEl.textContent = `${ret.withdrawalRatePercent.toFixed(2)}%`;
+                    if (ret.withdrawalStatus === 'safe') swrEl.style.color = 'var(--accent-green)';
+                    else if (ret.withdrawalStatus === 'caution') swrEl.style.color = '#FBBF24';
+                    else swrEl.style.color = 'var(--accent-red)';
+                }
+                const swrBadgeEl = document.getElementById('kpiWithdrawalBadge');
+                if (swrBadgeEl) {
+                    if (ret.withdrawalStatus === 'safe') {
+                        swrBadgeEl.textContent = '🟢 Safe ≤3.5%';
+                        swrBadgeEl.className = 'trend-pill trend-positive';
+                    } else if (ret.withdrawalStatus === 'caution') {
+                        swrBadgeEl.textContent = '🟡 Moderate 3.5–5%';
+                        swrBadgeEl.className = 'trend-pill trend-warning';
+                    } else {
+                        swrBadgeEl.textContent = '🔴 High >5%';
+                        swrBadgeEl.className = 'trend-pill trend-negative';
+                    }
+                }
+                const swrSubEl = document.getElementById('kpiWithdrawalSubtext');
+                if (swrSubEl) {
+                    swrSubEl.textContent = `${formatCurrency0(ret.annNetWithdrawal)}/yr net vs ${formatCurrency0(ret.investableBase)} inv.`;
+                }
+
+                const covEl = document.getElementById('kpiIncomeCoverage');
+                if (covEl) {
+                    covEl.textContent = `${ret.incomeCoveragePercent.toFixed(1)}%`;
+                    covEl.style.color = ret.incomeCoveragePercent >= 50 ? 'var(--accent-green)' : 'var(--text-main)';
+                }
+                const covSubEl = document.getElementById('kpiIncomeCoverageSubtext');
+                if (covSubEl) {
+                    covSubEl.textContent = `${formatCurrency0(ret.annInvIncome)} yield / ${formatCurrency0(ret.annSpending)} spent (Yield: ${ret.yieldOnInvestablePercent.toFixed(2)}%)`;
+                }
+
+                const ddEl = document.getElementById('kpiMaxDrawdown');
+                if (ddEl) {
+                    ddEl.textContent = `${ret.maxDrawdownPercent.toFixed(2)}%`;
+                    ddEl.style.color = ret.maxDrawdownPercent < -5 ? 'var(--accent-red)' : (ret.maxDrawdownPercent < 0 ? '#FBBF24' : 'var(--accent-green)');
+                }
+                const ddSubEl = document.getElementById('kpiMaxDrawdownSubtext');
+                if (ddSubEl) {
+                    if (ret.maxDrawdownPercent < 0 && ret.maxDrawdownMonth !== '—') {
+                        const pkH = formatMonthHuman(ret.maxDrawdownPeakMonth) || ret.maxDrawdownPeakMonth;
+                        const trH = formatMonthHuman(ret.maxDrawdownMonth) || ret.maxDrawdownMonth;
+                        ddSubEl.textContent = `${pkH} → ${trH} ( ${ret.monthsWithdrawingAtLoss} months)`;
+                    } else {
+                        ddSubEl.textContent = `No drawdown ( ${ret.monthsWithdrawingAtLoss} months)`;
+                    }
+                }
+
+                const cashBufEl = document.getElementById('kpiCashBuffer');
+                if (cashBufEl) {
+                    cashBufEl.textContent = `${ret.cashBufferMonths.toFixed(1)} mos`;
+                }
+                const runwaySubEl = document.getElementById('kpiRunwaySubtext');
+                if (runwaySubEl) {
+                    const rwStr = ret.runwayYears >= 99 ? '99+' : ret.runwayYears.toFixed(1);
+                    runwaySubEl.textContent = `${rwStr} yrs runway @ ${formatCurrency0(ret.avgMonthlySpending || 0)}/mo · ${formatCurrency0(ret.cashBalance || 0)} cash`;
+                }
             }
 
             if (updatedAt) {
@@ -1540,41 +2974,78 @@
             return `${mName} ${day}`;
         }
 
-        function filterNetWorthData(timeframe) {
-            const weekly = cachedWeeklyHistory || [];
-            const daily = cachedDailyHistory || [];
+        function filterNetWorthData() {
+            const scope = document.getElementById('scopeFilterSelect')?.value || currentFilteredView?.scope || 'total';
+            const startPeriod = document.getElementById('startPeriodSelect')?.value || currentFilteredView?.startPeriod || 'all';
+            const granularity = document.getElementById('granularitySelect')?.value || currentFilteredView?.granularity || 'monthly';
 
-            if (weekly.length === 0 && daily.length === 0) {
-                return { points: [], subtitle: 'No snapshot data available' };
+            if (granularity === 'quarterly' || granularity === 'yearly') {
+                const hist = currentFilteredView?.history || [];
+                const points = hist.map(p => ({
+                    date: p.period || p.month,
+                    balance: Number(p.end_nw || 0),
+                    isBucket: true,
+                    interpolated: false
+                }));
+                const unitLabel = granularity === 'quarterly' ? 'Quarterly' : 'Yearly';
+                const countUnit = granularity === 'quarterly' ? 'quarters' : 'years';
+                const baseSubtitle = `${unitLabel} valuation · (${points.length} ${countUnit})`;
+                return { points, subtitle: baseSubtitle, isInterpolated: false };
             }
 
-            // Determine latest date available
+            let baseWeekly = cachedWeeklyHistory || [];
+            let baseDaily = cachedDailyHistory || [];
+
+            if (baseWeekly.length === 0 && currentFilteredView?.filteredMonths?.length > 0) {
+                const synth = synthesizePointsFromMonthly(currentFilteredView.filteredMonths);
+                baseWeekly = synth.weekly;
+                baseDaily = synth.daily;
+            }
+
+            let weekly = baseWeekly.map(p => ({
+                ...p,
+                balance: scope === 'retirement'
+                    ? Number(p.retirement_balance ?? p.retirement ?? p.balance ?? 0)
+                    : (scope === 'taxable'
+                        ? Number(p.taxable_balance ?? p.taxable ?? p.balance ?? 0)
+                        : Number(p.balance ?? 0)),
+                interpolated: Boolean(p.interpolated)
+            }));
+            let daily = baseDaily.map(p => ({
+                ...p,
+                balance: scope === 'retirement'
+                    ? Number(p.retirement_balance ?? p.retirement ?? p.balance ?? 0)
+                    : (scope === 'taxable'
+                        ? Number(p.taxable_balance ?? p.taxable ?? p.balance ?? 0)
+                        : Number(p.balance ?? 0)),
+                interpolated: Boolean(p.interpolated)
+            }));
+
+            if (weekly.length === 0 && daily.length === 0) {
+                return { points: [], subtitle: 'No snapshot data available', isInterpolated: false };
+            }
+
             const latestStr = (daily.length > 0 ? daily[daily.length - 1].date : '') ||
                 (weekly.length > 0 ? weekly[weekly.length - 1].date : '') ||
                 new Date().toISOString().slice(0, 10);
             const latestDate = new Date(latestStr + 'T12:00:00');
             const currentYear = latestDate.getFullYear();
 
-            if (timeframe === 'all') {
-                return {
-                    points: weekly,
-                    subtitle: `Weekly valuation · All-Time (${weekly.length} weekly points)`
-                };
-            }
+            let points = weekly;
+            let baseSubtitle = `Weekly valuation · All-Time (${weekly.length} weekly points)`;
 
-            if (timeframe === 'this_year') {
-                const startOfYear = `${currentYear}-01-01`;
-                let filtered = weekly.filter(p => p.date >= startOfYear);
-                if (filtered.length === 0 && weekly.length > 0) {
-                    filtered = weekly.slice(-12);
+            if (startPeriod === 'last_30d') {
+                const d = new Date(latestDate);
+                d.setDate(d.getDate() - 30);
+                const cutoff = d.toISOString().slice(0, 10);
+                let source = daily.length > 0 ? daily : weekly;
+                let filtered = source.filter(p => p.date >= cutoff);
+                if (filtered.length === 0 && source.length > 0) {
+                    filtered = source.slice(-30);
                 }
-                return {
-                    points: filtered,
-                    subtitle: `Weekly valuation · ${currentYear} (${filtered.length} weekly points)`
-                };
-            }
-
-            if (timeframe === 'last_3m') {
+                points = filtered;
+                baseSubtitle = `Daily valuation · Last 30 Days (${points.length} daily points)`;
+            } else if (startPeriod === 'last_3m') {
                 const d = new Date(latestDate);
                 d.setDate(d.getDate() - 90);
                 const cutoff = d.toISOString().slice(0, 10);
@@ -1583,39 +3054,65 @@
                 if (filtered.length === 0 && source.length > 0) {
                     filtered = source.slice(-90);
                 }
-                return {
-                    points: filtered,
-                    subtitle: `Daily valuation · Last 3 Months (${filtered.length} daily points)`
-                };
-            }
-
-            if (timeframe === 'last_30d') {
-                const d = new Date(latestDate);
-                d.setDate(d.getDate() - 30);
-                const cutoff = d.toISOString().slice(0, 10);
-                // Daily sampling for smooth curve (per User preference A2)
-                let source = daily.length > 0 ? daily : weekly;
-                let filtered = source.filter(p => p.date >= cutoff);
-                if (filtered.length === 0 && source.length > 0) {
-                    filtered = source.slice(-30);
+                points = filtered;
+                baseSubtitle = `Daily valuation · Last 3 Months (${points.length} daily points)`;
+            } else if (startPeriod === 'ytd') {
+                const startOfYear = `${currentYear}-01-01`;
+                let filtered = weekly.filter(p => p.date >= startOfYear);
+                if (filtered.length === 0 && weekly.length > 0) {
+                    filtered = weekly.slice(-12);
                 }
-                return {
-                    points: filtered,
-                    subtitle: `Daily valuation · Last 30 Days (${filtered.length} daily points)`
-                };
+                points = filtered;
+                baseSubtitle = `Weekly valuation · ${currentYear} (${points.length} weekly points)`;
+            } else if (startPeriod === 'trailing_12m') {
+                const d12 = new Date(latestDate);
+                d12.setDate(d12.getDate() - 365);
+                const cutoff12 = d12.toISOString().slice(0, 10);
+                let filtered = weekly.filter(p => p.date >= cutoff12);
+                if (filtered.length === 0 && weekly.length > 0) {
+                    filtered = weekly.slice(-52);
+                }
+                points = filtered;
+                baseSubtitle = `Weekly valuation · Trailing 12M (${points.length} weekly points)`;
+            } else if (startPeriod === 'all' || !startPeriod) {
+                points = weekly;
+                baseSubtitle = `Weekly valuation · All-Time (${points.length} weekly points)`;
+            } else {
+                const spCutoff = startPeriod.length === 7 ? `${startPeriod}-01` : startPeriod;
+                let filtered = weekly.filter(p => p.date >= spCutoff);
+                if (filtered.length === 0 && weekly.length > 0) {
+                    filtered = weekly;
+                }
+                points = filtered;
+                const yr = startPeriod.slice(0, 4);
+                baseSubtitle = `Weekly valuation · Since Jan ${yr} (${points.length} weekly points)`;
             }
 
-            return { points: weekly, subtitle: 'Weekly portfolio valuation' };
+            const isInterpolated = points.some(p => p.interpolated === true);
+            if (isInterpolated) {
+                baseSubtitle += ' · Estimated (interpolated from monthly closes)';
+            }
+
+            return { points, subtitle: baseSubtitle, isInterpolated };
         }
 
-        function renderNetWorthDollarChart(timeframe) {
-            currentNetWorthTimeframe = timeframe || currentNetWorthTimeframe || getInitialTimeframe();
-            const selectEl = document.getElementById('netWorthTimeframeSelect');
-            if (selectEl && selectEl.value !== currentNetWorthTimeframe) {
-                selectEl.value = currentNetWorthTimeframe;
+        function renderNetWorthDollarChart() {
+            const scope = document.getElementById('scopeFilterSelect')?.value || currentFilteredView?.scope || 'total';
+            const startPeriod = document.getElementById('startPeriodSelect')?.value || currentFilteredView?.startPeriod || 'all';
+            const granularity = document.getElementById('granularitySelect')?.value || currentFilteredView?.granularity || 'monthly';
+
+            const titleEl = document.getElementById('netWorthDollarTitle');
+            if (titleEl) {
+                if (scope === 'retirement') {
+                    titleEl.textContent = '💰 Net Worth — Retirement Accounts ($)';
+                } else if (scope === 'taxable') {
+                    titleEl.textContent = '💰 Net Worth — Taxable & Accessible ($)';
+                } else {
+                    titleEl.textContent = '💰 Net Worth ($)';
+                }
             }
 
-            const { points, subtitle } = filterNetWorthData(currentNetWorthTimeframe);
+            const { points, subtitle } = filterNetWorthData();
             const subEl = document.getElementById('netWorthChartSubtitle');
             if (subEl) {
                 let changeHtml = '';
@@ -1634,7 +3131,7 @@
             }
 
             const canvas = document.getElementById('netWorthDollarChart');
-            if (!canvas) return;
+            if (!canvas || typeof Chart === 'undefined') return;
             const ctx = canvas.getContext('2d');
 
             if (netWorthDollarChartInstance) {
@@ -1643,7 +3140,7 @@
 
             if (points.length === 0) return;
 
-            const labels = points.map(p => formatPointDateLabel(p.date, currentNetWorthTimeframe));
+            const labels = points.map(p => formatPointDateLabel(p.date, startPeriod));
             const balances = points.map(p => p.balance);
 
             netWorthDollarChartInstance = new Chart(ctx, {
@@ -1687,6 +3184,7 @@
                                     const idx = tooltipItems[0].dataIndex;
                                     const pt = points[idx];
                                     if (!pt || !pt.date) return '';
+                                    if (pt.isBucket || pt.date.length < 10) return formatMonthHuman(pt.date) || pt.date;
                                     const d = new Date(pt.date + 'T12:00:00');
                                     const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
                                     return d.toLocaleDateString('en-US', options);
@@ -1694,8 +3192,19 @@
                                 label: function (context) {
                                     const pt = points[context.dataIndex];
                                     if (!pt) return '';
-                                    const freq = (currentNetWorthTimeframe === 'last_30d' || currentNetWorthTimeframe === 'last_3m') ? 'Daily Net Worth' : 'Weekly Net Worth';
-                                    return `${freq}: ${formatCurrency2(pt.balance)}`;
+                                    const curScope = document.getElementById('scopeFilterSelect')?.value || 'total';
+                                    const curGranularity = document.getElementById('granularitySelect')?.value || 'monthly';
+                                    const curPeriod = document.getElementById('startPeriodSelect')?.value || 'all';
+                                    const scopeLabel = curScope === 'retirement'
+                                        ? 'Retirement Accounts'
+                                        : (curScope === 'taxable' ? 'Taxable / Accessible' : 'Total Net Worth');
+                                    const freq = curGranularity === 'quarterly'
+                                        ? 'Quarterly'
+                                        : (curGranularity === 'yearly'
+                                            ? 'Yearly'
+                                            : ((curPeriod === 'last_30d' || curPeriod === 'last_3m') ? 'Daily' : 'Weekly'));
+                                    const estSuffix = pt.interpolated ? ' · Estimated (interpolated from monthly closes)' : '';
+                                    return `${freq} ${scopeLabel}: ${formatCurrency2(pt.balance)}${estSuffix}`;
                                 }
                             }
                         }
@@ -1719,13 +3228,7 @@
                                 color: '#9CA3AF',
                                 font: { family: "'JetBrains Mono', monospace", size: 11 },
                                 callback: function (value) {
-                                    if (Math.abs(value) >= 1e6) {
-                                        return '$' + (value / 1e6).toFixed(2) + 'M';
-                                    }
-                                    if (Math.abs(value) >= 1e3) {
-                                        return '$' + (value / 1e3).toFixed(0) + 'k';
-                                    }
-                                    return '$' + Number(value).toLocaleString();
+                                    return formatCompactAxisDollar(value);
                                 }
                             },
                             grid: {
@@ -1737,46 +3240,354 @@
             });
         }
 
-        function onNetWorthTimeframeChange(newTimeframe) {
-            if (VALID_TIMEFRAMES.includes(newTimeframe)) {
-                try {
-                    localStorage.setItem(STORAGE_KEY_TIMEFRAME, newTimeframe);
-                } catch (e) {
-                    console.warn('Could not save timeframe preference to localStorage:', e);
-                }
-            }
-            renderNetWorthDollarChart(newTimeframe);
-        }
+        function renderInteractiveCharts(history, filteredMonths) {
+            if (typeof Chart === 'undefined') return;
 
-        function renderInteractiveCharts(history) {
             // Chart 1: Net Worth Dollar Trajectory
-            renderNetWorthDollarChart(currentNetWorthTimeframe);
+            renderNetWorthDollarChart();
 
-            const labels = history.map(h => h.month);
+            const labels = history.map(h => h.period || h.month);
 
-            // Chart 2: Monthly Net Worth Percentage Change (Bar Chart)
-            const barCtx = document.getElementById('monthlyBarChart').getContext('2d');
-            if (monthlyBarChartInstance) {
-                monthlyBarChartInstance.destroy();
+            // Chart 2: Month / Month % (Bar Chart)
+            const scope = document.getElementById('scopeFilterSelect')?.value || 'total';
+            const granularity = document.getElementById('granularitySelect')?.value || 'monthly';
+            const barTitleEl = document.getElementById('monthlyBarChartTitle');
+            const barSubEl = document.getElementById('monthlyBarChartSubtitle');
+            const periodUnit = granularity === 'quarterly' ? 'Quarter' : (granularity === 'yearly' ? 'Year' : 'Month');
+            const scopeDesc = scope === 'taxable'
+                ? 'Taxable / Accessible Capital'
+                : (scope === 'retirement' ? 'Retirement Accounts' : 'Total Portfolio');
+
+            if (barTitleEl) {
+                barTitleEl.textContent = `📊 ${periodUnit} / ${periodUnit} %`;
+            }
+            if (barSubEl) {
+                barSubEl.textContent = `% gain or loss for each ${periodUnit.toLowerCase()} relative to previous ${periodUnit.toLowerCase()} (${scopeDesc})`;
             }
 
-            monthlyBarChartInstance = new Chart(barCtx, {
-                type: 'bar',
+            const barCanvas = document.getElementById('monthlyBarChart');
+            if (barCanvas) {
+                const barCtx = barCanvas.getContext('2d');
+                if (monthlyBarChartInstance) {
+                    monthlyBarChartInstance.destroy();
+                }
+
+                const scopeLabel = scope === 'taxable'
+                    ? 'Taxable / Accessible Change (%)'
+                    : (scope === 'retirement' ? 'Retirement Change (%)' : `${periodUnit} Change (%)`);
+
+                monthlyBarChartInstance = new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: scopeLabel,
+                            data: history.map(h => Number((h.gain_percent || 0).toFixed(2))),
+                            backgroundColor: history.map(h => (h.gain_percent || 0) >= 0 ? '#10B981' : '#EF4444'),
+                            borderRadius: 4,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1E293B',
+                                titleColor: '#F9FAFB',
+                                bodyColor: '#E2E8F0',
+                                borderColor: '#374151',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    title: function (tooltipItems) {
+                                        const raw = tooltipItems[0]?.label || '';
+                                        return formatMonthHuman(raw) || raw;
+                                    },
+                                    label: function (context) {
+                                        const item = history[context.dataIndex];
+                                        if (!item) return '';
+                                        const scopeName = scope === 'taxable'
+                                            ? 'Taxable / Accessible'
+                                            : (scope === 'retirement' ? 'Retirement' : 'Total Portfolio');
+                                        return [
+                                            `Change: ${formatSignedPct(item.gain_percent, 2)}`,
+                                            `Dollar Change: ${formatSignedCurrency2(item.gain_dollars)}`,
+                                            `End ${scopeName}: ${formatCurrency2(item.end_nw)}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: '#9CA3AF',
+                                    maxRotation: 45,
+                                    minRotation: 45,
+                                    font: { family: "'JetBrains Mono', monospace", size: 11 }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.05)'
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    color: '#9CA3AF',
+                                    font: { family: "'JetBrains Mono', monospace", size: 11 },
+                                    callback: function (value) {
+                                        return `${value}%`;
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.08)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Chart B: Investment Income Stream (#investmentIncomeChart)
+            const incCanvas = document.getElementById('investmentIncomeChart');
+            if (incCanvas) {
+                const incCtx = incCanvas.getContext('2d');
+                if (investmentIncomeChartInstance) {
+                    investmentIncomeChartInstance.destroy();
+                }
+                investmentIncomeChartInstance = new Chart(incCtx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                type: 'line',
+                                label: 'Living Spending',
+                                data: history.map(h => Number((h.spending || 0).toFixed(2))),
+                                borderColor: '#EF4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                                borderWidth: 2,
+                                borderDash: [5, 4],
+                                pointRadius: 3,
+                                tension: 0.25,
+                                order: 0
+                            },
+                            {
+                                label: 'Dividends',
+                                data: history.map(h => Number((h.dividends || 0).toFixed(2))),
+                                backgroundColor: '#10B981',
+                                stack: 'yield',
+                                order: 1
+                            },
+                            {
+                                label: 'Interest',
+                                data: history.map(h => Number((h.interest || 0).toFixed(2))),
+                                backgroundColor: '#38BDF8',
+                                stack: 'yield',
+                                order: 1
+                            },
+                            {
+                                label: 'Capital Gains',
+                                data: history.map(h => Number((h.capital_gains || 0).toFixed(2))),
+                                backgroundColor: '#A855F7',
+                                stack: 'yield',
+                                order: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color: '#9CA3AF', font: { size: 11 } }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1E293B',
+                                titleColor: '#F9FAFB',
+                                bodyColor: '#E2E8F0',
+                                borderColor: '#374151',
+                                borderWidth: 1,
+                                padding: 12,
+                                callbacks: {
+                                    title: function (tooltipItems) {
+                                        const raw = tooltipItems[0]?.label || '';
+                                        return formatMonthHuman(raw) || raw;
+                                    },
+                                    afterBody: function (tooltipItems) {
+                                        const idx = tooltipItems[0]?.dataIndex;
+                                        const item = history[idx];
+                                        if (!item) return [];
+                                        const cov = item.spending > 0 ? ((item.inv_income / item.spending) * 100).toFixed(1) + '%' : 'N/A';
+                                        return [
+                                            `────────────────────────`,
+                                            `Total Yield: ${formatCurrency2(item.inv_income)}`,
+                                            `Spending Coverage: ${cov}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                stacked: true,
+                                ticks: {
+                                    color: '#9CA3AF',
+                                    maxRotation: 45,
+                                    minRotation: 0,
+                                    font: { family: "'JetBrains Mono', monospace", size: 10 }
+                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                            },
+                            y: {
+                                stacked: true,
+                                ticks: {
+                                    color: '#9CA3AF',
+                                    font: { family: "'JetBrains Mono', monospace", size: 11 },
+                                    callback: function (value) {
+                                        return formatCompactAxisDollar(value);
+                                    }
+                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.08)' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Chart 3: Cumulative Net Worth Growth % & Cumulative TWR % (Real True ROI + Nominal NW + Period CPI on Right Axis)
+            const areaCtx = document.getElementById('cumulativeAreaChart').getContext('2d');
+            if (cumulativeAreaChartInstance) {
+                cumulativeAreaChartInstance.destroy();
+            }
+
+            const inflationDatasetLabel = granularity === 'quarterly'
+                ? 'US Quarterly Inflation (% QoQ)'
+                : (granularity === 'yearly' ? 'US Annual Inflation (% YoY)' : 'US Monthly Inflation (% MoM)');
+            const inflationAxisTitle = inflationDatasetLabel;
+            const inflationPeriodWord = granularity === 'quarterly'
+                ? 'Quarter'
+                : (granularity === 'yearly' ? 'Year' : 'Month');
+
+            const cumTitleEl = document.getElementById('cumulativeChartTitle');
+            if (cumTitleEl) {
+                cumTitleEl.textContent = `📈 Cumulative Growth (%) — Real True ROI vs. Net Worth & ${inflationPeriodWord === 'Month' ? 'Monthly' : (inflationPeriodWord === 'Quarter' ? 'Quarterly' : 'Annual')} Inflation`;
+            }
+            const cumSubEl = document.getElementById('cumulativeChartSubtitle');
+            if (cumSubEl) {
+                cumSubEl.textContent = `Real True ROI & Nominal Net Worth Growth [Left Axis] · Cumulative CPI & ${inflationPeriodWord === 'Month' ? 'Monthly' : (inflationPeriodWord === 'Quarter' ? 'Quarterly' : 'Annual')} US Inflation [Right Axis]`;
+            }
+
+            const baseCpi = history.length > 0 ? getUsCpiForMonth(history[0].month || history[0].period) : 308.417;
+            const baseStartNw = history.length > 0 ? Number(history[0].start_nw ?? 0) : 0;
+            const realSeries = history.map(h => {
+                const periodKey = h.period || h.month;
+                const cpiVal = getUsCpiForMonth(h.month || h.period);
+                const cpiFactor = baseCpi > 0 ? (cpiVal / baseCpi) : 1;
+                const cumCpiPct = (cpiFactor - 1) * 100;
+                const periodInfPct = getPeriodInflationRate(periodKey, granularity);
+                const nomTwr = Number(h.cumulative_twr_percent ?? h.cumulative_gain_percent ?? 0);
+                const realTwr = ((1 + nomTwr / 100) / cpiFactor - 1) * 100;
+                const nomNw = Number(h.cumulative_gain_percent || 0);
+                const realNw = ((1 + nomNw / 100) / cpiFactor - 1) * 100;
+                const realEndNw = cpiFactor > 0 ? (Number(h.end_nw || 0) / cpiFactor) : Number(h.end_nw || 0);
+                const realGainDollars = realEndNw - baseStartNw;
+                return {
+                    cpiVal,
+                    cpiFactor,
+                    cumCpiPct,
+                    periodInfPct,
+                    nomTwr,
+                    realTwr,
+                    nomNw,
+                    realNw,
+                    realEndNw,
+                    realGainDollars
+                };
+            });
+
+            cumulativeAreaChartInstance = new Chart(areaCtx, {
+                type: 'line',
                 data: {
                     labels,
-                    datasets: [{
-                        label: 'Monthly Change (%)',
-                        data: history.map(h => Number(h.gain_percent.toFixed(2))),
-                        backgroundColor: history.map(h => h.gain_percent >= 0 ? '#10B981' : '#EF4444'),
-                        borderRadius: 4,
-                        borderSkipped: false
-                    }]
+                    datasets: [
+                        {
+                            label: 'Nominal Net Worth Growth (%)',
+                            yAxisID: 'y',
+                            data: realSeries.map(r => Number(r.nomNw.toFixed(2))),
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            borderWidth: 2.5,
+                            fill: false,
+                            tension: 0.35,
+                            pointBackgroundColor: '#3B82F6',
+                            pointBorderColor: '#1E293B',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Real True ROI (TWR %)',
+                            yAxisID: 'y',
+                            data: realSeries.map(r => Number(r.realTwr.toFixed(2))),
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.10)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.35,
+                            pointBackgroundColor: '#10B981',
+                            pointBorderColor: '#1E293B',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 7
+                        },
+                        {
+                            label: 'Cumulative US Inflation (%)',
+                            yAxisID: 'y1',
+                            data: realSeries.map(r => Number(r.cumCpiPct.toFixed(2))),
+                            borderColor: '#F97316',
+                            backgroundColor: 'rgba(249, 115, 22, 0.10)',
+                            borderWidth: 2.5,
+                            borderDash: [6, 4],
+                            fill: false,
+                            tension: 0.35,
+                            pointBackgroundColor: '#F97316',
+                            pointBorderColor: '#1E293B',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: inflationDatasetLabel,
+                            yAxisID: 'y1',
+                            data: realSeries.map(r => Number(r.periodInfPct.toFixed(2))),
+                            borderColor: '#FBBF24',
+                            backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                            borderWidth: 2,
+                            borderDash: [3, 3],
+                            fill: false,
+                            tension: 0.35,
+                            pointBackgroundColor: '#FBBF24',
+                            pointBorderColor: '#1E293B',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { display: false },
+                        legend: {
+                            display: true,
+                            labels: { color: '#9CA3AF', font: { size: 11 } }
+                        },
                         tooltip: {
                             backgroundColor: '#1E293B',
                             titleColor: '#F9FAFB',
@@ -1784,16 +3595,10 @@
                             borderColor: '#374151',
                             borderWidth: 1,
                             padding: 12,
-                            displayColors: false,
                             callbacks: {
-                                label: function (context) {
-                                    const item = history[context.dataIndex];
-                                    if (!item) return '';
-                                    return [
-                                        `Monthly Change: ${formatSignedPct(item.gain_percent, 2)}`,
-                                        `Dollar Change: ${formatSignedCurrency2(item.gain_dollars)}`,
-                                        `End Net Worth: ${formatCurrency2(item.end_nw)}`
-                                    ];
+                                title: function (tooltipItems) {
+                                    const raw = tooltipItems[0]?.label || '';
+                                    return formatMonthHuman(raw) || raw;
                                 }
                             }
                         }
@@ -1803,14 +3608,21 @@
                             ticks: {
                                 color: '#9CA3AF',
                                 maxRotation: 45,
-                                minRotation: 45,
-                                font: { family: "'JetBrains Mono', monospace", size: 11 }
+                                minRotation: 0,
+                                font: { family: "'JetBrains Mono', monospace", size: 10 }
                             },
                             grid: {
                                 color: 'rgba(255, 255, 255, 0.05)'
                             }
                         },
                         y: {
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Cumulative Return / Growth (%)',
+                                color: '#9CA3AF',
+                                font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' }
+                            },
                             ticks: {
                                 color: '#9CA3AF',
                                 font: { family: "'JetBrains Mono', monospace", size: 11 },
@@ -1821,110 +3633,306 @@
                             grid: {
                                 color: 'rgba(255, 255, 255, 0.08)'
                             }
+                        },
+                        y1: {
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'US CPI Inflation (%)',
+                                color: '#F97316',
+                                font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' }
+                            },
+                            ticks: {
+                                color: '#F97316',
+                                font: { family: "'JetBrains Mono', monospace", size: 10 },
+                                callback: function (value) {
+                                    return `${value > 0 ? '+' : ''}${Number(value).toFixed(1)}%`;
+                                }
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
                         }
                     }
                 }
             });
 
-            // Chart 3: Cumulative Net Worth Growth % (Area / Line Chart)
-            const areaCtx = document.getElementById('cumulativeAreaChart').getContext('2d');
-            if (cumulativeAreaChartInstance) {
-                cumulativeAreaChartInstance.destroy();
-            }
+            // Chart: % Change from All-Time High (#drawdownChart)
+            const ddCanvas = document.getElementById('drawdownChart');
+            if (ddCanvas) {
+                const ddCtx = ddCanvas.getContext('2d');
+                if (drawdownChartInstance) {
+                    drawdownChartInstance.destroy();
+                }
 
-            cumulativeAreaChartInstance = new Chart(areaCtx, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: 'Cumulative Growth (%)',
-                        data: history.map(h => Number(h.cumulative_gain_percent.toFixed(2))),
-                        borderColor: '#3B82F6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.35,
-                        pointBackgroundColor: '#3B82F6',
-                        pointBorderColor: '#1E293B',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 7
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#1E293B',
-                            titleColor: '#F9FAFB',
-                            bodyColor: '#E2E8F0',
-                            borderColor: '#374151',
-                            borderWidth: 1,
-                            padding: 12,
-                            displayColors: false,
-                            callbacks: {
-                                label: function (context) {
-                                    const item = history[context.dataIndex];
-                                    if (!item) return '';
-                                    return [
-                                        `Cumulative Growth: ${formatSignedPct(item.cumulative_gain_percent, 2)}`,
-                                        `Total Dollar Gain: ${formatSignedCurrency2(item.cumulative_gain_dollars)}`,
-                                        `Portfolio Net Worth: ${formatCurrency2(item.end_nw)}`
-                                    ];
-                                }
-                            }
-                        }
+                const athSubEl = document.getElementById('athChartSubtitle') || document.getElementById('drawdownChartSubtitle');
+                if (athSubEl) {
+                    athSubEl.textContent = `${scopeDesc} % decline relative to historical All-Time High (${periodUnit.toLowerCase()} closes — always ≤ 0%)`;
+                }
+
+                drawdownChartInstance = new Chart(ddCtx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: '% Change from ATH',
+                            data: history.map(h => Number((h.ath_change_percent ?? h.drawdown_percent ?? 0).toFixed(2))),
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.18)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.25,
+                            pointBackgroundColor: history.map(h => {
+                                const val = Number((h.ath_change_percent ?? h.drawdown_percent ?? 0).toFixed(2));
+                                return val === 0 ? '#10B981' : '#EF4444';
+                            }),
+                            pointBorderColor: history.map(h => {
+                                const val = Number((h.ath_change_percent ?? h.drawdown_percent ?? 0).toFixed(2));
+                                return val === 0 ? '#A7F3D0' : '#1E293B';
+                            }),
+                            pointBorderWidth: 1.5,
+                            pointRadius: 4,
+                            pointHoverRadius: 7
+                        }]
                     },
-                    scales: {
-                        x: {
-                            ticks: {
-                                color: '#9CA3AF',
-                                maxRotation: 45,
-                                minRotation: 45,
-                                font: { family: "'JetBrains Mono', monospace", size: 11 }
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.05)'
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1E293B',
+                                titleColor: '#F9FAFB',
+                                bodyColor: '#E2E8F0',
+                                borderColor: '#374151',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    title: function (tooltipItems) {
+                                        const raw = tooltipItems[0]?.label || '';
+                                        return formatMonthHuman(raw) || raw;
+                                    },
+                                    label: function (context) {
+                                        const item = history[context.dataIndex];
+                                        if (!item) return '';
+                                        const pct = Number((item.ath_change_percent ?? item.drawdown_percent ?? 0).toFixed(2));
+                                        const peakVal = item.ath_peak || item.peak_nw || 0;
+                                        const dollarDiff = item.end_nw - peakVal;
+                                        const scopeName = scope === 'taxable'
+                                            ? 'Taxable / Accessible'
+                                            : (scope === 'retirement' ? 'Retirement' : 'Total Portfolio');
+                                        const lines = [
+                                            `% from ATH: ${pct.toFixed(2)}%`,
+                                            `Current ${scopeName}: ${formatCurrency2(item.end_nw)}`
+                                        ];
+                                        if (peakVal > 0) {
+                                            const peakHuman = formatMonthHuman(item.ath_peak_month) || item.ath_peak_month;
+                                            lines.push(`All-Time High: ${formatCurrency2(peakVal)} (${peakHuman})`);
+                                            lines.push(`Distance to ATH: ${formatSignedCurrency2(dollarDiff)}`);
+                                        }
+                                        return lines;
+                                    }
+                                }
                             }
                         },
-                        y: {
-                            ticks: {
-                                color: '#9CA3AF',
-                                font: { family: "'JetBrains Mono', monospace", size: 11 },
-                                callback: function (value) {
-                                    return `${value >= 0 ? '+' : ''}${value}%`;
-                                }
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: '#9CA3AF',
+                                    maxRotation: 45,
+                                    minRotation: 0,
+                                    font: { family: "'JetBrains Mono', monospace", size: 10 }
+                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' }
                             },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.08)'
+                            y: {
+                                max: 0,
+                                ticks: {
+                                    color: '#9CA3AF',
+                                    font: { family: "'JetBrains Mono', monospace", size: 11 },
+                                    callback: function (value) {
+                                        return `${value}%`;
+                                    }
+                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.08)' }
                             }
                         }
                     }
+                });
+            }
+
+            // Chart D: Portfolio Composition by Account Type (#compositionChart)
+            const compCanvas = document.getElementById('compositionChart');
+            if (compCanvas) {
+                const compCtx = compCanvas.getContext('2d');
+                if (compositionChartInstance) {
+                    compositionChartInstance.destroy();
                 }
-            });
+
+                const hasTaxableRetirementBreakdown = history.some(
+                    h => h.balances_by_type && (
+                        h.balances_by_type.taxable_brokerage !== undefined ||
+                        h.balances_by_type.retirement !== undefined
+                    )
+                );
+
+                const compDatasets = hasTaxableRetirementBreakdown
+                    ? [
+                        {
+                            label: 'Taxable Investments',
+                            data: history.map(h => Number((h.balances_by_type?.taxable_brokerage || 0).toFixed(2))),
+                            backgroundColor: '#3B82F6',
+                            stack: 'comp'
+                        },
+                        {
+                            label: 'Retirement Accounts',
+                            data: history.map(h => Number((h.balances_by_type?.retirement || 0).toFixed(2))),
+                            backgroundColor: '#8B5CF6',
+                            stack: 'comp'
+                        },
+                        {
+                            label: 'Cash (Depository)',
+                            data: history.map(h => Number((h.balances_by_type?.depository || 0).toFixed(2))),
+                            backgroundColor: '#10B981',
+                            stack: 'comp'
+                        }
+                    ]
+                    : [
+                        {
+                            label: 'Investments (Brokerage)',
+                            data: history.map(h => Number((h.balances_by_type?.brokerage || 0).toFixed(2))),
+                            backgroundColor: '#3B82F6',
+                            stack: 'comp'
+                        },
+                        {
+                            label: 'Cash (Depository)',
+                            data: history.map(h => Number((h.balances_by_type?.depository || 0).toFixed(2))),
+                            backgroundColor: '#10B981',
+                            stack: 'comp'
+                        }
+                    ];
+
+                compositionChartInstance = new Chart(compCtx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: compDatasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color: '#9CA3AF', font: { size: 11 } }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1E293B',
+                                titleColor: '#F9FAFB',
+                                bodyColor: '#E2E8F0',
+                                borderColor: '#374151',
+                                borderWidth: 1,
+                                padding: 12,
+                                callbacks: {
+                                    title: function (tooltipItems) {
+                                        const raw = tooltipItems[0]?.label || '';
+                                        return formatMonthHuman(raw) || raw;
+                                    },
+                                    afterBody: function (tooltipItems) {
+                                        const item = history[tooltipItems[0]?.dataIndex];
+                                        if (!item) return [];
+                                        const bt = item.balances_by_type || {};
+                                        if (hasTaxableRetirementBreakdown) {
+                                            const taxableVal = Number(bt.taxable_brokerage || 0);
+                                            const retVal = Number(bt.retirement || 0);
+                                            const cashVal = Number(bt.depository || 0);
+                                            const totalVal = item.end_nw > 0 ? item.end_nw : (taxableVal + retVal + cashVal);
+                                            const fmtPct = (v) => totalVal > 0 ? ((v / totalVal) * 100).toFixed(1) + '%' : '0.0%';
+                                            return [
+                                                `────────────────────────`,
+                                                `Taxable Investments: ${formatCurrency2(taxableVal)} (${fmtPct(taxableVal)})`,
+                                                `Retirement: ${formatCurrency2(retVal)} (${fmtPct(retVal)})`,
+                                                `Cash: ${formatCurrency2(cashVal)} (${fmtPct(cashVal)})`,
+                                                `Total Balance: ${formatCurrency2(item.end_nw)}`
+                                            ];
+                                        }
+                                        const invShare = item.end_nw > 0
+                                            ? (((Number(bt.brokerage || 0) + Number(bt.depository || 0)) / item.end_nw) * 100).toFixed(1) + '%'
+                                            : '—';
+                                        return [
+                                            `────────────────────────`,
+                                            `Total Balance: ${formatCurrency2(item.end_nw)}`,
+                                            `Investable Share: ${invShare}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                stacked: true,
+                                ticks: {
+                                    color: '#9CA3AF',
+                                    maxRotation: 45,
+                                    minRotation: 0,
+                                    font: { family: "'JetBrains Mono', monospace", size: 10 }
+                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                            },
+                            y: {
+                                stacked: true,
+                                ticks: {
+                                    color: '#9CA3AF',
+                                    font: { family: "'JetBrains Mono', monospace", size: 11 },
+                                    callback: function (value) {
+                                        return formatCompactAxisDollar(value);
+                                    }
+                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.08)' }
+                            }
+                        }
+                    }
+                });
+            }
         }
 
-        function renderBreakdownTable(history) {
+        function renderBreakdownTable(history, granularity = 'monthly') {
             const tbody = document.getElementById('breakdownTableBody');
             const badge = document.getElementById('monthsTrackedBadge');
-            badge.textContent = `${history.length} Months Tracked`;
+            const unitLabel = granularity === 'quarterly' ? 'Quarters' : (granularity === 'yearly' ? 'Years' : 'Months');
+            badge.textContent = `${history.length} ${unitLabel} Tracked`;
 
             const reversed = [...history].reverse();
             tbody.innerHTML = reversed.map(row => {
-                const dollarClass = row.gain_dollars >= 0 ? 'val-positive' : 'val-negative';
-                const pillClass = row.gain_percent >= 0 ? 'trend-positive' : 'trend-negative';
-                const cumClass = row.cumulative_gain_percent >= 0 ? 'val-positive' : 'val-negative';
+                const yieldVal = Number(row.inv_income || 0);
+                const mktVal = Number(row.price_change_dollars || 0);
+                const spendVal = Number(row.spending || 0);
+                const twrVal = Number(row.twr_percent ?? row.gain_percent ?? 0);
+                const netDeltaVal = Number(row.gain_dollars || 0);
+                const cumTwrVal = Number(row.cumulative_twr_percent ?? row.cumulative_gain_percent ?? 0);
+
+                const yieldClass = yieldVal > 0 ? 'val-positive' : (yieldVal < 0 ? 'val-negative' : '');
+                const mktClass = mktVal >= 0 ? 'val-positive' : 'val-negative';
+                const spendClass = spendVal > 0 ? 'val-negative' : '';
+                const twrPillClass = twrVal >= 0 ? 'trend-positive' : 'trend-negative';
+                const dollarClass = netDeltaVal >= 0 ? 'val-positive' : 'val-negative';
+                const cumClass = cumTwrVal >= 0 ? 'val-positive' : 'val-negative';
+                const spendFormatted = spendVal > 0 ? '-' + formatCurrency2(spendVal) : formatCurrency2(0);
 
                 return `
                     <tr>
-                        <th scope="row">${row.month}</th>
+                        <th scope="row">${row.period || row.month}</th>
                         <td>${formatCurrency2(row.start_nw)}</td>
                         <td>${formatCurrency2(row.end_nw)}</td>
-                        <td class="${dollarClass}">${formatSignedCurrency2(row.gain_dollars)}</td>
-                        <td><span class="trend-pill ${pillClass}">${formatSignedPct(row.gain_percent, 2)}</span></td>
-                        <td class="${cumClass}">${formatSignedPct(row.cumulative_gain_percent, 2)}</td>
+                        <td class="${yieldClass}">${formatSignedCurrency2(yieldVal)}</td>
+                        <td class="${mktClass}">${formatSignedCurrency2(mktVal)}</td>
+                        <td class="${spendClass}">${spendFormatted}</td>
+                        <td><span class="trend-pill ${twrPillClass}">${formatSignedPct(twrVal, 2)}</span></td>
+                        <td class="${dollarClass}">${formatSignedCurrency2(netDeltaVal)}</td>
+                        <td class="${cumClass}">${formatSignedPct(cumTwrVal, 2)}</td>
                     </tr>
                 `;
             }).join('');
@@ -1969,6 +3977,7 @@
                 const res = await fetch('/api/net-worth');
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const payload = await res.json();
+                rawPayloadCache = payload;
 
                 lastUpdatedAt = payload.updated_at || null;
                 const fContainer = document.getElementById('freshnessContainer');
@@ -1995,12 +4004,30 @@
                 netWorthData = extracted;
 
                 if (extracted.history.length > 0) {
-                    renderKpis(extracted.kpis, extracted.history, payload.updated_at);
-                    renderInteractiveCharts(extracted.history);
-                    renderBreakdownTable(extracted.history);
+                    const granularity = document.getElementById('granularitySelect')?.value || 'monthly';
+                    renderKpis(extracted.kpis, extracted.history, payload.updated_at, extracted.retirement);
+                    renderInteractiveCharts(extracted.history, extracted.filteredMonths);
+                    renderBreakdownTable(extracted.history, granularity);
                 }
 
-                if (payload.status === 'ok' && (!payload.weekly_history || payload.weekly_history.length === 0) && payload.sync_status !== 'syncing') {
+                const hasRetirementAnalytics = Boolean(
+                    payload.retirement_analytics ||
+                    (payload.summary && payload.summary.retirement_analytics)
+                );
+                const hasTaxableRetirementBreakdown = Array.isArray(payload.history) && payload.history.some(
+                    h => h.balances_by_type && (
+                        h.balances_by_type.taxable_brokerage !== undefined ||
+                        h.balances_by_type.retirement !== undefined
+                    )
+                );
+                const hasWeeklyScopeBreakdown = Array.isArray(payload.weekly_history) && payload.weekly_history.some(
+                    p => p.retirement_balance !== undefined || p.taxable_balance !== undefined
+                );
+                if (
+                    payload.status === 'ok' &&
+                    ((!payload.weekly_history || payload.weekly_history.length === 0) || !hasRetirementAnalytics || !hasTaxableRetirementBreakdown || !hasWeeklyScopeBreakdown) &&
+                    payload.sync_status !== 'syncing'
+                ) {
                     triggerRefresh();
                 }
             } catch (err) {
@@ -2063,10 +4090,69 @@
             triggerRefresh();
         }
 
+        function setupStickyControlsBar() {
+            const headerEl = document.querySelector('.header');
+            const controlsBarEl = document.querySelector('.controls-bar');
+            if (!controlsBarEl) return;
+
+            let observer = null;
+            let sentinel = document.getElementById('controlsBarSentinel');
+            if (!sentinel) {
+                sentinel = document.createElement('div');
+                sentinel.id = 'controlsBarSentinel';
+                sentinel.setAttribute('aria-hidden', 'true');
+                sentinel.style.cssText = 'height: 1px; width: 100%; margin-bottom: -1px; pointer-events: none; visibility: hidden;';
+                controlsBarEl.parentNode.insertBefore(sentinel, controlsBarEl);
+            }
+
+            function syncHeaderHeightAndObserver() {
+                const headerHeight = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height || headerEl.offsetHeight || 62) : 62;
+                document.documentElement.style.setProperty('--header-actual-height', `${headerHeight}px`);
+
+                if (observer) {
+                    observer.disconnect();
+                }
+                if ('IntersectionObserver' in window) {
+                    observer = new IntersectionObserver(
+                        ([entry]) => {
+                            controlsBarEl.classList.toggle('is-stuck', !entry.isIntersecting);
+                        },
+                        {
+                            threshold: [0, 1],
+                            rootMargin: `-${headerHeight + 1}px 0px 0px 0px`
+                        }
+                    );
+                    observer.observe(sentinel);
+                }
+            }
+
+            syncHeaderHeightAndObserver();
+            window.addEventListener('resize', syncHeaderHeightAndObserver, { passive: true });
+        }
+
         function initApp() {
-            const selectEl = document.getElementById('netWorthTimeframeSelect');
-            if (selectEl) {
-                selectEl.value = currentNetWorthTimeframe;
+            setupStickyControlsBar();
+
+            try {
+                const storedScope = localStorage.getItem(STORAGE_KEY_SCOPE);
+                const scopeEl = document.getElementById('scopeFilterSelect');
+                if (storedScope && scopeEl && Array.from(scopeEl.options).some(o => o.value === storedScope)) {
+                    scopeEl.value = storedScope;
+                }
+
+                const storedGranularity = localStorage.getItem(STORAGE_KEY_GRANULARITY);
+                const granEl = document.getElementById('granularitySelect');
+                if (storedGranularity && granEl && Array.from(granEl.options).some(o => o.value === storedGranularity)) {
+                    granEl.value = storedGranularity;
+                }
+
+                const storedPeriod = localStorage.getItem(STORAGE_KEY_PERIOD);
+                const periodEl = document.getElementById('startPeriodSelect');
+                if (storedPeriod && periodEl && Array.from(periodEl.options).some(o => o.value === storedPeriod)) {
+                    periodEl.value = storedPeriod;
+                }
+            } catch (e) {
+                console.warn('localStorage not accessible:', e);
             }
 
             if (new URLSearchParams(window.location.search).get('updated') === '1') {

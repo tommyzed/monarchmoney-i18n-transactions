@@ -103,6 +103,12 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     -   **Timeframe Performance Appended to Details**: Real-time percentage change and absolute dollar gain/loss dynamically color-coded (green for positive, red for negative).
     -   **Sticky Local Storage Preferences**: User's chosen timeframe persists automatically across page reloads and browser sessions.
     -   **Annualized Yearly Gain (CAGR)**: Normalized compound annual growth rate replacing simple average monthly returns.
+*   **📊 v2.10: Inflation-Adjusted Net Worth Analytics, Sticky Scope Controls & Dual-Axis True ROI**:
+    -   **Sticky Top Scope Bar**: Persistent sticky header for filtering across Total Portfolio, Taxable/Accessible, and Retirement with unified timeframe and granularity controls.
+    -   **Dual-Axis Real ROI & Inflation**: Charting Real True ROI (adjusted via official U.S. BLS CPI-U data) and Nominal Net Worth Growth on the Left Axis alongside Cumulative and Period U.S. CPI Inflation on the Right Axis.
+    -   **Elimination of Synthetic Interpolation**: Raw weekly and daily balances computed directly from Monarch account snapshots for retirement and taxable accounts.
+    -   **Interactive KPI Calculation Modals**: In-depth calculation formulas, live historical spending assumptions, and financial guidance modals across all 11 summary cards.
+    -   **Human-Readable Tooltip Dates**: Standardized month and quarter hover labels (e.g. `Nov 2025`, `Q2 2025`) across all interactive charts.
 
 ## 🖼 Demos / Screenshots
 

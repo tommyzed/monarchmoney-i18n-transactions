@@ -1,5 +1,6 @@
 import unittest
 from bridge_app.services.net_worth_service import (
+    classify_account,
     compute_net_worth_analytics,
     generate_net_worth_png,
 )
@@ -228,6 +229,450 @@ class TestNetWorthService(unittest.TestCase):
         self.assertEqual(len(daily), 6)
         self.assertEqual(daily[0]["date"], "2024-01-01")
         self.assertEqual(daily[-1]["date"], "2024-01-15")
+
+    def test_retirement_return_decomposition_no_double_counting(self):
+        # Month with $1,000,000 start, $1,002,500 end (+$2,500 net worth change)
+        # Dividends=$3,000, Interest=$1,000, Cap Gains=$500 (inv_income=$4,500)
+        # Living spending=$6,000, Transfer=$10,000 (ignored)
+        snapshots = [
+            {"date": "2024-01-01", "balance": 1000000.0},
+            {"date": "2024-01-31", "balance": 1002500.0},
+        ]
+        categories = [
+            {"id": "c_div", "name": "Dividends", "group": {"type": "income"}},
+            {"id": "c_int", "name": "Interest", "group": {"type": "income"}},
+            {"id": "c_cg", "name": "Capital Gains", "group": {"type": "income"}},
+            {"id": "c_exp", "name": "Groceries", "group": {"type": "expense"}},
+            {"id": "c_trf", "name": "Transfer", "group": {"type": "transfer"}},
+        ]
+        transactions = [
+            {"date": "2024-01-10", "amount": 3000.0, "category": {"id": "c_div"}},
+            {"date": "2024-01-12", "amount": 1000.0, "category": {"id": "c_int"}},
+            {"date": "2024-01-15", "amount": 500.0, "category": {"id": "c_cg"}},
+            {"date": "2024-01-20", "amount": -6000.0, "category": {"id": "c_exp"}},
+            {"date": "2024-01-25", "amount": -10000.0, "category": {"id": "c_trf"}},
+        ]
+        res = compute_net_worth_analytics(
+            snapshots,
+            start_date_filter="2024-01-01",
+            transactions=transactions,
+            categories=categories,
+        )
+        jan = res["history"][0]
+        self.assertEqual(jan["gain_amount"], 2500.0)
+        self.assertEqual(jan["dividends"], 3000.0)
+        self.assertEqual(jan["interest"], 1000.0)
+        self.assertEqual(jan["capital_gains"], 500.0)
+        self.assertEqual(jan["inv_income"], 4500.0)
+        self.assertEqual(jan["other_income"], 0.0)
+        self.assertEqual(jan["spending"], 6000.0)
+        self.assertEqual(jan["net_external_flow"], -6000.0)
+        self.assertEqual(jan["total_return_dollars"], 8500.0)
+        self.assertEqual(jan["price_change_dollars"], 4000.0)
+        # Zero double-counting identity:
+        self.assertEqual(
+            round(
+                jan["interest"]
+                + jan["dividends"]
+                + jan["capital_gains"]
+                + jan["price_change_dollars"]
+                + jan["other_income"]
+                - jan["spending"],
+                2,
+            ),
+            jan["gain_amount"],
+        )
+
+    def test_modified_dietz_twr_and_chain_linking(self):
+        # Month 1: $1,000,000 start, $50,000 withdrawal, investment return +$19,500 (+2.0% on $975k avg capital)
+        # End balance = $969,500 (raw gain_percent = -3.05%, but TWR = +2.00%)
+        # Month 2: $969,500 start, $0 flow, +5.0% return -> end balance = $1,017,975.0
+        # Chain-linked TWR = (1.02 * 1.05 - 1) * 100 = +7.10%
+        snapshots = [
+            {"date": "2024-01-01", "balance": 1000000.0},
+            {"date": "2024-01-31", "balance": 969500.0},
+            {"date": "2024-02-29", "balance": 1017975.0},
+        ]
+        transactions = [
+            {
+                "date": "2024-01-15",
+                "amount": -50000.0,
+                "category": {"id": "c1", "name": "Living Expenses", "group": {"type": "expense"}},
+            }
+        ]
+        res = compute_net_worth_analytics(snapshots, transactions=transactions)
+        jan = res["history"][0]
+        feb = res["history"][1]
+
+        self.assertEqual(jan["gain_percent"], -3.05)
+        self.assertEqual(jan["twr_percent"], 2.0)
+        self.assertEqual(jan["cumulative_twr_percent"], 2.0)
+
+        self.assertEqual(feb["twr_percent"], 5.0)
+        self.assertEqual(feb["cumulative_twr_percent"], 7.1)
+        self.assertEqual(res["retirement_analytics"]["twr_total_percent"], 7.1)
+
+    def test_withdrawal_rate_thresholds_and_coverage(self):
+        # 12 months with $2,000,000 investable net worth ($200k cash + $1,800k brokerage)
+        # Monthly spending = $5,000 ($60,000/yr -> 3.0% SWR -> "safe")
+        # Monthly dividends = $2,500 ($30,000/yr -> 50.0% income coverage, 1.5% yield)
+        # Cash buffer = $200,000 / $5,000 = 40.0 months; Runway = $2,000,000 / $60,000 = 33.3 years
+        snapshots = [{"date": "2024-01-01", "balance": 2000000.0}]
+        snapshots_by_type = []
+        transactions = []
+        for m in range(1, 13):
+            m_str = f"2024-{m:02d}"
+            snapshots.append({"date": f"{m_str}-28", "balance": 2000000.0})
+            snapshots_by_type.append(
+                {"accountType": "depository", "month": m_str, "balance": 200000.0}
+            )
+            snapshots_by_type.append(
+                {"accountType": "brokerage", "month": m_str, "balance": 1800000.0}
+            )
+            transactions.append(
+                {
+                    "date": f"{m_str}-10",
+                    "amount": 2500.0,
+                    "category": {"name": "Dividends", "group": {"type": "income"}},
+                }
+            )
+            transactions.append(
+                {
+                    "date": f"{m_str}-20",
+                    "amount": -5000.0,
+                    "category": {"name": "Travel", "group": {"type": "expense"}},
+                }
+            )
+
+        res_safe = compute_net_worth_analytics(
+            snapshots,
+            snapshots_by_type=snapshots_by_type,
+            transactions=transactions,
+        )
+        ret = res_safe["retirement_analytics"]
+        self.assertEqual(ret["trailing_12m_spending"], 60000.0)
+        self.assertEqual(ret["trailing_12m_inv_income"], 30000.0)
+        self.assertEqual(ret["withdrawal_rate_percent"], 3.0)
+        self.assertEqual(ret["withdrawal_rate_status"], "safe")
+        self.assertEqual(ret["income_coverage_percent"], 50.0)
+        self.assertEqual(ret["yield_on_investable_percent"], 1.5)
+        self.assertEqual(ret["cash_buffer_months"], 40.0)
+        self.assertEqual(ret["runway_years"], 33.3)
+
+        # Increase spending to $7,500/mo ($90,000/yr -> 4.5% SWR -> "caution")
+        tx_caution = [
+            {
+                "date": f"2024-{m:02d}-20",
+                "amount": -7500.0,
+                "category": {"name": "Living", "group": {"type": "expense"}},
+            }
+            for m in range(1, 13)
+        ]
+        res_caution = compute_net_worth_analytics(
+            snapshots,
+            snapshots_by_type=snapshots_by_type,
+            transactions=tx_caution,
+        )
+        self.assertEqual(res_caution["retirement_analytics"]["withdrawal_rate_percent"], 4.5)
+        self.assertEqual(res_caution["retirement_analytics"]["withdrawal_rate_status"], "caution")
+
+        # Increase spending to $10,000/mo ($120,000/yr -> 6.0% SWR -> "high")
+        tx_high = [
+            {
+                "date": f"2024-{m:02d}-20",
+                "amount": -10000.0,
+                "category": {"name": "Living", "group": {"type": "expense"}},
+            }
+            for m in range(1, 13)
+        ]
+        res_high = compute_net_worth_analytics(
+            snapshots,
+            snapshots_by_type=snapshots_by_type,
+            transactions=tx_high,
+        )
+        self.assertEqual(res_high["retirement_analytics"]["withdrawal_rate_percent"], 6.0)
+        self.assertEqual(res_high["retirement_analytics"]["withdrawal_rate_status"], "high")
+
+    def test_account_type_scopes_and_drawdown(self):
+        # Month 1 (2024-01): Total = $2,000,000 (Cash $100k, Brokerage $1,500k, Real Estate $450k, Credit -$10k, Loan -$40k)
+        #   Investable = $1,600,000, Liquid = $1,590,000, Illiquid = $400,000
+        # Month 2 (2024-02): Market drop -> Total = $1,800,000 (-10% drawdown), spending = $5,000 (withdrawing at a loss!)
+        #   Cash $100k, Brokerage $1,300k, Real Estate $450k, Credit -$10k, Loan -$40k
+        snapshots = [
+            {"date": "2024-01-01", "balance": 2000000.0},
+            {"date": "2024-01-31", "balance": 2000000.0},
+            {"date": "2024-02-29", "balance": 1800000.0},
+        ]
+        snapshots_by_type = [
+            {"accountType": "depository", "month": "2024-01", "balance": 100000.0},
+            {"accountType": "brokerage", "month": "2024-01", "balance": 1500000.0},
+            {"accountType": "real_estate", "month": "2024-01", "balance": 450000.0},
+            {"accountType": "credit", "month": "2024-01", "balance": 10000.0},
+            {"accountType": "loan", "month": "2024-01", "balance": 40000.0},
+            {"accountType": "depository", "month": "2024-02", "balance": 100000.0},
+            {"accountType": "brokerage", "month": "2024-02", "balance": 1300000.0},
+            {"accountType": "real_estate", "month": "2024-02", "balance": 450000.0},
+            {"accountType": "credit", "month": "2024-02", "balance": 10000.0},
+            {"accountType": "loan", "month": "2024-02", "balance": 40000.0},
+        ]
+        account_types = [
+            {"name": "depository", "group": "asset"},
+            {"name": "brokerage", "group": "asset"},
+            {"name": "real_estate", "group": "asset"},
+            {"name": "credit", "group": "liability"},
+            {"name": "loan", "group": "liability"},
+        ]
+        transactions = [
+            {
+                "date": "2024-02-15",
+                "amount": -5000.0,
+                "category": {"name": "Living", "group": {"type": "expense"}},
+            }
+        ]
+        res = compute_net_worth_analytics(
+            snapshots,
+            snapshots_by_type=snapshots_by_type,
+            account_types=account_types,
+            transactions=transactions,
+        )
+        jan, feb = res["history"][0], res["history"][1]
+        ret = res["retirement_analytics"]
+
+        self.assertEqual(jan["investable_end_balance"], 1600000.0)
+        self.assertEqual(jan["liquid_end_balance"], 1590000.0)
+        self.assertEqual(feb["investable_end_balance"], 1400000.0)
+        self.assertEqual(feb["liquid_end_balance"], 1390000.0)
+        self.assertEqual(feb["drawdown_percent"], -10.0)
+        self.assertEqual(feb["investable_drawdown_percent"], -12.5)
+
+        self.assertTrue(ret["has_type_breakdown"])
+        self.assertTrue(ret["has_transactions"])
+        self.assertEqual(ret["investable_net_worth"], 1400000.0)
+        self.assertEqual(ret["liquid_net_worth"], 1390000.0)
+        self.assertEqual(ret["illiquid_net_worth"], 400000.0)
+        self.assertEqual(ret["cash_balance"], 100000.0)
+        self.assertEqual(ret["investments_balance"], 1300000.0)
+        self.assertEqual(ret["real_estate_balance"], 450000.0)
+        self.assertEqual(ret["liabilities_balance"], -50000.0)
+        self.assertEqual(ret["max_drawdown_percent"], -10.0)
+        self.assertEqual(ret["max_drawdown_month"], "2024-02")
+        self.assertEqual(ret["investable_max_drawdown_percent"], -12.5)
+        self.assertEqual(ret["months_withdrawing_at_loss"], 1)
+
+    def test_classify_account(self):
+        # Retirement by subtype
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": {"name": "brokerage"},
+                    "subtype": {"name": "ira"},
+                    "displayName": "Vanguard IRA",
+                }
+            ),
+            "retirement",
+        )
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": {"name": "brokerage"},
+                    "subtype": {"name": "roth_ira"},
+                    "displayName": "Fidelity Roth",
+                }
+            ),
+            "retirement",
+        )
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": {"name": "brokerage"},
+                    "subtype": {"name": "st_401k"},
+                    "displayName": "Employer Plan",
+                }
+            ),
+            "retirement",
+        )
+        # Retirement by displayName when subtype is generic brokerage
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": {"name": "brokerage"},
+                    "subtype": {"name": "brokerage"},
+                    "displayName": "Schwab Rollover 401(k)",
+                }
+            ),
+            "retirement",
+        )
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": "investment",
+                    "subtype": "brokerage",
+                    "name": "Federal TSP Account",
+                }
+            ),
+            "retirement",
+        )
+        # Taxable brokerage
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": {"name": "brokerage"},
+                    "subtype": {"name": "brokerage"},
+                    "displayName": "Schwab Individual Brokerage",
+                }
+            ),
+            "taxable_brokerage",
+        )
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": "investment",
+                    "subtype": "individual",
+                    "name": "Interactive Brokers",
+                }
+            ),
+            "taxable_brokerage",
+        )
+        # Depository, Credit, Loan, Other
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": {"name": "depository"},
+                    "subtype": {"name": "checking"},
+                    "displayName": "Chase Checking",
+                }
+            ),
+            "depository",
+        )
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": {"name": "credit"},
+                    "subtype": {"name": "credit_card"},
+                    "displayName": "Amex Platinum",
+                }
+            ),
+            "credit",
+        )
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": {"name": "loan"},
+                    "subtype": {"name": "mortgage"},
+                    "displayName": "Home Mortgage",
+                }
+            ),
+            "loan",
+        )
+        self.assertEqual(
+            classify_account(
+                {
+                    "type": {"name": "real_estate"},
+                    "subtype": {"name": "home"},
+                    "displayName": "Primary Residence",
+                }
+            ),
+            "other",
+        )
+
+    def test_taxable_and_retirement_breakdown(self):
+        snapshots = [
+            {"date": "2024-01-01", "balance": 1600000.0},
+            {"date": "2024-01-31", "balance": 1600000.0},
+            {"date": "2024-02-29", "balance": 1750000.0},
+        ]
+        snapshots_by_type = [
+            {"accountType": "depository", "month": "2024-01", "balance": 100000.0},
+            {"accountType": "brokerage", "month": "2024-01", "balance": 1500000.0},
+            {"accountType": "depository", "month": "2024-02", "balance": 100000.0},
+            {"accountType": "brokerage", "month": "2024-02", "balance": 1650000.0},
+        ]
+        # Provide account_monthly_balances for 2024-02 (600k taxable, 1,050k retirement -> sum 1,650k)
+        # For 2024-01, test earliest-known-ratio distribution against 1,500k brokerage
+        account_monthly_balances = {
+            "2024-02": {
+                "taxable_brokerage": 600000.0,
+                "retirement": 1050000.0,
+            }
+        }
+        res = compute_net_worth_analytics(
+            snapshots,
+            snapshots_by_type=snapshots_by_type,
+            account_monthly_balances=account_monthly_balances,
+        )
+        jan, feb = res["history"][0], res["history"][1]
+
+        # Feb has exact account_monthly_balances
+        self.assertEqual(feb["balances_by_type"]["taxable_brokerage"], 600000.0)
+        self.assertEqual(feb["balances_by_type"]["retirement"], 1050000.0)
+        self.assertEqual(feb["balances_by_type"]["brokerage"], 1650000.0)
+        self.assertEqual(feb["investable_end_balance"], 1750000.0)
+        self.assertEqual(feb["taxable_end_balance"], 700000.0)
+        self.assertEqual(feb["retirement_end_balance"], 1050000.0)
+        self.assertEqual(feb["taxable_start_balance"], jan["taxable_end_balance"])
+        self.assertEqual(feb["retirement_start_balance"], jan["retirement_end_balance"])
+
+        # Jan distributed by earliest known ratio (600 / 1650 = 4/11 of 1,500,000)
+        self.assertEqual(
+            round(
+                jan["balances_by_type"]["taxable_brokerage"]
+                + jan["balances_by_type"]["retirement"],
+                2,
+            ),
+            1500000.0,
+        )
+        self.assertEqual(jan["balances_by_type"]["brokerage"], 1500000.0)
+        self.assertEqual(jan["investable_end_balance"], 1600000.0)
+        self.assertEqual(
+            jan["taxable_end_balance"],
+            round(100000.0 + jan["balances_by_type"]["taxable_brokerage"], 2),
+        )
+        self.assertEqual(
+            jan["retirement_end_balance"],
+            jan["balances_by_type"]["retirement"],
+        )
+        self.assertEqual(jan["taxable_start_balance"], jan["taxable_end_balance"])
+        self.assertEqual(jan["retirement_start_balance"], jan["retirement_end_balance"])
+
+        # Verify summary & retirement_analytics fields
+        self.assertTrue(res["summary"]["has_taxable_retirement_breakdown"])
+        self.assertEqual(res["summary"]["taxable_investments_balance"], 600000.0)
+        self.assertEqual(res["summary"]["retirement_balance"], 1050000.0)
+        self.assertTrue(res["retirement_analytics"]["has_taxable_retirement_breakdown"])
+        self.assertEqual(
+            res["retirement_analytics"]["taxable_investments_balance"], 600000.0
+        )
+        self.assertEqual(res["retirement_analytics"]["retirement_balance"], 1050000.0)
+        self.assertEqual(
+            res["retirement_analytics"]["taxable_accessible_balance"], 700000.0
+        )
+        self.assertEqual(
+            res["retirement_analytics"]["retirement_accounts_balance"], 1050000.0
+        )
+
+        # Verify daily_history and weekly_history include retirement_balance and taxable_balance
+        self.assertEqual(res["daily_history"][-1]["date"], "2024-02-29")
+        self.assertEqual(res["daily_history"][-1]["retirement_balance"], 1050000.0)
+        self.assertEqual(res["daily_history"][-1]["taxable_balance"], 700000.0)
+        self.assertEqual(res["weekly_history"][-1]["retirement_balance"], 1050000.0)
+        self.assertEqual(res["weekly_history"][-1]["taxable_balance"], 700000.0)
+
+        # Also test explicit account_daily_balances override
+        account_daily_balances = {
+            "2024-01-01": {"retirement_balance": 950000.0, "taxable_balance": 650000.0},
+            "2024-01-31": {"retirement_balance": 960000.0, "taxable_balance": 640000.0},
+            "2024-02-29": {"retirement_balance": 1050000.0, "taxable_balance": 700000.0},
+        }
+        res_daily = compute_net_worth_analytics(
+            snapshots,
+            snapshots_by_type=snapshots_by_type,
+            account_monthly_balances=account_monthly_balances,
+            account_daily_balances=account_daily_balances,
+        )
+        self.assertEqual(res_daily["daily_history"][0]["retirement_balance"], 950000.0)
+        self.assertEqual(res_daily["daily_history"][0]["taxable_balance"], 650000.0)
+        self.assertEqual(res_daily["weekly_history"][0]["retirement_balance"], 950000.0)
+        self.assertEqual(res_daily["weekly_history"][0]["taxable_balance"], 650000.0)
 
 
 if __name__ == "__main__":

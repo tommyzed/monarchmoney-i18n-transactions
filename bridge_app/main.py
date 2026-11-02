@@ -1858,7 +1858,7 @@ LOADING_HTML = """
                     <div class="footer-brand" style="font-family: 'Inter', system-ui, -apple-system, sans-serif; font-weight: 700; font-size: 0.95rem; color: #112217;">ego<span style="color: #047857;">dev</span>null</div>
                 </a>
                 <div style="font-size: 0.82rem; color: #666; text-align: center;">
-                    <span style="font-style: italic;">v2.9 · 20261028.1756</span> &copy; 2026 Tom Olick
+                    <span style="font-style: italic;">v2.10 · 20261102.2249</span> &copy; 2026 Tom Olick
                 </div>
             </footer>
         </div>
@@ -4955,16 +4955,22 @@ async def get_net_worth_report_endpoint(
     has_weekly = bool(
         report
         and report.summary
-        and (
-            (report.summary.get("weekly_history") and len(report.summary["weekly_history"]) > 0)
-            or (report.summary.get("daily_history") and len(report.summary["daily_history"]) > 0)
-        )
+        and report.summary.get("weekly_history")
+        and len(report.summary["weekly_history"]) > 0
+        and isinstance(report.summary["weekly_history"][-1], dict)
+        and "retirement_balance" in report.summary["weekly_history"][-1]
+    )
+    has_retirement = bool(
+        report
+        and report.summary
+        and report.summary.get("retirement_analytics")
+        and "has_taxable_retirement_breakdown" in report.summary
     )
 
     if (
         not report
         or (report.summary is None and report.sync_status != "syncing")
-        or (report.sync_status != "syncing" and not has_weekly)
+        or (report.sync_status != "syncing" and (not has_weekly or not has_retirement))
     ):
         try:
             return await calculate_and_save_net_worth_report(start_date=start_date)
@@ -4982,6 +4988,7 @@ async def get_net_worth_report_endpoint(
         "start_date": report.start_date,
         "latest_date": report.latest_date,
         "summary": report.summary,
+        "retirement_analytics": (report.summary or {}).get("retirement_analytics") or {},
         "history": report.history or [],
         "weekly_history": (report.summary or {}).get("weekly_history") or [],
         "daily_history": (report.summary or {}).get("daily_history") or [],
