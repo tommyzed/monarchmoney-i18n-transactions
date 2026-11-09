@@ -1958,9 +1958,10 @@
                 icon: '🎯',
                 title: 'Withdrawal Rate (12M SWR)',
                 calc: `
-                    <p>Measures your trailing 12-month annualized net portfolio withdrawal as a percentage of your current investable base:</p>
-                    <div class="kpi-formula-box">Net Withdrawal = max(0, Living Spending − Non-Portfolio Income)<br>12M SWR % = (Annualized Net Withdrawal ÷ Investable Portfolio Base) × 100</div>
-                    <p><strong>Spending Assumption:</strong> The withdrawal numerator is derived from the exact same historical <strong>trailing 12-month living spending</strong> assumption used in <em>Cash Buffer &amp; Runway</em>—summing actual Monarch Money expense transactions over the last 12 months (excluding internal transfers, credit card payments, and hidden items) to smooth out seasonal spikes.</p>
+                    <p>Measures your 12-month annualized total living spending as a percentage of your current investable base:</p>
+                    <div class="kpi-formula-box">Annualized Spending = Total Spending in window × (12 ÷ Months Covered)<br>12M SWR % = (Annualized Spending ÷ Investable Portfolio Base) × 100</div>
+                    <p><strong>Gross, not net:</strong> The rate uses <em>total</em> spending — the same figure shown on the Spending page — and does <strong>not</strong> subtract non-portfolio income (salary, benefits, refunds, etc.). This keeps temporary income from masking your true spending pace. Hover the card's subtext to see the net-of-income figure.</p>
+                    <p><strong>Spending Assumption:</strong> The numerator uses actual Monarch Money expense transactions (excluding internal transfers, credit card payments, and hidden items) over the most recent 12 months of the selected period. When the period is shorter than 12 months (e.g. <em>This Year (YTD)</em> or <em>Last 3 Months</em>), the spending pace in that window is <strong>extrapolated to a full 12 months</strong>. Months covered are counted by day, so a partial current month (e.g. the 1st–9th) only counts as a fraction of a month.</p>
                 `,
                 usage: `
                     <p>Benchmarks your spending pace against the classic Trinity Study / 4% Safe Withdrawal Rate framework:</p>
@@ -2009,13 +2010,13 @@
                 title: 'Cash Buffer & Runway',
                 calc: `
                     <p>Combines your liquid depository cash cushion (in months of living expenses) with total portfolio longevity (in years):</p>
-                    <div class="kpi-formula-box">Cash Buffer (mos) = Depository Cash Balance ÷ Assumed Monthly Living Spend<br>Portfolio Runway (yrs) = Investable Portfolio Base ÷ Annual Net Withdrawal</div>
+                    <div class="kpi-formula-box">Cash Buffer (mos) = Depository Cash Balance ÷ Assumed Monthly Living Spend<br>Portfolio Runway (yrs) = Investable Portfolio Base ÷ Annualized Total Spending</div>
                     <p><strong>How the Spending Assumption Is Derived:</strong></p>
                     <ul>
                         <li><strong>Historical Trailing 12-Month Baseline:</strong> Rather than guessing, this metric uses your <strong>actual historical living spending over the trailing 12 months</strong> (or active filtered period) recorded in Monarch Money.</li>
                         <li><strong>Included &amp; Excluded Transactions:</strong> Sums all itemized outflow transactions in Monarch under living expense category groups (housing, food, utilities, healthcare, travel, shopping, etc.) while strictly excluding internal account transfers, credit card bill payments, investment buy orders, and hidden transactions.</li>
                         <li><strong>Seasonality Smoothing:</strong> A rolling 12-month average (<code>Annualized Spending ÷ 12</code>) is used so lumpy annual costs—such as property taxes, insurance premiums, vacations, and holiday spending—are evenly represented without distorting any single month.</li>
-                        <li>If non-portfolio income exceeds spending (zero net withdrawal), portfolio runway caps at <strong>99+ yrs</strong>.</li>
+                        <li>Runway uses <strong>total spending</strong> (same as the Spending page and the SWR card), without subtracting non-portfolio income, and caps at <strong>99+ yrs</strong>.</li>
                     </ul>
                 `,
                 usage: `
@@ -2046,7 +2047,7 @@
             let calcHtml = info.calc || '';
             const ret = currentFilteredView?.retirement || netWorthData?.retirement;
             if (metricKey === 'cash_buffer' && ret) {
-                const mosCount = ret.trailingMonthsUsed || 12;
+                const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
                 const liveAssumptionsHtml = `
                     <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
                         <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (Trailing ${mosCount}M Historical Data):</div>
@@ -2319,6 +2320,27 @@
             } else {
                 selectEl.value = 'all';
             }
+        }
+
+        // Returns the number of (fractional) months of data covered by a list of monthly items.
+        // Past months count as full months; the final month counts only up to its end_date
+        // (latest snapshot date), so a partial current month contributes e.g. 9/30.
+        function computeCoveredMonths(months) {
+            if (!Array.isArray(months) || months.length === 0) return 0;
+            const last = months[months.length - 1];
+            const lastMonthStr = String(last.month || '');
+            const yr = parseInt(lastMonthStr.slice(0, 4), 10);
+            const mo = parseInt(lastMonthStr.slice(5, 7), 10);
+            if (!yr || !mo) return months.length;
+
+            const daysInLastMonth = new Date(Date.UTC(yr, mo, 0)).getUTCDate();
+            let lastFraction = 1;
+            const endDate = String(last.end_date || '');
+            if (endDate.slice(0, 7) === lastMonthStr) {
+                const day = parseInt(endDate.slice(8, 10), 10);
+                if (day > 0) lastFraction = Math.min(1, day / daysInLastMonth);
+            }
+            return (months.length - 1) + lastFraction;
         }
 
         function computeFilteredView(rawHistory, retirementAnalytics, scope, startPeriod, granularity) {
@@ -2600,7 +2622,11 @@
             const tOtherInc = trailingSlice.reduce((s, m) => s + m.other_income, 0);
             const tInvIncome = trailingSlice.reduce((s, m) => s + m.inv_income, 0);
             const tNetWithdrawal = Math.max(0, tSpending - tOtherInc);
-            const annScale = tCount > 0 ? (12 / tCount) : 1;
+            // Extrapolate the in-scope pace to a full 12 months using the actual number of
+            // days covered (the latest month is usually partial, e.g. Nov 1–9), so YTD /
+            // short windows aren't under-annualized by treating a partial month as full.
+            const coveredMonths = computeCoveredMonths(trailingSlice);
+            const annScale = coveredMonths > 0 ? (12 / coveredMonths) : 1;
             const annSpending = tSpending * annScale;
             const annNetWithdrawal = tNetWithdrawal * annScale;
             const annInvIncome = tInvIncome * annScale;
@@ -2618,8 +2644,10 @@
                 ? Number(lastItem.investable_end_balance)
                 : ((cashBal + invBal) > 0 ? (cashBal + invBal) : (Number(retirementAnalytics?.investable_net_worth) || currentNw));
 
+            // SWR is based on total (gross) living spending — the same figure as the Spending
+            // page — not net of non-portfolio income, so temporary income doesn't mask the pace.
             const withdrawalRatePercent = investableBase > 0
-                ? (annNetWithdrawal / investableBase) * 100
+                ? (annSpending / investableBase) * 100
                 : Number(retirementAnalytics?.withdrawal_rate_percent ?? 0);
             let withdrawalStatus = 'safe';
             if (withdrawalRatePercent > 5.0) {
@@ -2638,9 +2666,9 @@
             const cashBufferMonths = avgMonthlySpending > 0
                 ? (cashBal / avgMonthlySpending)
                 : Number(retirementAnalytics?.cash_buffer_months ?? 0);
-            const runwayYears = annNetWithdrawal > 0
-                ? Math.min(99.9, investableBase / annNetWithdrawal)
-                : (annSpending > 0 ? Math.min(99.9, investableBase / annSpending) : Number(retirementAnalytics?.runway_years ?? 99.9));
+            const runwayYears = annSpending > 0
+                ? Math.min(99.9, investableBase / annSpending)
+                : Number(retirementAnalytics?.runway_years ?? 99.9);
 
             return {
                 scope,
@@ -2676,6 +2704,7 @@
                     avgMonthlySpending,
                     avgMonthlyNetWithdrawal,
                     trailingMonthsUsed: tCount,
+                    coveredMonths,
                     annInvIncome,
                     investableBase,
                     incomeCoveragePercent,
@@ -2908,7 +2937,13 @@
                 }
                 const swrSubEl = document.getElementById('kpiWithdrawalSubtext');
                 if (swrSubEl) {
-                    swrSubEl.textContent = `${formatCurrency0(ret.annNetWithdrawal)}/yr net vs ${formatCurrency0(ret.investableBase)} inv.`;
+                    const covMos = Number(ret.coveredMonths || ret.trailingMonthsUsed || 0);
+                    const covLabel = covMos >= 11.95 ? '12M' : `ann. from ${covMos.toFixed(1)} mo`;
+                    swrSubEl.textContent = `${formatCurrency0(ret.annSpending)}/yr spend (${covLabel}) vs ${formatCurrency0(ret.investableBase)} inv.`;
+                    const otherIncAnn = Math.max(0, (ret.annSpending || 0) - (ret.annNetWithdrawal || 0));
+                    swrSubEl.title = otherIncAnn > 0
+                        ? `Net of non-portfolio income (${formatCurrency0(otherIncAnn)}/yr): ${formatCurrency0(ret.annNetWithdrawal)}/yr`
+                        : '';
                 }
 
                 const covEl = document.getElementById('kpiIncomeCoverage');

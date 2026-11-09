@@ -798,8 +798,10 @@ def compute_net_worth_analytics(
     trailing_12m_inv_income = round(sum(h["inv_income"] for h in trailing), 2)
     annualized_inv_income = round(trailing_12m_inv_income * ann_factor, 2)
 
+    # SWR is based on total (gross) living spending — matching the Spending report —
+    # rather than spending net of non-portfolio income.
     withdrawal_rate_percent = (
-        round((annualized_net_withdrawal / investable_net_worth) * 100.0, 2)
+        round((annualized_spending / investable_net_worth) * 100.0, 2)
         if investable_net_worth > 0
         else 0.0
     )
@@ -848,8 +850,8 @@ def compute_net_worth_analytics(
         else None
     )
     runway_years = (
-        round(investable_net_worth / annualized_net_withdrawal, 1)
-        if annualized_net_withdrawal > 0
+        round(investable_net_worth / annualized_spending, 1)
+        if annualized_spending > 0
         else None
     )
 
