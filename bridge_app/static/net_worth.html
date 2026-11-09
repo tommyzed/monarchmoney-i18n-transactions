@@ -1437,13 +1437,14 @@
                 <div class="kpi-subtext" id="kpiWorstMonthSubtext">Recorded in —</div>
             </div>
 
-            <!-- Card 6: Annualized Yearly Gain -->
-            <div class="kpi-card accent-amber">
+            <!-- Card 6: Max Drawdown from Peak -->
+            <div class="kpi-card accent-red">
                 <div class="kpi-header">
-                    <div class="kpi-label">Annualized Net Growth</div>
-                    <button type="button" class="kpi-info-btn" aria-label="Info about Annualized Net Growth"
-                        onclick="openKpiModal('annualized_gain', event)"
-                        title="How Annualized Net Growth is calculated &amp; how to use it">
+                    <div class="kpi-label">Max Drawdown from Peak</div>
+                    <button type="button" class="kpi-info-btn"
+                        aria-label="Info about Max Drawdown and Sequence Risk"
+                        onclick="openKpiModal('max_drawdown', event)"
+                        title="How Max Drawdown &amp; Sequence Risk is calculated &amp; how to use it">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <circle cx="12" cy="12" r="10"></circle>
@@ -1452,8 +1453,8 @@
                         </svg>
                     </button>
                 </div>
-                <div class="kpi-value" id="kpiAnnualizedGain">+0.00%</div>
-                <div class="kpi-subtext">Compound annual ΔNW (incl. flows)</div>
+                <div class="kpi-value" id="kpiMaxDrawdown" style="color: var(--accent-green);">0.00%</div>
+                <div class="kpi-subtext" id="kpiMaxDrawdownSubtext">No drawdown · 0 mos withdrawing at a loss</div>
             </div>
         </section>
 
@@ -1463,7 +1464,26 @@
                 <h2 class="kpi-section-title">🏖️ Retirement ROI &amp; Sustainability</h2>
             </div>
             <div class="kpi-grid">
-                <!-- Retirement Card 1: True Investment ROI (TWR) -->
+                <!-- Retirement Card 1: Annualized Net Growth -->
+                <div class="kpi-card accent-amber">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Annualized Net Growth</div>
+                        <button type="button" class="kpi-info-btn" aria-label="Info about Annualized Net Growth"
+                            onclick="openKpiModal('annualized_gain', event)"
+                            title="How Annualized Net Growth is calculated &amp; how to use it">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="kpi-value" id="kpiAnnualizedGain">+0.00%</div>
+                    <div class="kpi-subtext">Compound annual ΔNW (incl. flows)</div>
+                </div>
+
+                <!-- Retirement Card 2: True Investment ROI (TWR) -->
                 <div class="kpi-card accent-emerald">
                     <div class="kpi-header">
                         <div class="kpi-label">True Investment ROI (TWR)</div>
@@ -1485,7 +1505,7 @@
                     </div>
                 </div>
 
-                <!-- Retirement Card 2: Withdrawal Rate (12M SWR) -->
+                <!-- Retirement Card 3: Withdrawal Rate (12M SWR) -->
                 <div class="kpi-card accent-amber">
                     <div class="kpi-header">
                         <div class="kpi-label">Withdrawal Rate (12M SWR)</div>
@@ -1507,7 +1527,7 @@
                     </div>
                 </div>
 
-                <!-- Retirement Card 3: Income Coverage (12M) -->
+                <!-- Retirement Card 4: Income Coverage (12M) -->
                 <div class="kpi-card accent-blue">
                     <div class="kpi-header">
                         <div class="kpi-label">Income Coverage (12M)</div>
@@ -1524,26 +1544,6 @@
                     </div>
                     <div class="kpi-value" id="kpiIncomeCoverage">0.0%</div>
                     <div class="kpi-subtext" id="kpiIncomeCoverageSubtext">$0 yield / $0 spent (Yield: 0.00%)</div>
-                </div>
-
-                <!-- Retirement Card 4: Max Drawdown & Sequence Risk -->
-                <div class="kpi-card accent-red">
-                    <div class="kpi-header">
-                        <div class="kpi-label">Max Drawdown from Peak</div>
-                        <button type="button" class="kpi-info-btn"
-                            aria-label="Info about Max Drawdown and Sequence Risk"
-                            onclick="openKpiModal('max_drawdown', event)"
-                            title="How Max Drawdown &amp; Sequence Risk is calculated &amp; how to use it">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="kpi-value" id="kpiMaxDrawdown" style="color: var(--accent-green);">0.00%</div>
-                    <div class="kpi-subtext" id="kpiMaxDrawdownSubtext">No drawdown · 0 mos withdrawing at a loss</div>
                 </div>
 
                 <!-- Retirement Card 5: Cash Buffer & Runway -->
