@@ -1437,12 +1437,11 @@
                 <div class="kpi-subtext" id="kpiWorstMonthSubtext">Recorded in —</div>
             </div>
 
-            <!-- Card 6: Max Drawdown from Peak -->
+            <!-- Card 6: Max Drawdown -->
             <div class="kpi-card accent-red">
                 <div class="kpi-header">
-                    <div class="kpi-label">Max Drawdown from Peak</div>
-                    <button type="button" class="kpi-info-btn"
-                        aria-label="Info about Max Drawdown and Sequence Risk"
+                    <div class="kpi-label">Max Drawdown</div>
+                    <button type="button" class="kpi-info-btn" aria-label="Info about Max Drawdown and Sequence Risk"
                         onclick="openKpiModal('max_drawdown', event)"
                         title="How Max Drawdown &amp; Sequence Risk is calculated &amp; how to use it">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1480,13 +1479,13 @@
                         </button>
                     </div>
                     <div class="kpi-value" id="kpiAnnualizedGain">+0.00%</div>
-                    <div class="kpi-subtext">Compound annual ΔNW (incl. flows)</div>
+                    <div class="kpi-subtext">Ann. · Includes flows</div>
                 </div>
 
                 <!-- Retirement Card 2: True Investment ROI (TWR) -->
                 <div class="kpi-card accent-emerald">
                     <div class="kpi-header">
-                        <div class="kpi-label">True Investment ROI (TWR)</div>
+                        <div class="kpi-label">Investment ROI (TWR)</div>
                         <button type="button" class="kpi-info-btn" aria-label="Info about True Investment ROI (TWR)"
                             onclick="openKpiModal('twr_roi', event)"
                             title="How True Investment ROI (TWR) is calculated &amp; how to use it">
@@ -1501,7 +1500,7 @@
                     <div class="kpi-value" id="kpiTwrAnnualized">+0.00%</div>
                     <div class="kpi-subtext">
                         <span class="trend-pill trend-positive" id="kpiTwrTotalPill">+0.00% cum.</span>
-                        <span>Ann. · Excludes withdrawals</span>
+                        <span>Ann. · Excludes flows</span>
                     </div>
                 </div>
 
@@ -1940,7 +1939,7 @@
             },
             twr_roi: {
                 icon: '🏖️',
-                title: 'True Investment ROI (TWR)',
+                title: 'Investment ROI (TWR)',
                 calc: `
                     <p>Computes your portfolio's pure investment return using chain-linked monthly <strong>Modified Dietz Time-Weighted Return (TWR)</strong>, stripping out external cash flows:</p>
                     <div class="kpi-formula-box">Monthly Return $ = ΔNW − Net External Flow (Other Income − Spending)<br>Monthly TWR = Monthly Return $ ÷ (Start NW + 0.5 × Net External Flow)<br>Cumulative TWR = [ Π (1 + Monthly TWR_i) − 1 ] × 100<br>Real True ROI % = [ (1 + Nominal TWR) ÷ (CPI_t ÷ CPI_0) − 1 ] × 100</div>
@@ -2485,7 +2484,6 @@
             let maxAthDropPercent = 0;
             let maxAthDropMonth = '';
             let maxAthPeakMonth = '';
-            let monthsWithdrawingAtLoss = 0;
 
             filteredMonths = filteredMonths.map(m => {
                 const cumDollars = m.end_nw - baseStartNw;
@@ -2498,9 +2496,6 @@
                     maxAthDropPercent = ddPct;
                     maxAthDropMonth = m.month;
                     maxAthPeakMonth = m.ath_peak_month;
-                }
-                if (m.total_return_dollars < 0 && m.spending > 0) {
-                    monthsWithdrawingAtLoss += 1;
                 }
 
                 return {
@@ -2738,7 +2733,6 @@
                     maxDrawdownMonth: maxAthDropMonth || '—',
                     maxDrawdownPeakMonth: maxAthPeakMonth || '—',
                     currentDrawdownPercent: lastItem ? (lastItem.ath_change_percent ?? lastItem.drawdown_percent ?? 0) : 0,
-                    monthsWithdrawingAtLoss,
                     cashBalance: cashBal,
                     cashBufferMonths,
                     runwayYears
@@ -2978,7 +2972,7 @@
                     } else {
                         covLabel = `12M avg across ${covMos.toFixed(1)} mo`;
                     }
-                    swrSubEl.textContent = `${formatCurrency0(ret.annSpending)}/yr spend (${covLabel}) vs ${formatCurrency0(ret.investableBase)} inv.`;
+                    swrSubEl.textContent = `${formatCurrency0(ret.annSpending)}/yr spend (${covLabel})`;
                     const otherIncAnn = Math.max(0, (ret.annSpending || 0) - (ret.annNetWithdrawal || 0));
                     swrSubEl.title = otherIncAnn > 0
                         ? `Net of non-portfolio income (${formatCurrency0(otherIncAnn)}/yr): ${formatCurrency0(ret.annNetWithdrawal)}/yr`
@@ -3005,9 +2999,9 @@
                     if (ret.maxDrawdownPercent < 0 && ret.maxDrawdownMonth !== '—') {
                         const pkH = formatMonthHuman(ret.maxDrawdownPeakMonth) || ret.maxDrawdownPeakMonth;
                         const trH = formatMonthHuman(ret.maxDrawdownMonth) || ret.maxDrawdownMonth;
-                        ddSubEl.textContent = `${pkH} → ${trH} ( ${ret.monthsWithdrawingAtLoss} months)`;
+                        ddSubEl.textContent = `${pkH} → ${trH}`;
                     } else {
-                        ddSubEl.textContent = `No drawdown ( ${ret.monthsWithdrawingAtLoss} months)`;
+                        ddSubEl.textContent = `No drawdown (at peak)`;
                     }
                 }
 
