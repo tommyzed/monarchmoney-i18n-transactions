@@ -349,7 +349,7 @@ class GhostSecurityMiddleware(BaseHTTPMiddleware):
                 response.headers["Cache-Control"] = "no-cache, must-revalidate"
             return response
 
-        if request.url.path.endswith((".png", ".jpg", ".jpeg", ".webp", ".svg", ".css", ".js", ".gif")):
+        if not request.url.path.startswith("/api/") and request.url.path.endswith((".png", ".jpg", ".jpeg", ".webp", ".svg", ".css", ".js", ".gif")):
              return await call_next(request)
 
         # Allow FIRE dashboard demo access
@@ -5064,10 +5064,14 @@ async def get_net_worth_status_endpoint(
 
 @app.get("/api/net-worth/chart.png")
 async def get_net_worth_chart_png_endpoint(
+    request: Request,
     start_date: str = "2024-01-01",
     db: AsyncSession = Depends(get_db),
 ):
     """Generate and return a dark-mode high-resolution PNG chart of Net Worth performance."""
+    if not getattr(request.state, "is_authenticated", False):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     from .services.net_worth_service import (
         calculate_and_save_net_worth_report,
         generate_net_worth_png,

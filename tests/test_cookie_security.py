@@ -54,3 +54,16 @@ def test_security_blocked_when_secret_not_configured(monkeypatch):
     response_s = client.get("/s?s=some_secret")
     assert response_s.status_code == 500
     assert "Security not configured" in response_s.text
+
+
+def test_api_png_endpoint_requires_authentication():
+    client = TestClient(app)
+
+    # Unauthenticated request to /api/net-worth/chart.png must be blocked by GhostSecurityMiddleware (404 Ghost Mode)
+    response = client.get("/api/net-worth/chart.png")
+    assert response.status_code == 404
+
+    # Public static asset ending in .png (not under /api/) remains accessible
+    logo_response = client.get("/logo.png")
+    assert logo_response.status_code == 200
+
