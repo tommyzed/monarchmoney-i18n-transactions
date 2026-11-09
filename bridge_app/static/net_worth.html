@@ -1961,7 +1961,13 @@
                     <p>Measures your 12-month annualized total living spending as a percentage of your current investable base:</p>
                     <div class="kpi-formula-box">Annualized Spending = Total Spending in window × (12 ÷ Months Covered)<br>12M SWR % = (Annualized Spending ÷ Investable Portfolio Base) × 100</div>
                     <p><strong>Gross, not net:</strong> The rate uses <em>total</em> spending — the same figure shown on the Spending page — and does <strong>not</strong> subtract non-portfolio income (salary, benefits, refunds, etc.). This keeps temporary income from masking your true spending pace. Hover the card's subtext to see the net-of-income figure.</p>
-                    <p><strong>Spending Assumption:</strong> The numerator uses actual Monarch Money expense transactions (excluding internal transfers, credit card payments, and hidden items) over the most recent 12 months of the selected period. When the period is shorter than 12 months (e.g. <em>This Year (YTD)</em> or <em>Last 3 Months</em>), the spending pace in that window is <strong>extrapolated to a full 12 months</strong>. Months covered are counted by day, so a partial current month (e.g. the 1st–9th) only counts as a fraction of a month.</p>
+                    <p><strong>Spending Assumption:</strong> Sourced directly from Monarch Money expense transactions (excluding internal transfers, credit card payments, and hidden items) across the selected period:</p>
+                    <ul>
+                        <li><strong>Last 3 Months / YTD:</strong> Annualizes the spending in that window to a 12-month run-rate (<code>spending × (12 ÷ covered months)</code>).</li>
+                        <li><strong>All Time:</strong> Computes the average spending for 12 months across all elapsed history (<code>total spending × (12 ÷ all-time covered months)</code>).</li>
+                        <li><strong>Trailing 12 Months:</strong> Uses actual spending across the trailing 12-month window.</li>
+                    </ul>
+                    <p>Months covered are counted by day, so a partial current month (e.g. the 1st–9th) counts as its exact fractional month rather than distorting the rate.</p>
                 `,
                 usage: `
                     <p>Benchmarks your spending pace against the classic Trinity Study / 4% Safe Withdrawal Rate framework:</p>
@@ -2050,10 +2056,21 @@
                 const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
                 const liveAssumptionsHtml = `
                     <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
-                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (Trailing ${mosCount}M Historical Data):</div>
+                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (${mosCount} Mo Scope Data):</div>
                         <div>• Assumed Monthly Spend: <strong>${formatCurrency0(ret.avgMonthlySpending || 0)}/mo</strong> (${formatCurrency0(ret.annSpending || 0)}/yr)</div>
                         <div>• Assumed Net Portfolio Outflow: <strong>${formatCurrency0(ret.annNetWithdrawal || 0)}/yr</strong> (${formatCurrency0(ret.avgMonthlyNetWithdrawal || 0)}/mo)</div>
                         <div>• Depository Cash Reserves: <strong>${formatCurrency0(ret.cashBalance || 0)}</strong> · Investable Base: <strong>${formatCurrency0(ret.investableBase || 0)}</strong></div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'withdrawal_rate' && ret) {
+                const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
+                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (${mosCount} Mo Scope Data):</div>
+                        <div>• Annualized Total Spending: <strong>${formatCurrency0(ret.annSpending || 0)}/yr</strong> (${formatCurrency0(ret.avgMonthlySpending || 0)}/mo)</div>
+                        <div>• Investable Portfolio Base: <strong>${formatCurrency0(ret.investableBase || 0)}</strong></div>
+                        <div>• Withdrawal Rate (SWR): <strong>${(ret.withdrawalRatePercent || 0).toFixed(2)}%</strong> (${ret.withdrawalStatus || 'safe'})</div>
                     </div>
                 `;
                 calcHtml = liveAssumptionsHtml + calcHtml;
@@ -2615,17 +2632,24 @@
                 twrAnnualizedPercent = (Math.pow(1 + twrTotalPercent / 100, 12 / monthsCount) - 1) * 100;
             }
 
-            // Trailing 12M (within filtered window) for SWR & Income Coverage
-            const trailingSlice = filteredMonths.slice(-12);
-            const tCount = trailingSlice.length;
-            const tSpending = trailingSlice.reduce((s, m) => s + m.spending, 0);
-            const tOtherInc = trailingSlice.reduce((s, m) => s + m.other_income, 0);
-            const tInvIncome = trailingSlice.reduce((s, m) => s + m.inv_income, 0);
+            // Scope-based spending & retirement metrics (annualized to 12M pace)
+            // Evaluates spending across all months in the chosen scope (filteredMonths).
+            // - Last 3 Months: Extrapolates / annualizes the spend in the last 3 months to 12 months
+            // - YTD: Extrapolates / annualizes the spend in the active calendar year to 12 months
+            // - All Time (or multi-year filters): Computes the 12-month average spend across all elapsed months
+            // - Trailing 12 Months: Evaluates the trailing 12-month window
+            const evalMonths = (startPeriod === 'trailing_12m')
+                ? filteredMonths.slice(-12)
+                : filteredMonths;
+            const tCount = evalMonths.length;
+            const tSpending = evalMonths.reduce((s, m) => s + m.spending, 0);
+            const tOtherInc = evalMonths.reduce((s, m) => s + m.other_income, 0);
+            const tInvIncome = evalMonths.reduce((s, m) => s + m.inv_income, 0);
             const tNetWithdrawal = Math.max(0, tSpending - tOtherInc);
-            // Extrapolate the in-scope pace to a full 12 months using the actual number of
-            // days covered (the latest month is usually partial, e.g. Nov 1–9), so YTD /
-            // short windows aren't under-annualized by treating a partial month as full.
-            const coveredMonths = computeCoveredMonths(trailingSlice);
+            // Extrapolate or average the in-scope pace to a full 12 months using the actual
+            // number of days covered (the latest month is usually partial, e.g. Nov 1–9), so
+            // partial months don't distort the annualization.
+            const coveredMonths = computeCoveredMonths(evalMonths);
             const annScale = coveredMonths > 0 ? (12 / coveredMonths) : 1;
             const annSpending = tSpending * annScale;
             const annNetWithdrawal = tNetWithdrawal * annScale;
@@ -2695,6 +2719,7 @@
                 },
                 retirement: {
                     hasTypeBreakdown,
+                    startPeriod,
                     twrTotalPercent,
                     twrAnnualizedPercent,
                     withdrawalRatePercent,
@@ -2938,7 +2963,21 @@
                 const swrSubEl = document.getElementById('kpiWithdrawalSubtext');
                 if (swrSubEl) {
                     const covMos = Number(ret.coveredMonths || ret.trailingMonthsUsed || 0);
-                    const covLabel = covMos >= 11.95 ? '12M' : `ann. from ${covMos.toFixed(1)} mo`;
+                    const sp = ret.startPeriod || document.getElementById('startPeriodSelect')?.value || 'all';
+                    let covLabel;
+                    if (sp === 'all' || (sp.startsWith('20') && covMos > 12.5)) {
+                        covLabel = `12M avg across ${covMos.toFixed(1)} mo`;
+                    } else if (sp === 'trailing_12m') {
+                        covLabel = covMos >= 11.95 ? '12M' : `trailing 12M (${covMos.toFixed(1)} mo)`;
+                    } else if (sp === 'ytd') {
+                        covLabel = `ann. from ${covMos.toFixed(1)} mo`;
+                    } else if (sp === 'last_3m') {
+                        covLabel = `ann. from ${covMos.toFixed(1)} mo`;
+                    } else if (covMos < 11.95) {
+                        covLabel = `ann. from ${covMos.toFixed(1)} mo`;
+                    } else {
+                        covLabel = `12M avg across ${covMos.toFixed(1)} mo`;
+                    }
                     swrSubEl.textContent = `${formatCurrency0(ret.annSpending)}/yr spend (${covLabel}) vs ${formatCurrency0(ret.investableBase)} inv.`;
                     const otherIncAnn = Math.max(0, (ret.annSpending || 0) - (ret.annNetWithdrawal || 0));
                     swrSubEl.title = otherIncAnn > 0
