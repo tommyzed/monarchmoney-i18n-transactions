@@ -1381,7 +1381,6 @@
                     </div>
                     <div class="kpi-value" id="kpiTotalDollarGain">+$0</div>
                     <div class="kpi-subtext">
-                        <span class="trend-pill trend-positive" id="kpiTotalPctPill">+0.00%</span>
                         <span id="kpiTotalSinceLabel">since Jan 1, 2024</span>
                     </div>
                 </div>
@@ -1402,13 +1401,16 @@
                         </button>
                     </div>
                     <div class="kpi-value" id="kpiAnnualizedGain">+0.00%</div>
-                    <div class="kpi-subtext">Ann. · Includes flows</div>
+                    <div class="kpi-subtext">
+                        <span class="trend-pill trend-positive" id="kpiTotalPctPill">+0.00% cum.</span>
+                        <span>Ann. · Includes flows</span>
+                    </div>
                 </div>
 
                 <!-- Card 4: Investment ROI (TWR) -->
                 <div class="kpi-card accent-emerald">
                     <div class="kpi-header">
-                        <div class="kpi-label">Investment ROI (TWR)</div>
+                        <div class="kpi-label">Annualized Investment ROI (TWR)</div>
                         <button type="button" class="kpi-info-btn" aria-label="Info about Investment ROI (TWR)"
                             onclick="openKpiModal('twr_roi', event)"
                             title="How True Investment ROI (TWR) is calculated &amp; how to use it">
@@ -2900,8 +2902,10 @@
             document.getElementById('kpiCurrentNetWorth').textContent = formatCurrency0(kpis.currentNw);
 
             const pctPill = document.getElementById('kpiTotalPctPill');
-            pctPill.textContent = formatSignedPct(kpis.totalPctGain, 2);
-            pctPill.className = 'trend-pill ' + (kpis.totalPctGain >= 0 ? 'trend-positive' : 'trend-negative');
+            if (pctPill) {
+                pctPill.textContent = `${formatSignedPct(kpis.totalPctGain, 2)} cum.`;
+                pctPill.className = 'trend-pill ' + (kpis.totalPctGain >= 0 ? 'trend-positive' : 'trend-negative');
+            }
 
             const sinceEl = document.getElementById('kpiTotalSinceLabel');
             if (sinceEl) {
