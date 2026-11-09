@@ -849,11 +849,6 @@ def compute_net_worth_analytics(
         if avg_monthly_spending > 0
         else None
     )
-    runway_years = (
-        round(investable_net_worth / annualized_spending, 1)
-        if annualized_spending > 0
-        else None
-    )
 
     retirement_analytics = {
         "has_type_breakdown": bool(by_month_type or account_monthly_balances),
@@ -906,7 +901,6 @@ def compute_net_worth_analytics(
         ],
         "months_withdrawing_at_loss": months_withdrawing_at_loss,
         "cash_buffer_months": cash_buffer_months,
-        "runway_years": runway_years,
         "total_inv_income_all_time": round(sum(h["inv_income"] for h in history), 2),
         "total_spending_all_time": round(sum(h["spending"] for h in history), 2),
         "total_other_income_all_time": round(

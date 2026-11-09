@@ -316,7 +316,7 @@ class TestNetWorthService(unittest.TestCase):
         # 12 months with $2,000,000 investable net worth ($200k cash + $1,800k brokerage)
         # Monthly spending = $5,000 ($60,000/yr -> 3.0% SWR -> "safe")
         # Monthly dividends = $2,500 ($30,000/yr -> 50.0% income coverage, 1.5% yield)
-        # Cash buffer = $200,000 / $5,000 = 40.0 months; Runway = $2,000,000 / $60,000 = 33.3 years
+        # Cash buffer = $200,000 / $5,000 = 40.0 months
         snapshots = [{"date": "2024-01-01", "balance": 2000000.0}]
         snapshots_by_type = []
         transactions = []
@@ -357,7 +357,6 @@ class TestNetWorthService(unittest.TestCase):
         self.assertEqual(ret["income_coverage_percent"], 50.0)
         self.assertEqual(ret["yield_on_investable_percent"], 1.5)
         self.assertEqual(ret["cash_buffer_months"], 40.0)
-        self.assertEqual(ret["runway_years"], 33.3)
 
         # Increase spending to $7,500/mo ($90,000/yr -> 4.5% SWR -> "caution")
         tx_caution = [
