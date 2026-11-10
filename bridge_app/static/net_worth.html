@@ -865,6 +865,48 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .mode-toggle-group {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--border-color-light);
+            border-radius: 8px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .mode-toggle-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: var(--font-sans);
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 0.28rem 0.65rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .mode-toggle-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mode-toggle-btn[aria-pressed="true"],
+        .mode-toggle-btn.active {
+            background: rgba(59, 130, 246, 0.22);
+            color: #93C5FD;
+            box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.4);
+        }
+
+        .mode-toggle-btn:focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 2px;
         }
 
         .timeframe-select {
@@ -932,9 +974,10 @@
             --label-4: "Yield (Div/Int)";
             --label-5: "Market Change";
             --label-6: "Spending";
-            --label-7: "True ROI (TWR %)";
-            --label-8: "Net ΔNW ($)";
-            --label-9: "Cum. TWR (%)";
+            --label-7: "Yield Cov.";
+            --label-8: "True ROI (TWR %)";
+            --label-9: "Net ΔNW ($)";
+            --label-10: "Cum. TWR (%)";
         }
 
         table.breakdown-table thead {
@@ -942,6 +985,33 @@
             inset-block-start: 0;
             z-index: 2;
             background: #182234;
+        }
+
+        table.breakdown-table tfoot {
+            position: sticky;
+            inset-block-end: 0;
+            z-index: 2;
+            background: #152033;
+        }
+
+        table.breakdown-table tfoot th,
+        table.breakdown-table tfoot td {
+            background: #152033;
+            border-top: 2px solid var(--border-color-light);
+            border-bottom: none;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            text-align: right;
+            color: var(--text-main);
+        }
+
+        table.breakdown-table tfoot th[scope="row"] {
+            position: sticky;
+            inset-inline-start: 0;
+            z-index: 3;
+            text-align: left;
+            background: #152033;
+            color: #93C5FD;
         }
 
         table.breakdown-table th,
@@ -1012,6 +1082,7 @@
             table.breakdown-table,
             table.breakdown-table thead,
             table.breakdown-table tbody,
+            table.breakdown-table tfoot,
             table.breakdown-table tr,
             table.breakdown-table th,
             table.breakdown-table td {
@@ -1022,7 +1093,12 @@
                 display: none;
             }
 
-            table.breakdown-table tbody tr {
+            table.breakdown-table tfoot {
+                position: static;
+            }
+
+            table.breakdown-table tbody tr,
+            table.breakdown-table tfoot tr {
                 border: 1px solid var(--border-color-light);
                 border-radius: 8px;
                 padding: 0.75rem;
@@ -1030,7 +1106,13 @@
                 background: var(--bg-card);
             }
 
-            table.breakdown-table tbody th[scope="row"] {
+            table.breakdown-table tfoot tr {
+                background: #152033;
+                border-color: rgba(96, 165, 250, 0.4);
+            }
+
+            table.breakdown-table tbody th[scope="row"],
+            table.breakdown-table tfoot th[scope="row"] {
                 position: sticky;
                 inset-block-start: 0;
                 z-index: 2;
@@ -1039,17 +1121,21 @@
                 border-radius: 6px;
                 margin-block-end: 0.5rem;
                 border-bottom: none;
+                border-top: none;
             }
 
-            table.breakdown-table tbody td {
+            table.breakdown-table tbody td,
+            table.breakdown-table tfoot td {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 padding: 0.45rem 0.25rem;
                 border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                border-top: none;
             }
 
-            table.breakdown-table tbody td:last-child {
+            table.breakdown-table tbody td:last-child,
+            table.breakdown-table tfoot td:last-child {
                 border-bottom: none;
             }
 
@@ -1111,6 +1197,14 @@
 
             table.breakdown-table td:nth-child(9)::before {
                 content: var(--label-9);
+                font-family: var(--font-sans);
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            table.breakdown-table td:nth-child(10)::before {
+                content: var(--label-10);
                 font-family: var(--font-sans);
                 font-size: 0.78rem;
                 color: var(--text-muted);
@@ -1454,7 +1548,7 @@
                 <!-- Card 6: Best Month -->
                 <div class="kpi-card accent-emerald">
                     <div class="kpi-header">
-                        <div class="kpi-label">Best Month</div>
+                        <div class="kpi-label" id="kpiBestPeriodLabel">Best Month</div>
                         <button type="button" class="kpi-info-btn" aria-label="Info about Best Month"
                             onclick="openKpiModal('best_month', event)"
                             title="How Best Month is calculated &amp; how to use it">
@@ -1473,7 +1567,7 @@
                 <!-- Card 7: Worst Month -->
                 <div class="kpi-card accent-red">
                     <div class="kpi-header">
-                        <div class="kpi-label">Worst Month</div>
+                        <div class="kpi-label" id="kpiWorstPeriodLabel">Worst Month</div>
                         <button type="button" class="kpi-info-btn" aria-label="Info about Worst Month"
                             onclick="openKpiModal('worst_month', event)"
                             title="How Worst Month is calculated &amp; how to use it">
@@ -1506,7 +1600,7 @@
                         </button>
                     </div>
                     <div class="kpi-value" id="kpiMaxDrawdown" style="color: var(--accent-green);">0.00%</div>
-                    <div class="kpi-subtext" id="kpiMaxDrawdownSubtext">No drawdown · 0 mos withdrawing at a loss</div>
+                    <div class="kpi-subtext" id="kpiMaxDrawdownSubtext">No drawdown</div>
                 </div>
             </section>
         </div>
@@ -1595,13 +1689,21 @@
                 </div>
             </section>
 
-            <!-- Chart 2: Monthly Net Worth Percentage Change -->
+            <!-- Chart 2: Monthly Net Worth Percentage Change & Attribution -->
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title" id="monthlyBarChartTitle">📊 Month / Month %</h2>
+                        <h2 class="section-title" id="monthlyBarChartTitle">📊 Month / Month % (Raw ΔNW vs. TWR)</h2>
                         <p class="section-subtitle" id="monthlyBarChartSubtitle">% gain or loss for each month relative
                             to the previous month</p>
+                    </div>
+                    <div class="chart-controls">
+                        <div class="mode-toggle-group" role="group" aria-label="Period Change Display Mode">
+                            <button type="button" class="mode-toggle-btn active" id="monthlyModePctBtn"
+                                aria-pressed="true" onclick="setMonthlyChartMode('pct')">% Change (ΔNW vs. TWR)</button>
+                            <button type="button" class="mode-toggle-btn" id="monthlyModeAttrBtn"
+                                aria-pressed="false" onclick="setMonthlyChartMode('attribution')">$ Attribution</button>
+                        </div>
                     </div>
                 </div>
                 <div class="chart-wrapper">
@@ -1615,7 +1717,7 @@
                     <div class="section-title-group">
                         <h2 class="section-title">💵 Passive Investment Income vs. Spending</h2>
                         <p class="section-subtitle" id="investmentIncomeSubtitle">Realized dividends, interest, and
-                            capital gains compared against living expenses</p>
+                            capital gains with 12M rolling average yield compared against living expenses</p>
                     </div>
                 </div>
                 <div class="chart-wrapper">
@@ -1627,9 +1729,8 @@
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title" id="cumulativeChartTitle">📈 Cumulative Growth</h2>
-                        <p class="section-subtitle" id="cumulativeChartSubtitle">Real True ROI &amp; Nominal Net Worth
-                            Growth [Left Axis] · Cumulative CPI &amp; US Inflation of that period [Right Axis]</p>
+                        <h2 class="section-title" id="cumulativeChartTitle">📈 Cumulative Growth &amp; Inflation Benchmark (%)</h2>
+                        <p class="section-subtitle" id="cumulativeChartSubtitle">Unified comparison of Real True ROI (TWR %), Nominal True ROI (TWR %), Nominal Net Worth Growth (%), and Cumulative US CPI Inflation (%)</p>
                     </div>
                 </div>
                 <div class="chart-wrapper">
@@ -1660,6 +1761,14 @@
                         <p class="section-subtitle" id="compositionChartSubtitle">Monthly asset allocation across
                             Taxable Investments, Retirement (Tax-Advantaged), and Cash</p>
                     </div>
+                    <div class="chart-controls">
+                        <div class="mode-toggle-group" role="group" aria-label="Portfolio Composition Display Mode">
+                            <button type="button" class="mode-toggle-btn active" id="compModeDollarBtn"
+                                aria-pressed="true" onclick="setCompositionChartMode('dollar')">$ Dollars</button>
+                            <button type="button" class="mode-toggle-btn" id="compModePctBtn"
+                                aria-pressed="false" onclick="setCompositionChartMode('percent')">% Allocation</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="compositionChart"></canvas>
@@ -1673,7 +1782,7 @@
                 <div class="section-title-group">
                     <h2 class="section-title">📋 Itemized Performance &amp; Cash-Flow Breakdown</h2>
                     <p class="section-subtitle">Historical balances, realized yield, market price change, living
-                        withdrawals, and Time-Weighted Return (TWR %)</p>
+                        withdrawals, yield coverage, and Time-Weighted Return (TWR %)</p>
                 </div>
                 <span class="section-badge" id="monthsTrackedBadge">0 Months Tracked</span>
             </div>
@@ -1690,6 +1799,7 @@
                             <th scope="col">Yield (Div/Int)</th>
                             <th scope="col">Market Change</th>
                             <th scope="col">Spending</th>
+                            <th scope="col">Yield Cov.</th>
                             <th scope="col">True ROI (TWR %)</th>
                             <th scope="col">Net ΔNW ($)</th>
                             <th scope="col">Cum. TWR (%)</th>
@@ -1698,6 +1808,9 @@
                     <tbody id="breakdownTableBody">
                         <!-- Populated dynamically in reverse chronological order -->
                     </tbody>
+                    <tfoot id="breakdownTableFoot">
+                        <!-- Populated dynamically with period totals and averages -->
+                    </tfoot>
                 </table>
             </div>
         </section>
@@ -1709,7 +1822,7 @@
                 <div class="footer-brand">ego<span>dev</span>null</div>
             </a>
             <div class="footer-copyright">
-                <span style="font-style: italic;">v2.10 · 20261102.2249</span>
+                <span style="font-style: italic;">v2.11 · 20261110.2136</span>
             </div>
             <div class="footer-copyright">
                 &copy; 2026
@@ -1759,6 +1872,40 @@
         let cachedWeeklyHistory = [];
         let cachedDailyHistory = [];
         let currentFilteredView = null;
+        let monthlyChartMode = 'pct';
+        let compositionChartMode = 'dollar';
+
+        function setMonthlyChartMode(mode) {
+            monthlyChartMode = mode === 'attribution' ? 'attribution' : 'pct';
+            const pctBtn = document.getElementById('monthlyModePctBtn');
+            const attrBtn = document.getElementById('monthlyModeAttrBtn');
+            if (pctBtn && attrBtn) {
+                const isAttr = monthlyChartMode === 'attribution';
+                pctBtn.classList.toggle('active', !isAttr);
+                pctBtn.setAttribute('aria-pressed', String(!isAttr));
+                attrBtn.classList.toggle('active', isAttr);
+                attrBtn.setAttribute('aria-pressed', String(isAttr));
+            }
+            if (currentFilteredView) {
+                renderInteractiveCharts(currentFilteredView.history, currentFilteredView.filteredMonths);
+            }
+        }
+
+        function setCompositionChartMode(mode) {
+            compositionChartMode = mode === 'percent' ? 'percent' : 'dollar';
+            const dollarBtn = document.getElementById('compModeDollarBtn');
+            const pctBtn = document.getElementById('compModePctBtn');
+            if (dollarBtn && pctBtn) {
+                const isPct = compositionChartMode === 'percent';
+                dollarBtn.classList.toggle('active', !isPct);
+                dollarBtn.setAttribute('aria-pressed', String(!isPct));
+                pctBtn.classList.toggle('active', isPct);
+                pctBtn.setAttribute('aria-pressed', String(isPct));
+            }
+            if (currentFilteredView) {
+                renderInteractiveCharts(currentFilteredView.history, currentFilteredView.filteredMonths);
+            }
+        }
 
         const STORAGE_KEY_SCOPE = 'monarch_net_worth_scope';
         const STORAGE_KEY_GRANULARITY = 'monarch_net_worth_granularity';
@@ -1889,9 +2036,9 @@
                 icon: '🏔️',
                 title: 'Period Peak',
                 calc: `
-                    <p>The highest end-of-month valuation (high-water mark) recorded within your currently selected <strong>Scope</strong> and <strong>Period</strong>:</p>
-                    <div class="kpi-formula-box">Period Peak = max(Monthly Ending Net Worth in Selected Window)</div>
-                    <p>The subtext identifies the exact month when that high-water mark was reached.</p>
+                    <p>The highest snapshot valuation (high-water mark) recorded on the Net Worth chart within your currently selected <strong>Scope</strong>, <strong>View</strong>, and <strong>Period</strong>:</p>
+                    <div class="kpi-formula-box">Period Peak = max(Plotted Snapshot Valuations in Selected Window)</div>
+                    <p>In <em>Monthly</em> view, this includes intra-month weekly/daily snapshots plotted on the Net Worth chart (e.g., a mid-month peak on May 10) as well as month-end closes. In <em>Quarterly</em> or <em>Yearly</em> view, it reflects the highest bucket close.</p>
                 `,
                 usage: `
                     <p>Provides psychological and risk context for where your current portfolio stands relative to its best historical level:</p>
@@ -2066,12 +2213,13 @@
             const ret = currentFilteredView?.retirement || netWorthData?.retirement;
             if (metricKey === 'cash_buffer' && ret) {
                 const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
+                const netMosLabel = (ret.netCashBufferMonths || 0) >= 999 ? '∞ mos (yield covers 100%)' : `${(ret.netCashBufferMonths || 0).toFixed(1)} mos`;
                 const liveAssumptionsHtml = `
                     <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
                         <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (${mosCount} Mo Scope Data):</div>
                         <div>• Assumed Monthly Spend: <strong>${formatCurrency0(ret.avgMonthlySpending || 0)}/mo</strong> (${formatCurrency0(ret.annSpending || 0)}/yr)</div>
-                        <div>• Assumed Net Portfolio Outflow: <strong>${formatCurrency0(ret.annNetWithdrawal || 0)}/yr</strong> (${formatCurrency0(ret.avgMonthlyNetWithdrawal || 0)}/mo)</div>
-                        <div>• Depository Cash Reserves: <strong>${formatCurrency0(ret.cashBalance || 0)}</strong> · Investable Base: <strong>${formatCurrency0(ret.investableBase || 0)}</strong></div>
+                        <div>• Gross Cash Buffer: <strong>${(ret.cashBufferMonths || 0).toFixed(1)} mos</strong> · Net-of-Yield Cash Runway: <strong>${netMosLabel}</strong></div>
+                        <div>• Depository Cash Reserves: <strong>${formatCurrency0(ret.cashBalance || 0)}</strong> · Scoped Base: <strong>${formatCurrency0(ret.investableBase || 0)}</strong></div>
                     </div>
                 `;
                 calcHtml = liveAssumptionsHtml + calcHtml;
@@ -2081,8 +2229,8 @@
                     <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
                         <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (${mosCount} Mo Scope Data):</div>
                         <div>• Annualized Total Spending: <strong>${formatCurrency0(ret.annSpending || 0)}/yr</strong> (${formatCurrency0(ret.avgMonthlySpending || 0)}/mo)</div>
-                        <div>• Investable Portfolio Base: <strong>${formatCurrency0(ret.investableBase || 0)}</strong></div>
-                        <div>• Withdrawal Rate (SWR): <strong>${(ret.withdrawalRatePercent || 0).toFixed(2)}%</strong> (${ret.withdrawalStatus || 'safe'})</div>
+                        <div>• Scoped Portfolio Base: <strong>${formatCurrency0(ret.investableBase || 0)}</strong> (Total: ${formatCurrency0(ret.totalInvestableBase || 0)} · Accessible: ${formatCurrency0(ret.accessibleBase || 0)})</div>
+                        <div>• Scoped SWR: <strong>${(ret.withdrawalRatePercent || 0).toFixed(2)}%</strong> · Total SWR: <strong>${(ret.totalPortfolioSwrPercent || 0).toFixed(2)}%</strong> · Accessible Bridge SWR: <strong>${(ret.accessibleBridgeSwrPercent || 0).toFixed(2)}%</strong></div>
                     </div>
                 `;
                 calcHtml = liveAssumptionsHtml + calcHtml;
@@ -2093,9 +2241,34 @@
                 const liveAssumptionsHtml = `
                     <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
                         <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Selected Scope Actuals (${mosCount} Mo):</div>
-                        <div>• Period Investment Yield: <strong>${formatCurrency0(realYield || 0)}</strong></div>
+                        <div>• Period Investment Yield: <strong>${formatCurrency0(realYield || 0)}</strong> (Annualized: <strong>${formatCurrency0(ret.annInvIncome || 0)}/yr</strong>)</div>
                         <div>• Period Total Spending: <strong>${formatCurrency0(realSpend || 0)}</strong></div>
-                        <div>• Coverage Ratio: <strong>${(ret.incomeCoveragePercent || 0).toFixed(1)}%</strong> · Period Yield on Base: <strong>${(ret.yieldOnInvestablePercent || 0).toFixed(2)}%</strong></div>
+                        <div>• Coverage Ratio: <strong>${(ret.incomeCoveragePercent || 0).toFixed(1)}%</strong> · Annualized Yield on Base: <strong>${(ret.yieldOnInvestablePercent || 0).toFixed(2)}%</strong></div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'max_drawdown' && ret) {
+                const pkH = formatMonthHuman(ret.maxDrawdownPeakMonth) || ret.maxDrawdownPeakMonth;
+                const trH = formatMonthHuman(ret.maxDrawdownMonth) || ret.maxDrawdownMonth;
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
+                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Selected Scope Drawdown &amp; Sequence Risk:</div>
+                        <div>• Max Drawdown from ATH: <strong>${(ret.maxDrawdownPercent || 0).toFixed(2)}%</strong> / <strong>${formatCurrency0(ret.maxDrawdownDollars || 0)}</strong> (${pkH} → ${trH})</div>
+                        <div>• Current Distance from ATH: <strong>${(ret.currentDrawdownPercent || 0).toFixed(2)}%</strong></div>
+                        <div>• Months Withdrawing at a Loss: <strong>${ret.monthsWithdrawingAtLoss ?? 0} months</strong></div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'period_peak' && currentFilteredView?.kpis) {
+                const kp = currentFilteredView.kpis;
+                const pkLabel = formatMonthHuman(kp.peakMonth) || kp.peakMonth;
+                const diffFromPeak = (kp.currentNw || 0) - (kp.peakNw || 0);
+                const diffPct = (kp.peakNw || 0) > 0 ? (diffFromPeak / kp.peakNw) * 100 : 0;
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
+                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Selected Window Peak Snapshot:</div>
+                        <div>• Period Peak Valuation: <strong>${formatCurrency0(kp.peakNw || 0)}</strong> (${pkLabel})</div>
+                        <div>• Current Valuation: <strong>${formatCurrency0(kp.currentNw || 0)}</strong> (${diffFromPeak >= -0.5 ? 'At Peak' : `${formatSignedCurrency0(diffFromPeak)} / ${diffPct.toFixed(2)}% from peak`})</div>
                     </div>
                 `;
                 calcHtml = liveAssumptionsHtml + calcHtml;
@@ -2205,6 +2378,12 @@
             const year = parts[0];
             const mIdx = parseInt(parts[1], 10) - 1;
             if (mIdx >= 0 && mIdx < 12) {
+                if (parts.length >= 3) {
+                    const dayNum = parseInt(parts[2], 10);
+                    if (dayNum > 0 && dayNum <= 31) {
+                        return `${SHORT_MONTHS[mIdx]} ${dayNum}, ${year}`;
+                    }
+                }
                 return `${SHORT_MONTHS[mIdx]} ${year}`;
             }
             return monthStr;
@@ -2403,12 +2582,12 @@
                 const spending = Number(item.spending ?? 0);
                 const netExternalFlow = Number(item.net_external_flow ?? (otherIncome - spending));
 
-                let startNw = Number(item.investable_start_balance ?? item.start_balance ?? item.start_nw ?? 0);
-                let endNw = Number(item.investable_end_balance ?? item.end_balance ?? item.end_nw ?? 0);
-                let gainDollars = Number(item.investable_gain_amount ?? item.gain_amount ?? item.gain_dollars ?? (endNw - startNw));
-                let totalReturnDollars = Number(item.investable_total_return_dollars ?? item.total_return_dollars ?? (gainDollars - netExternalFlow));
-                let priceChangeDollars = Number(item.investable_price_change_dollars ?? item.price_change_dollars ?? (totalReturnDollars - invIncome));
-                let twrPercent = Number(item.investable_twr_percent ?? item.twr_percent ?? (startNw !== 0 ? (gainDollars / startNw) * 100 : 0));
+                let startNw = Number(item.start_balance ?? item.start_nw ?? item.investable_start_balance ?? 0);
+                let endNw = Number(item.end_balance ?? item.end_nw ?? item.investable_end_balance ?? 0);
+                let gainDollars = Number(item.gain_amount ?? item.gain_dollars ?? item.investable_gain_amount ?? (endNw - startNw));
+                let totalReturnDollars = Number(item.total_return_dollars ?? item.investable_total_return_dollars ?? (gainDollars - netExternalFlow));
+                let priceChangeDollars = Number(item.price_change_dollars ?? item.investable_price_change_dollars ?? (totalReturnDollars - invIncome));
+                let twrPercent = Number(item.twr_percent ?? item.investable_twr_percent ?? (startNw !== 0 ? (gainDollars / startNw) * 100 : 0));
 
                 if (normScope === 'taxable') {
                     const fallbackTaxable = Number(item.balances_by_type?.depository || 0) + Number(item.balances_by_type?.taxable_brokerage || 0);
@@ -2460,17 +2639,52 @@
                 };
             });
 
-            // Step 1b: Track true cumulative All-Time High (ATH) across the entire scope history
+            // Step 1b: Map weekly/daily snapshot series to active scope so intra-month peaks
+            // (e.g. a weekly high on May 10) align across the Net Worth chart, Period Peak, and ATH/Drawdown.
+            const useDailySnapshots = (startPeriod === 'last_30d' || startPeriod === 'last_3m');
+            const rawSnapshotSource = useDailySnapshots
+                ? ((cachedDailyHistory && cachedDailyHistory.length > 0) ? cachedDailyHistory : (cachedWeeklyHistory || []))
+                : ((cachedWeeklyHistory && cachedWeeklyHistory.length > 0) ? cachedWeeklyHistory : (cachedDailyHistory || []));
+            const scopedSnapshots = (granularity === 'monthly' && Array.isArray(rawSnapshotSource))
+                ? rawSnapshotSource.map(p => ({
+                    date: String(p.date || ''),
+                    month: String(p.date || '').slice(0, 7),
+                    balance: normScope === 'retirement'
+                        ? Number(p.retirement_balance ?? p.retirement ?? p.balance ?? 0)
+                        : (normScope === 'taxable'
+                            ? Number(p.taxable_balance ?? p.taxable ?? p.balance ?? 0)
+                            : Number(p.balance ?? 0))
+                })).filter(p => p.date.length >= 7)
+                : [];
+            const snapshotsByMonth = new Map();
+            scopedSnapshots.forEach(pt => {
+                if (!snapshotsByMonth.has(pt.month)) {
+                    snapshotsByMonth.set(pt.month, []);
+                }
+                snapshotsByMonth.get(pt.month).push(pt);
+            });
+
+            // Track true cumulative All-Time High (ATH) across the entire scope history
             let allTimePeak = 0;
             let allTimePeakMonth = '';
             const scopedMonthsWithAth = scopedMonths.map(m => {
-                if (m.start_nw > allTimePeak) {
-                    allTimePeak = m.start_nw;
-                    allTimePeakMonth = m.month;
+                let monthPeakNw = m.end_nw;
+                let monthPeakDate = m.month;
+                if (m.start_nw > monthPeakNw) {
+                    monthPeakNw = m.start_nw;
+                    monthPeakDate = m.month;
                 }
-                if (m.end_nw > allTimePeak) {
-                    allTimePeak = m.end_nw;
-                    allTimePeakMonth = m.month;
+                const intraPts = snapshotsByMonth.get(m.month) || [];
+                intraPts.forEach(pt => {
+                    if (pt.balance > monthPeakNw) {
+                        monthPeakNw = pt.balance;
+                        monthPeakDate = pt.date || m.month;
+                    }
+                });
+
+                if (monthPeakNw > allTimePeak) {
+                    allTimePeak = monthPeakNw;
+                    allTimePeakMonth = monthPeakDate;
                 }
                 const athPct = allTimePeak > 0
                     ? Math.min(0, ((m.end_nw - allTimePeak) / allTimePeak) * 100)
@@ -2478,6 +2692,8 @@
 
                 return {
                     ...m,
+                    month_peak_nw: monthPeakNw,
+                    month_peak_date: monthPeakDate,
                     ath_peak: allTimePeak,
                     ath_peak_month: allTimePeakMonth,
                     ath_change_percent: athPct
@@ -2508,6 +2724,7 @@
             const baseStartNw = filteredMonths.length > 0 ? filteredMonths[0].start_nw : 0;
             let runningTwrFactor = 1.0;
             let maxAthDropPercent = 0;
+            let maxAthDropDollars = 0;
             let maxAthDropMonth = '';
             let maxAthPeakMonth = '';
 
@@ -2518,8 +2735,10 @@
                 const cumTwrPercent = (runningTwrFactor - 1) * 100;
 
                 const ddPct = m.ath_change_percent;
+                const ddDollars = Math.min(0, m.end_nw - (m.ath_peak || m.end_nw));
                 if (ddPct < maxAthDropPercent) {
                     maxAthDropPercent = ddPct;
+                    maxAthDropDollars = ddDollars;
                     maxAthDropMonth = m.month;
                     maxAthPeakMonth = m.ath_peak_month;
                 }
@@ -2529,7 +2748,8 @@
                     cumulative_gain_dollars: cumDollars,
                     cumulative_gain_percent: cumPercent,
                     cumulative_twr_percent: cumTwrPercent,
-                    drawdown_percent: ddPct
+                    drawdown_percent: ddPct,
+                    drawdown_dollars: ddDollars
                 };
             });
 
@@ -2626,13 +2846,31 @@
             const totalDollarGain = currentNw - startingNw;
             const totalPctGain = startingNw !== 0 ? (totalDollarGain / startingNw) * 100 : 0;
 
-            let bestPeak = firstItem;
-            let bestM = firstItem;
-            let worstM = firstItem;
-            for (const h of filteredMonths) {
-                if (bestPeak && h.end_nw > bestPeak.end_nw) bestPeak = h;
-                if (bestM && h.gain_percent > bestM.gain_percent) bestM = h;
-                if (worstM && h.gain_percent < worstM.gain_percent) worstM = h;
+            let peakNw = firstItem ? firstItem.end_nw : currentNw;
+            let peakMonth = firstItem ? (firstItem.period || firstItem.month) : '—';
+            const peakSearchBuckets = (granularity === 'quarterly' || granularity === 'yearly')
+                ? aggregatedSeries
+                : filteredMonths;
+            for (const h of peakSearchBuckets) {
+                const candidateVal = (granularity === 'monthly' && h.month_peak_nw !== undefined)
+                    ? h.month_peak_nw
+                    : h.end_nw;
+                const candidateDate = (granularity === 'monthly' && h.month_peak_date)
+                    ? h.month_peak_date
+                    : (h.period || h.month);
+                if (candidateVal >= peakNw) {
+                    peakNw = candidateVal;
+                    peakMonth = candidateDate;
+                }
+            }
+
+            // Use aggregatedSeries (Monthly, Quarterly, or Yearly buckets) for Best/Worst Period KPIs
+            const periodBuckets = aggregatedSeries.length > 0 ? aggregatedSeries : filteredMonths;
+            let bestM = periodBuckets[0] || null;
+            let worstM = periodBuckets[0] || null;
+            for (const p of periodBuckets) {
+                if (bestM && p.gain_percent > bestM.gain_percent) bestM = p;
+                if (worstM && p.gain_percent < worstM.gain_percent) worstM = p;
             }
 
             const monthsCount = filteredMonths.length;
@@ -2677,6 +2915,7 @@
             const annInvIncome = tInvIncome * annScale;
             const avgMonthlySpending = annSpending / 12;
             const avgMonthlyNetWithdrawal = annNetWithdrawal / 12;
+            const avgMonthlyInvIncome = annInvIncome / 12;
 
             const lastBt = lastItem?.balances_by_type || {};
             const cashBal = lastBt.depository !== undefined
@@ -2685,15 +2924,39 @@
             const invBal = lastBt.brokerage !== undefined
                 ? Number(lastBt.brokerage)
                 : Number(retirementAnalytics?.investments_balance ?? 0);
-            const investableBase = (lastItem && Number(lastItem.investable_end_balance) > 0)
+            const totalInvestableBase = (lastItem && Number(lastItem.investable_end_balance) > 0)
                 ? Number(lastItem.investable_end_balance)
                 : ((cashBal + invBal) > 0 ? (cashBal + invBal) : (Number(retirementAnalytics?.investable_net_worth) || currentNw));
+
+            const taxableBrokerageBal = lastBt.taxable_brokerage !== undefined
+                ? Number(lastBt.taxable_brokerage)
+                : Number(retirementAnalytics?.taxable_investments_balance ?? 0);
+            const accessibleBase = (lastItem && Number(lastItem.taxable_end_balance) > 0)
+                ? Number(lastItem.taxable_end_balance)
+                : ((cashBal + taxableBrokerageBal) > 0 ? (cashBal + taxableBrokerageBal) : totalInvestableBase);
+            const retirementOnlyBase = (lastItem && Number(lastItem.retirement_end_balance) > 0)
+                ? Number(lastItem.retirement_end_balance)
+                : Number(retirementAnalytics?.retirement_accounts_balance ?? retirementAnalytics?.retirement_balance ?? 0);
+
+            // Make investableBase scope-aware so switching Scope to Taxable or Retirement updates SWR & Yield
+            const investableBase = normScope === 'taxable'
+                ? (accessibleBase > 0 ? accessibleBase : currentNw)
+                : (normScope === 'retirement'
+                    ? (retirementOnlyBase > 0 ? retirementOnlyBase : currentNw)
+                    : totalInvestableBase);
 
             // SWR is based on total (gross) living spending — the same figure as the Spending
             // page — not net of non-portfolio income, so temporary income doesn't mask the pace.
             const withdrawalRatePercent = investableBase > 0
                 ? (annSpending / investableBase) * 100
                 : Number(retirementAnalytics?.withdrawal_rate_percent ?? 0);
+            const totalPortfolioSwrPercent = totalInvestableBase > 0
+                ? (annSpending / totalInvestableBase) * 100
+                : withdrawalRatePercent;
+            const accessibleBridgeSwrPercent = accessibleBase > 0
+                ? (annSpending / accessibleBase) * 100
+                : withdrawalRatePercent;
+
             let withdrawalStatus = 'safe';
             if (withdrawalRatePercent > 5.0) {
                 withdrawalStatus = 'high';
@@ -2705,17 +2968,33 @@
                 ? (tInvIncome / tSpending) * 100
                 : (tInvIncome > 0 ? 100 : Number(retirementAnalytics?.income_coverage_percent ?? 0));
             const yieldOnInvestablePercent = investableBase > 0
-                ? (tInvIncome / investableBase) * 100
+                ? (annInvIncome / investableBase) * 100
                 : Number(retirementAnalytics?.yield_on_investable_percent ?? 0);
+            const periodYieldOnInvestablePercent = investableBase > 0
+                ? (tInvIncome / investableBase) * 100
+                : 0;
 
             const cashBufferMonths = avgMonthlySpending > 0
                 ? (cashBal / avgMonthlySpending)
                 : Number(retirementAnalytics?.cash_buffer_months ?? 0);
+            const netMonthlyAfterYield = Math.max(0, avgMonthlySpending - avgMonthlyInvIncome);
+            const netCashBufferMonths = netMonthlyAfterYield > 0
+                ? (cashBal / netMonthlyAfterYield)
+                : (cashBal > 0 ? 999 : 0);
+            const accessibleRunwayYears = annSpending > 0
+                ? (accessibleBase / annSpending)
+                : 0;
+
+            const monthsWithdrawingAtLoss = filteredMonths.reduce(
+                (cnt, m) => cnt + ((m.total_return_dollars < 0 && m.spending > 0) ? 1 : 0),
+                0
+            );
 
             return {
                 scope,
                 startPeriod,
                 granularity,
+                scopedMonths: scopedMonthsWithAth,
                 filteredMonths,
                 history: aggregatedSeries,
                 kpis: {
@@ -2723,14 +3002,16 @@
                     currentNw,
                     totalDollarGain,
                     totalPctGain,
-                    peakNw: bestPeak ? bestPeak.end_nw : currentNw,
-                    peakMonth: bestPeak ? bestPeak.month : '—',
+                    peakNw,
+                    peakMonth,
                     bestMonthGain: bestM ? bestM.gain_percent : 0,
+                    bestMonthDollars: bestM ? bestM.gain_dollars : 0,
                     bestMonthTwr: bestM ? bestM.twr_percent : 0,
-                    bestMonthName: bestM ? bestM.month : '—',
+                    bestMonthName: bestM ? (bestM.period || bestM.month) : '—',
                     worstMonthGain: worstM ? worstM.gain_percent : 0,
+                    worstMonthDollars: worstM ? worstM.gain_dollars : 0,
                     worstMonthTwr: worstM ? worstM.twr_percent : 0,
-                    worstMonthName: worstM ? worstM.month : '—',
+                    worstMonthName: worstM ? (worstM.period || worstM.month) : '—',
                     annualizedGain,
                     avgMonthlyGain,
                     sinceMonth: firstItem ? firstItem.month : '2024-01'
@@ -2741,6 +3022,8 @@
                     twrTotalPercent,
                     twrAnnualizedPercent,
                     withdrawalRatePercent,
+                    totalPortfolioSwrPercent,
+                    accessibleBridgeSwrPercent,
                     withdrawalStatus,
                     annNetWithdrawal,
                     annSpending,
@@ -2748,18 +3031,27 @@
                     totalInvIncome: tInvIncome,
                     avgMonthlySpending,
                     avgMonthlyNetWithdrawal,
+                    avgMonthlyInvIncome,
                     trailingMonthsUsed: tCount,
                     coveredMonths,
                     annInvIncome,
                     investableBase,
+                    totalInvestableBase,
+                    accessibleBase,
+                    retirementOnlyBase,
                     incomeCoveragePercent,
                     yieldOnInvestablePercent,
+                    periodYieldOnInvestablePercent,
                     maxDrawdownPercent: maxAthDropPercent,
+                    maxDrawdownDollars: maxAthDropDollars,
                     maxDrawdownMonth: maxAthDropMonth || '—',
                     maxDrawdownPeakMonth: maxAthPeakMonth || '—',
                     currentDrawdownPercent: lastItem ? (lastItem.ath_change_percent ?? lastItem.drawdown_percent ?? 0) : 0,
+                    monthsWithdrawingAtLoss,
                     cashBalance: cashBal,
-                    cashBufferMonths
+                    cashBufferMonths,
+                    netCashBufferMonths,
+                    accessibleRunwayYears
                 }
             };
         }
@@ -2892,12 +3184,20 @@
 
         function renderKpis(kpis, history, updatedAt, retirement) {
             const scope = document.getElementById('scopeFilterSelect')?.value || 'total';
+            const granularity = document.getElementById('granularitySelect')?.value || 'monthly';
+            const periodUnit = granularity === 'quarterly' ? 'Quarter' : (granularity === 'yearly' ? 'Year' : 'Month');
+
             const nwLabelEl = document.getElementById('kpiCurrentNetWorthLabel');
             if (nwLabelEl) {
                 if (scope === 'taxable') nwLabelEl.textContent = 'Taxable / Accessible Capital';
                 else if (scope === 'retirement') nwLabelEl.textContent = 'Retirement Accounts';
                 else nwLabelEl.textContent = 'Total Portfolio';
             }
+
+            const bestLabelEl = document.getElementById('kpiBestPeriodLabel');
+            if (bestLabelEl) bestLabelEl.textContent = `Best ${periodUnit}`;
+            const worstLabelEl = document.getElementById('kpiWorstPeriodLabel');
+            if (worstLabelEl) worstLabelEl.textContent = `Worst ${periodUnit}`;
 
             document.getElementById('kpiCurrentNetWorth').textContent = formatCurrency0(kpis.currentNw);
 
@@ -2919,14 +3219,16 @@
             document.getElementById('kpiStartingSubtext').textContent = `Starting: ${formatCurrency0(kpis.startingNw)}`;
             document.getElementById('kpiPeakNetWorth').textContent = formatCurrency0(kpis.peakNw);
             const peakHuman = formatMonthHuman(kpis.peakMonth) || kpis.peakMonth;
-            document.getElementById('kpiPeakMonthSubtext').textContent = `Reached in ${peakHuman}`;
+            const peakPrep = /^\d{4}-\d{2}-\d{2}$/.test(String(kpis.peakMonth || '')) ? 'Reached on' : 'Reached in';
+            document.getElementById('kpiPeakMonthSubtext').textContent = `${peakPrep} ${peakHuman}`;
 
             const bestMonthEl = document.getElementById('kpiBestMonthGain');
             bestMonthEl.textContent = formatSignedPct(kpis.bestMonthGain, 2);
             bestMonthEl.style.color = kpis.bestMonthGain >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
             const bestHuman = formatMonthHuman(kpis.bestMonthName) || kpis.bestMonthName;
+            const bestDollarStr = kpis.bestMonthDollars !== undefined ? ` (${formatSignedCurrency0(kpis.bestMonthDollars)})` : '';
             const bestTwrSuffix = kpis.bestMonthTwr !== undefined ? ` · TWR ${formatSignedPct(kpis.bestMonthTwr, 2)}` : '';
-            document.getElementById('kpiBestMonthSubtext').textContent = `${bestHuman}${bestTwrSuffix}`;
+            document.getElementById('kpiBestMonthSubtext').textContent = `${bestHuman}${bestDollarStr}${bestTwrSuffix}`;
 
             const worstMonthEl = document.getElementById('kpiWorstMonthGain');
             if (worstMonthEl) {
@@ -2936,8 +3238,9 @@
             const worstMonthSubtext = document.getElementById('kpiWorstMonthSubtext');
             if (worstMonthSubtext) {
                 const worstHuman = formatMonthHuman(kpis.worstMonthName) || kpis.worstMonthName;
+                const worstDollarStr = kpis.worstMonthDollars !== undefined ? ` (${formatSignedCurrency0(kpis.worstMonthDollars)})` : '';
                 const worstTwrSuffix = kpis.worstMonthTwr !== undefined ? ` · TWR ${formatSignedPct(kpis.worstMonthTwr, 2)}` : '';
-                worstMonthSubtext.textContent = `${worstHuman}${worstTwrSuffix}`;
+                worstMonthSubtext.textContent = `${worstHuman}${worstDollarStr}${worstTwrSuffix}`;
             }
 
             const annualizedEl = document.getElementById('kpiAnnualizedGain') || document.getElementById('kpiAvgMonthlyGain');
@@ -2989,16 +3292,18 @@
                         covLabel = `12M avg across ${covMos.toFixed(1)} mo`;
                     } else if (sp === 'trailing_12m') {
                         covLabel = covMos >= 11.95 ? '12M' : `trailing 12M (${covMos.toFixed(1)} mo)`;
-                    } else if (sp === 'ytd') {
-                        covLabel = `ann. from ${covMos.toFixed(1)} mo`;
-                    } else if (sp === 'last_3m') {
-                        covLabel = `ann. from ${covMos.toFixed(1)} mo`;
-                    } else if (covMos < 11.95) {
+                    } else if (sp === 'ytd' || sp === 'last_3m' || covMos < 11.95) {
                         covLabel = `ann. from ${covMos.toFixed(1)} mo`;
                     } else {
                         covLabel = `12M avg across ${covMos.toFixed(1)} mo`;
                     }
-                    swrSubEl.textContent = `${formatCurrency0(ret.annSpending)}/yr spend (${covLabel})`;
+                    let bridgeSuffix = '';
+                    if (scope === 'total' && ret.accessibleBridgeSwrPercent !== undefined && Math.abs(ret.accessibleBridgeSwrPercent - ret.withdrawalRatePercent) > 0.05) {
+                        bridgeSuffix = ` · ${ret.accessibleBridgeSwrPercent.toFixed(2)}% of Accessible`;
+                    } else if (scope === 'taxable' && ret.totalPortfolioSwrPercent !== undefined && Math.abs(ret.totalPortfolioSwrPercent - ret.withdrawalRatePercent) > 0.05) {
+                        bridgeSuffix = ` · ${ret.totalPortfolioSwrPercent.toFixed(2)}% of Total`;
+                    }
+                    swrSubEl.textContent = `${formatCurrency0(ret.annSpending)}/yr (${covLabel})${bridgeSuffix}`;
                     const otherIncAnn = Math.max(0, (ret.annSpending || 0) - (ret.annNetWithdrawal || 0));
                     swrSubEl.title = otherIncAnn > 0
                         ? `Net of non-portfolio income (${formatCurrency0(otherIncAnn)}/yr): ${formatCurrency0(ret.annNetWithdrawal)}/yr`
@@ -3014,7 +3319,8 @@
                 if (covSubEl) {
                     const realYield = ret.totalInvIncome !== undefined ? ret.totalInvIncome : ret.annInvIncome;
                     const realSpend = ret.totalSpending !== undefined ? ret.totalSpending : ret.annSpending;
-                    covSubEl.textContent = `${formatCurrency0(realYield)} yield / ${formatCurrency0(realSpend)} spent`;
+                    const annYieldPct = (ret.yieldOnInvestablePercent || 0).toFixed(2);
+                    covSubEl.textContent = `${formatCurrency0(realYield)} yield / ${formatCurrency0(realSpend)} spent · ${annYieldPct}% Ann. Yield`;
                 }
 
                 const ddEl = document.getElementById('kpiMaxDrawdown');
@@ -3027,9 +3333,10 @@
                     if (ret.maxDrawdownPercent < 0 && ret.maxDrawdownMonth !== '—') {
                         const pkH = formatMonthHuman(ret.maxDrawdownPeakMonth) || ret.maxDrawdownPeakMonth;
                         const trH = formatMonthHuman(ret.maxDrawdownMonth) || ret.maxDrawdownMonth;
-                        ddSubEl.textContent = `${pkH} → ${trH}`;
+                        const ddDollarStr = formatCurrency0(ret.maxDrawdownDollars || 0);
+                        ddSubEl.textContent = `${ddDollarStr} drawdown (${pkH} → ${trH})`;
                     } else {
-                        ddSubEl.textContent = `No drawdown (at peak)`;
+                        ddSubEl.textContent = 'No drawdown';
                     }
                 }
 
@@ -3236,25 +3543,65 @@
 
             const labels = points.map(p => formatPointDateLabel(p.date, startPeriod));
             const balances = points.map(p => p.balance);
+            const latestCpiVal = points.length > 0 ? getUsCpiForMonth(points[points.length - 1].date) : 338.200;
+            const realTodayBalances = points.map(p => {
+                const ptCpi = getUsCpiForMonth(p.date);
+                const factor = ptCpi > 0 ? (latestCpiVal / ptCpi) : 1;
+                return Number((p.balance * factor).toFixed(2));
+            });
+            let runningAth = 0;
+            const athCeilingBalances = points.map(p => {
+                if (p.balance > runningAth) runningAth = p.balance;
+                return Number(runningAth.toFixed(2));
+            });
 
             netWorthDollarChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels,
-                    datasets: [{
-                        label: 'Net Worth ($)',
-                        data: balances,
-                        borderColor: '#10B981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                        borderWidth: 2.5,
-                        fill: true,
-                        tension: 0.25,
-                        pointBackgroundColor: '#10B981',
-                        pointBorderColor: '#111827',
-                        pointBorderWidth: 1.5,
-                        pointRadius: points.length > 50 ? 2 : (points.length > 25 ? 3 : 4),
-                        pointHoverRadius: 6
-                    }]
+                    datasets: [
+                        {
+                            label: 'Nominal Net Worth ($)',
+                            data: balances,
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.25,
+                            pointBackgroundColor: '#10B981',
+                            pointBorderColor: '#111827',
+                            pointBorderWidth: 1.5,
+                            pointRadius: points.length > 50 ? 2 : (points.length > 25 ? 3 : 4),
+                            pointHoverRadius: 6,
+                            order: 1
+                        },
+                        {
+                            label: "Real Net Worth (Today's $)",
+                            data: realTodayBalances,
+                            borderColor: '#38BDF8',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            fill: false,
+                            tension: 0.25,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            order: 2
+                        },
+                        {
+                            label: 'Running High-Water Mark (ATH $)',
+                            data: athCeilingBalances,
+                            borderColor: 'rgba(168, 85, 247, 0.7)',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            borderDash: [3, 3],
+                            fill: false,
+                            stepped: 'before',
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            order: 3
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
@@ -3264,7 +3611,10 @@
                         intersect: false
                     },
                     plugins: {
-                        legend: { display: false },
+                        legend: {
+                            display: true,
+                            labels: { color: '#9CA3AF', font: { size: 11 } }
+                        },
                         tooltip: {
                             backgroundColor: '#1E293B',
                             titleColor: '#F9FAFB',
@@ -3272,7 +3622,7 @@
                             borderColor: '#374151',
                             borderWidth: 1,
                             padding: 12,
-                            displayColors: false,
+                            displayColors: true,
                             callbacks: {
                                 title: function (tooltipItems) {
                                     const idx = tooltipItems[0].dataIndex;
@@ -3286,19 +3636,13 @@
                                 label: function (context) {
                                     const pt = points[context.dataIndex];
                                     if (!pt) return '';
-                                    const curScope = document.getElementById('scopeFilterSelect')?.value || 'total';
-                                    const curGranularity = document.getElementById('granularitySelect')?.value || 'monthly';
-                                    const curPeriod = document.getElementById('startPeriodSelect')?.value || 'all';
-                                    const scopeLabel = curScope === 'retirement'
-                                        ? 'Retirement Accounts'
-                                        : (curScope === 'taxable' ? 'Taxable / Accessible' : 'Total Net Worth');
-                                    const freq = curGranularity === 'quarterly'
-                                        ? 'Quarterly'
-                                        : (curGranularity === 'yearly'
-                                            ? 'Yearly'
-                                            : ((curPeriod === 'last_30d' || curPeriod === 'last_3m') ? 'Daily' : 'Weekly'));
-                                    const estSuffix = pt.interpolated ? ' · Estimated (interpolated from monthly closes)' : '';
-                                    return `${freq} ${scopeLabel}: ${formatCurrency2(pt.balance)}${estSuffix}`;
+                                    const dsLabel = context.dataset.label || '';
+                                    const val = Number(context.parsed.y || 0);
+                                    if (context.datasetIndex === 0) {
+                                        const estSuffix = pt.interpolated ? ' (Est.)' : '';
+                                        return `${dsLabel}: ${formatCurrency2(val)}${estSuffix}`;
+                                    }
+                                    return `${dsLabel}: ${formatCurrency2(val)}`;
                                 }
                             }
                         }
@@ -3342,7 +3686,7 @@
 
             const labels = history.map(h => h.period || h.month);
 
-            // Chart 2: Month / Month % (Bar Chart)
+            // Chart 2: Period % Change vs. TWR OR Dollar Return Attribution
             const scope = document.getElementById('scopeFilterSelect')?.value || 'total';
             const granularity = document.getElementById('granularitySelect')?.value || 'monthly';
             const barTitleEl = document.getElementById('monthlyBarChartTitle');
@@ -3352,11 +3696,16 @@
                 ? 'Taxable / Accessible Capital'
                 : (scope === 'retirement' ? 'Retirement Accounts' : 'Total Portfolio');
 
+            const isAttrMode = monthlyChartMode === 'attribution';
             if (barTitleEl) {
-                barTitleEl.textContent = `📊 ${periodUnit} / ${periodUnit} %`;
+                barTitleEl.textContent = isAttrMode
+                    ? `⚖️ ${periodUnit} Return & Cash-Flow Attribution ($)`
+                    : `📊 ${periodUnit} / ${periodUnit} % (Raw ΔNW vs. True ROI TWR)`;
             }
             if (barSubEl) {
-                barSubEl.textContent = `% gain or loss for each ${periodUnit.toLowerCase()} relative to previous ${periodUnit.toLowerCase()} (${scopeDesc})`;
+                barSubEl.textContent = isAttrMode
+                    ? `Decomposition of ${periodUnit.toLowerCase()} net worth change into Market Price Δ, Passive Yield, and Living Withdrawals (${scopeDesc})`
+                    : `Net Worth % change (after spending) compared with cash-flow-adjusted True Investment ROI TWR % (${scopeDesc})`;
             }
 
             const barCanvas = document.getElementById('monthlyBarChart');
@@ -3366,82 +3715,215 @@
                     monthlyBarChartInstance.destroy();
                 }
 
-                const scopeLabel = scope === 'taxable'
-                    ? 'Taxable / Accessible Change (%)'
-                    : (scope === 'retirement' ? 'Retirement Change (%)' : `${periodUnit} Change (%)`);
-
-                monthlyBarChartInstance = new Chart(barCtx, {
-                    type: 'bar',
-                    data: {
-                        labels,
-                        datasets: [{
-                            label: scopeLabel,
-                            data: history.map(h => Number((h.gain_percent || 0).toFixed(2))),
-                            backgroundColor: history.map(h => (h.gain_percent || 0) >= 0 ? '#10B981' : '#EF4444'),
-                            borderRadius: 4,
-                            borderSkipped: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: '#1E293B',
-                                titleColor: '#F9FAFB',
-                                bodyColor: '#E2E8F0',
-                                borderColor: '#374151',
-                                borderWidth: 1,
-                                padding: 12,
-                                displayColors: false,
-                                callbacks: {
-                                    title: function (tooltipItems) {
-                                        const raw = tooltipItems[0]?.label || '';
-                                        return formatMonthHuman(raw) || raw;
-                                    },
-                                    label: function (context) {
-                                        const item = history[context.dataIndex];
-                                        if (!item) return '';
-                                        const scopeName = scope === 'taxable'
-                                            ? 'Taxable / Accessible'
-                                            : (scope === 'retirement' ? 'Retirement' : 'Total Portfolio');
-                                        return [
-                                            `Change: ${formatSignedPct(item.gain_percent, 2)}`,
-                                            `Dollar Change: ${formatSignedCurrency2(item.gain_dollars)}`,
-                                            `End ${scopeName}: ${formatCurrency2(item.end_nw)}`
-                                        ];
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                ticks: {
-                                    color: '#9CA3AF',
-                                    maxRotation: 45,
-                                    minRotation: 45,
-                                    font: { family: "'JetBrains Mono', monospace", size: 11 }
+                if (isAttrMode) {
+                    monthlyBarChartInstance = new Chart(barCtx, {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [
+                                {
+                                    type: 'line',
+                                    label: 'Net Δ Net Worth ($)',
+                                    data: history.map(h => Number((h.gain_dollars || 0).toFixed(2))),
+                                    borderColor: '#F9FAFB',
+                                    backgroundColor: 'rgba(249, 250, 251, 0.15)',
+                                    borderWidth: 2.2,
+                                    pointBackgroundColor: '#F9FAFB',
+                                    pointBorderColor: '#0F172A',
+                                    pointRadius: 3.5,
+                                    tension: 0.2,
+                                    order: 0
                                 },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.05)'
+                                {
+                                    label: 'Passive Yield (Div + Int + CapGains)',
+                                    data: history.map(h => Number((h.inv_income || 0).toFixed(2))),
+                                    backgroundColor: '#10B981',
+                                    stack: 'attr',
+                                    borderRadius: 3,
+                                    order: 1
+                                },
+                                {
+                                    label: 'Market Price Appreciation ($)',
+                                    data: history.map(h => Number((h.price_change_dollars || 0).toFixed(2))),
+                                    backgroundColor: '#3B82F6',
+                                    stack: 'attr',
+                                    borderRadius: 3,
+                                    order: 1
+                                },
+                                {
+                                    label: 'Living Withdrawals / Net Flow ($)',
+                                    data: history.map(h => Number((h.net_external_flow ?? -h.spending ?? 0).toFixed(2))),
+                                    backgroundColor: '#EF4444',
+                                    stack: 'attr',
+                                    borderRadius: 3,
+                                    order: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    labels: { color: '#9CA3AF', font: { size: 11 } }
+                                },
+                                tooltip: {
+                                    backgroundColor: '#1E293B',
+                                    titleColor: '#F9FAFB',
+                                    bodyColor: '#E2E8F0',
+                                    borderColor: '#374151',
+                                    borderWidth: 1,
+                                    padding: 12,
+                                    callbacks: {
+                                        title: function (tooltipItems) {
+                                            const raw = tooltipItems[0]?.label || '';
+                                            return formatMonthHuman(raw) || raw;
+                                        },
+                                        label: function (context) {
+                                            const val = Number(context.parsed.y || 0);
+                                            return `${context.dataset.label}: ${formatSignedCurrency2(val)}`;
+                                        },
+                                        afterBody: function (tooltipItems) {
+                                            const item = history[tooltipItems[0]?.dataIndex];
+                                            if (!item) return [];
+                                            return [
+                                                `────────────────────────`,
+                                                `True ROI (TWR): ${formatSignedPct(item.twr_percent, 2)}`,
+                                                `Raw ΔNW %: ${formatSignedPct(item.gain_percent, 2)}`
+                                            ];
+                                        }
+                                    }
                                 }
                             },
-                            y: {
-                                ticks: {
-                                    color: '#9CA3AF',
-                                    font: { family: "'JetBrains Mono', monospace", size: 11 },
-                                    callback: function (value) {
-                                        return `${value}%`;
-                                    }
+                            scales: {
+                                x: {
+                                    stacked: true,
+                                    ticks: {
+                                        color: '#9CA3AF',
+                                        maxRotation: 45,
+                                        minRotation: 45,
+                                        font: { family: "'JetBrains Mono', monospace", size: 11 }
+                                    },
+                                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
                                 },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.08)'
+                                y: {
+                                    stacked: true,
+                                    ticks: {
+                                        color: '#9CA3AF',
+                                        font: { family: "'JetBrains Mono', monospace", size: 11 },
+                                        callback: function (value) {
+                                            return formatCompactAxisDollar(value);
+                                        }
+                                    },
+                                    grid: { color: 'rgba(255, 255, 255, 0.08)' }
                                 }
                             }
                         }
-                    }
-                });
+                    });
+                } else {
+                    const scopeLabel = scope === 'taxable'
+                        ? 'Taxable / Accessible ΔNW (%)'
+                        : (scope === 'retirement' ? 'Retirement ΔNW (%)' : `${periodUnit} Net Worth Δ (%)`);
+
+                    monthlyBarChartInstance = new Chart(barCtx, {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [
+                                {
+                                    type: 'line',
+                                    label: 'True Investment ROI (TWR %)',
+                                    data: history.map(h => Number((h.twr_percent ?? h.gain_percent ?? 0).toFixed(2))),
+                                    borderColor: '#38BDF8',
+                                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                                    borderWidth: 2,
+                                    borderDash: [4, 3],
+                                    pointBackgroundColor: '#38BDF8',
+                                    pointBorderColor: '#0F172A',
+                                    pointRadius: 3,
+                                    tension: 0.25,
+                                    order: 0
+                                },
+                                {
+                                    label: scopeLabel,
+                                    data: history.map(h => Number((h.gain_percent || 0).toFixed(2))),
+                                    backgroundColor: history.map(h => (h.gain_percent || 0) >= 0 ? '#10B981' : '#EF4444'),
+                                    borderRadius: 4,
+                                    borderSkipped: false,
+                                    order: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    labels: { color: '#9CA3AF', font: { size: 11 } }
+                                },
+                                tooltip: {
+                                    backgroundColor: '#1E293B',
+                                    titleColor: '#F9FAFB',
+                                    bodyColor: '#E2E8F0',
+                                    borderColor: '#374151',
+                                    borderWidth: 1,
+                                    padding: 12,
+                                    displayColors: true,
+                                    callbacks: {
+                                        title: function (tooltipItems) {
+                                            const raw = tooltipItems[0]?.label || '';
+                                            return formatMonthHuman(raw) || raw;
+                                        },
+                                        afterBody: function (tooltipItems) {
+                                            const item = history[tooltipItems[0]?.dataIndex];
+                                            if (!item) return [];
+                                            const scopeName = scope === 'taxable'
+                                                ? 'Taxable / Accessible'
+                                                : (scope === 'retirement' ? 'Retirement' : 'Total Portfolio');
+                                            return [
+                                                `────────────────────────`,
+                                                `Dollar Change: ${formatSignedCurrency2(item.gain_dollars)}`,
+                                                `Market Price Δ: ${formatSignedCurrency2(item.price_change_dollars)}`,
+                                                `Passive Yield: ${formatSignedCurrency2(item.inv_income)}`,
+                                                `Living Spend: -${formatCurrency2(item.spending)}`,
+                                                `End ${scopeName}: ${formatCurrency2(item.end_nw)}`
+                                            ];
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: {
+                                        color: '#9CA3AF',
+                                        maxRotation: 45,
+                                        minRotation: 45,
+                                        font: { family: "'JetBrains Mono', monospace", size: 11 }
+                                    },
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.05)'
+                                    }
+                                },
+                                y: {
+                                    ticks: {
+                                        color: '#9CA3AF',
+                                        font: { family: "'JetBrains Mono', monospace", size: 11 },
+                                        callback: function (value) {
+                                            return `${value}%`;
+                                        }
+                                    },
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.08)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
             }
 
             // Chart B: Investment Income Stream (#investmentIncomeChart)
@@ -3451,6 +3933,54 @@
                 if (investmentIncomeChartInstance) {
                     investmentIncomeChartInstance.destroy();
                 }
+
+                // Compute rolling 12-month (or 4-quarter) average yield & spending per period to smooth seasonal spikes.
+                // When in monthly view, look back across full scopedMonths so the start of a filtered window (e.g. YTD/12M)
+                // still reflects a true trailing 12-month rolling average.
+                const windowLen = granularity === 'quarterly' ? 4 : (granularity === 'yearly' ? 2 : 12);
+                const fullMonthlySource = (granularity === 'monthly' && Array.isArray(currentFilteredView?.scopedMonths) && currentFilteredView.scopedMonths.length > 0)
+                    ? currentFilteredView.scopedMonths
+                    : null;
+                const fullMonthIndexMap = new Map();
+                if (fullMonthlySource) {
+                    fullMonthlySource.forEach((m, i) => fullMonthIndexMap.set(m.month, i));
+                }
+
+                const rollingAvgYieldSeries = history.map((item, idx) => {
+                    if (fullMonthlySource && fullMonthIndexMap.has(item.month)) {
+                        const fullIdx = fullMonthIndexMap.get(item.month);
+                        const startIdx = Math.max(0, fullIdx - windowLen + 1);
+                        const slice = fullMonthlySource.slice(startIdx, fullIdx + 1);
+                        const sumYield = slice.reduce((acc, m) => acc + Number(m.inv_income || 0), 0);
+                        return Number((sumYield / slice.length).toFixed(2));
+                    }
+                    const startIdx = Math.max(0, idx - windowLen + 1);
+                    const slice = history.slice(startIdx, idx + 1);
+                    const sumYield = slice.reduce((acc, m) => acc + Number(m.inv_income || 0), 0);
+                    return Number((sumYield / slice.length).toFixed(2));
+                });
+
+                const rollingAvgSpendSeries = history.map((item, idx) => {
+                    if (fullMonthlySource && fullMonthIndexMap.has(item.month)) {
+                        const fullIdx = fullMonthIndexMap.get(item.month);
+                        const startIdx = Math.max(0, fullIdx - windowLen + 1);
+                        const slice = fullMonthlySource.slice(startIdx, fullIdx + 1);
+                        const sumSpend = slice.reduce((acc, m) => acc + Number(m.spending || 0), 0);
+                        return Number((sumSpend / slice.length).toFixed(2));
+                    }
+                    const startIdx = Math.max(0, idx - windowLen + 1);
+                    const slice = history.slice(startIdx, idx + 1);
+                    const sumSpend = slice.reduce((acc, m) => acc + Number(m.spending || 0), 0);
+                    return Number((sumSpend / slice.length).toFixed(2));
+                });
+
+                const rollingLabel = granularity === 'quarterly'
+                    ? '4Q Rolling Avg Yield'
+                    : (granularity === 'yearly' ? 'Multi-Yr Avg Yield' : '12M Rolling Avg Yield');
+                const rollingSpendLabel = granularity === 'quarterly'
+                    ? '4Q Rolling Living Spending'
+                    : (granularity === 'yearly' ? 'Multi-Yr Avg Spending' : '12M Rolling Living Spending');
+
                 investmentIncomeChartInstance = new Chart(incCtx, {
                     type: 'bar',
                     data: {
@@ -3460,12 +3990,39 @@
                                 type: 'line',
                                 label: 'Living Spending',
                                 data: history.map(h => Number((h.spending || 0).toFixed(2))),
-                                borderColor: '#EF4444',
-                                backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                                borderWidth: 2,
-                                borderDash: [5, 4],
-                                pointRadius: 3,
+                                borderColor: 'rgba(239, 68, 68, 0.55)',
+                                backgroundColor: 'rgba(239, 68, 68, 0.10)',
+                                borderWidth: 1.5,
+                                borderDash: [4, 4],
+                                pointRadius: 2,
                                 tension: 0.25,
+                                stack: 'spending_line',
+                                order: 0
+                            },
+                            {
+                                type: 'line',
+                                label: rollingSpendLabel,
+                                data: rollingAvgSpendSeries,
+                                borderColor: '#EF4444',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2.3,
+                                pointRadius: 2,
+                                pointHoverRadius: 5,
+                                tension: 0.35,
+                                stack: 'rolling_spending_line',
+                                order: 0
+                            },
+                            {
+                                type: 'line',
+                                label: rollingLabel,
+                                data: rollingAvgYieldSeries,
+                                borderColor: '#FBBF24',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2.3,
+                                pointRadius: 2,
+                                pointHoverRadius: 5,
+                                tension: 0.35,
+                                stack: 'rolling_yield_line',
                                 order: 0
                             },
                             {
@@ -3517,10 +4074,15 @@
                                         const item = history[idx];
                                         if (!item) return [];
                                         const cov = item.spending > 0 ? ((item.inv_income / item.spending) * 100).toFixed(1) + '%' : 'N/A';
+                                        const rollSpend = rollingAvgSpendSeries[idx] || 0;
+                                        const rollYield = rollingAvgYieldSeries[idx] || 0;
+                                        const rollCov = rollSpend > 0 ? ((rollYield / rollSpend) * 100).toFixed(1) + '%' : 'N/A';
+                                        const netGap = (item.inv_income || 0) - (item.spending || 0);
                                         return [
                                             `────────────────────────`,
-                                            `Total Yield: ${formatCurrency2(item.inv_income)}`,
-                                            `Spending Coverage: ${cov}`
+                                            `Total Period Yield: ${formatCurrency2(item.inv_income)}`,
+                                            `Period Coverage: ${cov} (Rolling: ${rollCov})`,
+                                            `Net Yield vs. Spend: ${formatSignedCurrency2(netGap)}`
                                         ];
                                     }
                                 }
@@ -3553,27 +4115,19 @@
                 });
             }
 
-            // Chart 3: Cumulative Net Worth Growth % & Cumulative TWR % (Real True ROI + Nominal NW + Period CPI on Right Axis)
+            // Chart 3: Cumulative Growth & Inflation Benchmark (%) — Unified Left Y-Axis
             const areaCtx = document.getElementById('cumulativeAreaChart').getContext('2d');
             if (cumulativeAreaChartInstance) {
                 cumulativeAreaChartInstance.destroy();
             }
 
-            const inflationDatasetLabel = granularity === 'quarterly'
-                ? 'US Quarterly Inflation (% QoQ)'
-                : (granularity === 'yearly' ? 'US Annual Inflation (% YoY)' : 'US Monthly Inflation (% MoM)');
-            const inflationAxisTitle = inflationDatasetLabel;
-            const inflationPeriodWord = granularity === 'quarterly'
-                ? 'Quarter'
-                : (granularity === 'yearly' ? 'Year' : 'Month');
-
             const cumTitleEl = document.getElementById('cumulativeChartTitle');
             if (cumTitleEl) {
-                cumTitleEl.textContent = `📈 Cumulative Growth`;
+                cumTitleEl.textContent = `📈 Cumulative Growth & Inflation Benchmark (%)`;
             }
             const cumSubEl = document.getElementById('cumulativeChartSubtitle');
             if (cumSubEl) {
-                cumSubEl.textContent = `Real True ROI & Nominal Net Worth Growth · Cumulative CPI & ${inflationPeriodWord === 'Month' ? 'Monthly' : (inflationPeriodWord === 'Quarter' ? 'Quarterly' : 'Annual')} US Inflation`;
+                cumSubEl.textContent = `Unified scale: Real True ROI (TWR %), Nominal True ROI (TWR %), Nominal Net Worth Growth (%), and Cumulative US CPI Inflation (%)`;
             }
 
             const baseCpi = history.length > 0 ? getUsCpiForMonth(history[0].month || history[0].period) : 308.417;
@@ -3610,22 +4164,7 @@
                     labels,
                     datasets: [
                         {
-                            label: 'Nominal Net Worth Growth (%)',
-                            yAxisID: 'y',
-                            data: realSeries.map(r => Number(r.nomNw.toFixed(2))),
-                            borderColor: '#3B82F6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                            borderWidth: 2.5,
-                            fill: false,
-                            tension: 0.35,
-                            pointBackgroundColor: '#3B82F6',
-                            pointBorderColor: '#1E293B',
-                            pointBorderWidth: 1.5,
-                            pointRadius: 3,
-                            pointHoverRadius: 6
-                        },
-                        {
-                            label: 'Real True ROI (TWR %)',
+                            label: 'Real True ROI (Inflation-Adjusted TWR %)',
                             yAxisID: 'y',
                             data: realSeries.map(r => Number(r.realTwr.toFixed(2))),
                             borderColor: '#10B981',
@@ -3640,8 +4179,39 @@
                             pointHoverRadius: 7
                         },
                         {
-                            label: 'Cumulative US Inflation (%)',
-                            yAxisID: 'y1',
+                            label: 'Nominal True ROI (TWR %)',
+                            yAxisID: 'y',
+                            data: realSeries.map(r => Number(r.nomTwr.toFixed(2))),
+                            borderColor: '#38BDF8',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [4, 3],
+                            fill: false,
+                            tension: 0.35,
+                            pointBackgroundColor: '#38BDF8',
+                            pointBorderColor: '#1E293B',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 2.5,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: 'Nominal Net Worth Growth (After Spend %)',
+                            yAxisID: 'y',
+                            data: realSeries.map(r => Number(r.nomNw.toFixed(2))),
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            borderWidth: 2.5,
+                            fill: false,
+                            tension: 0.35,
+                            pointBackgroundColor: '#3B82F6',
+                            pointBorderColor: '#1E293B',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Cumulative US CPI Inflation (%)',
+                            yAxisID: 'y',
                             data: realSeries.map(r => Number(r.cumCpiPct.toFixed(2))),
                             borderColor: '#F97316',
                             backgroundColor: 'rgba(249, 115, 22, 0.10)',
@@ -3650,22 +4220,6 @@
                             fill: false,
                             tension: 0.35,
                             pointBackgroundColor: '#F97316',
-                            pointBorderColor: '#1E293B',
-                            pointBorderWidth: 1.5,
-                            pointRadius: 3,
-                            pointHoverRadius: 5
-                        },
-                        {
-                            label: inflationDatasetLabel,
-                            yAxisID: 'y1',
-                            data: realSeries.map(r => Number(r.periodInfPct.toFixed(2))),
-                            borderColor: '#FBBF24',
-                            backgroundColor: 'rgba(251, 191, 36, 0.15)',
-                            borderWidth: 2,
-                            borderDash: [3, 3],
-                            fill: false,
-                            tension: 0.35,
-                            pointBackgroundColor: '#FBBF24',
                             pointBorderColor: '#1E293B',
                             pointBorderWidth: 1.5,
                             pointRadius: 3,
@@ -3693,6 +4247,16 @@
                                 title: function (tooltipItems) {
                                     const raw = tooltipItems[0]?.label || '';
                                     return formatMonthHuman(raw) || raw;
+                                },
+                                afterBody: function (tooltipItems) {
+                                    const idx = tooltipItems[0]?.dataIndex;
+                                    const r = realSeries[idx];
+                                    if (!r) return [];
+                                    return [
+                                        `────────────────────────`,
+                                        `Real NW Growth (After Spend & CPI): ${formatSignedPct(r.realNw, 2)}`,
+                                        `Period US Inflation Rate: ${formatSignedPct(r.periodInfPct, 2)}`
+                                    ];
                                 }
                             }
                         }
@@ -3713,7 +4277,7 @@
                             position: 'left',
                             title: {
                                 display: true,
-                                text: 'Cumulative Return / Growth (%)',
+                                text: 'Cumulative Growth & Inflation (%)',
                                 color: '#9CA3AF',
                                 font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' }
                             },
@@ -3726,25 +4290,6 @@
                             },
                             grid: {
                                 color: 'rgba(255, 255, 255, 0.08)'
-                            }
-                        },
-                        y1: {
-                            position: 'right',
-                            title: {
-                                display: true,
-                                text: 'US CPI Inflation (%)',
-                                color: '#F97316',
-                                font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' }
-                            },
-                            ticks: {
-                                color: '#F97316',
-                                font: { family: "'JetBrains Mono', monospace", size: 10 },
-                                callback: function (value) {
-                                    return `${value > 0 ? '+' : ''}${Number(value).toFixed(1)}%`;
-                                }
-                            },
-                            grid: {
-                                drawOnChartArea: false
                             }
                         }
                     }
@@ -3865,6 +4410,14 @@
                     compositionChartInstance.destroy();
                 }
 
+                const isPctMode = compositionChartMode === 'percent';
+                const compSubEl = document.getElementById('compositionChartSubtitle');
+                if (compSubEl) {
+                    compSubEl.textContent = isPctMode
+                        ? `${periodUnit} 100% asset allocation share across Taxable Investments, Retirement (Tax-Advantaged), and Cash`
+                        : `${periodUnit} asset valuation ($) across Taxable Investments, Retirement (Tax-Advantaged), and Cash`;
+                }
+
                 const hasTaxableRetirementBreakdown = history.some(
                     h => h.balances_by_type && (
                         h.balances_by_type.taxable_brokerage !== undefined ||
@@ -3872,37 +4425,47 @@
                     )
                 );
 
+                const computeShareOrDollar = (h, rawVal) => {
+                    const v = Math.max(0, Number(rawVal || 0));
+                    if (!isPctMode) return Number(v.toFixed(2));
+                    const bt = h.balances_by_type || {};
+                    const tot = hasTaxableRetirementBreakdown
+                        ? (Math.max(0, Number(bt.taxable_brokerage || 0)) + Math.max(0, Number(bt.retirement || 0)) + Math.max(0, Number(bt.depository || 0)))
+                        : (Math.max(0, Number(bt.brokerage || 0)) + Math.max(0, Number(bt.depository || 0)));
+                    return tot > 0 ? Number(((v / tot) * 100).toFixed(2)) : 0;
+                };
+
                 const compDatasets = hasTaxableRetirementBreakdown
                     ? [
                         {
-                            label: 'Taxable Investments',
-                            data: history.map(h => Number((h.balances_by_type?.taxable_brokerage || 0).toFixed(2))),
+                            label: isPctMode ? 'Taxable Investments (%)' : 'Taxable Investments',
+                            data: history.map(h => computeShareOrDollar(h, h.balances_by_type?.taxable_brokerage)),
                             backgroundColor: '#3B82F6',
                             stack: 'comp'
                         },
                         {
-                            label: 'Retirement Accounts',
-                            data: history.map(h => Number((h.balances_by_type?.retirement || 0).toFixed(2))),
+                            label: isPctMode ? 'Retirement Accounts (%)' : 'Retirement Accounts',
+                            data: history.map(h => computeShareOrDollar(h, h.balances_by_type?.retirement)),
                             backgroundColor: '#8B5CF6',
                             stack: 'comp'
                         },
                         {
-                            label: 'Cash (Depository)',
-                            data: history.map(h => Number((h.balances_by_type?.depository || 0).toFixed(2))),
+                            label: isPctMode ? 'Cash / Depository (%)' : 'Cash (Depository)',
+                            data: history.map(h => computeShareOrDollar(h, h.balances_by_type?.depository)),
                             backgroundColor: '#10B981',
                             stack: 'comp'
                         }
                     ]
                     : [
                         {
-                            label: 'Investments (Brokerage)',
-                            data: history.map(h => Number((h.balances_by_type?.brokerage || 0).toFixed(2))),
+                            label: isPctMode ? 'Investments / Brokerage (%)' : 'Investments (Brokerage)',
+                            data: history.map(h => computeShareOrDollar(h, h.balances_by_type?.brokerage)),
                             backgroundColor: '#3B82F6',
                             stack: 'comp'
                         },
                         {
-                            label: 'Cash (Depository)',
-                            data: history.map(h => Number((h.balances_by_type?.depository || 0).toFixed(2))),
+                            label: isPctMode ? 'Cash / Depository (%)' : 'Cash (Depository)',
+                            data: history.map(h => computeShareOrDollar(h, h.balances_by_type?.depository)),
                             backgroundColor: '#10B981',
                             stack: 'comp'
                         }
@@ -3945,11 +4508,13 @@
                                             const cashVal = Number(bt.depository || 0);
                                             const totalVal = item.end_nw > 0 ? item.end_nw : (taxableVal + retVal + cashVal);
                                             const fmtPct = (v) => totalVal > 0 ? ((v / totalVal) * 100).toFixed(1) + '%' : '0.0%';
+                                            const accessibleVal = taxableVal + cashVal;
                                             return [
                                                 `────────────────────────`,
                                                 `Taxable Investments: ${formatCurrency2(taxableVal)} (${fmtPct(taxableVal)})`,
-                                                `Retirement: ${formatCurrency2(retVal)} (${fmtPct(retVal)})`,
-                                                `Cash: ${formatCurrency2(cashVal)} (${fmtPct(cashVal)})`,
+                                                `Cash (Depository): ${formatCurrency2(cashVal)} (${fmtPct(cashVal)})`,
+                                                `Accessible (Taxable + Cash): ${formatCurrency2(accessibleVal)} (${fmtPct(accessibleVal)})`,
+                                                `Retirement (Locked <59½): ${formatCurrency2(retVal)} (${fmtPct(retVal)})`,
                                                 `Total Balance: ${formatCurrency2(item.end_nw)}`
                                             ];
                                         }
@@ -3978,11 +4543,12 @@
                             },
                             y: {
                                 stacked: true,
+                                max: isPctMode ? 100 : undefined,
                                 ticks: {
                                     color: '#9CA3AF',
                                     font: { family: "'JetBrains Mono', monospace", size: 11 },
                                     callback: function (value) {
-                                        return formatCompactAxisDollar(value);
+                                        return isPctMode ? `${value}%` : formatCompactAxisDollar(value);
                                     }
                                 },
                                 grid: { color: 'rgba(255, 255, 255, 0.08)' }
@@ -3995,6 +4561,7 @@
 
         function renderBreakdownTable(history, granularity = 'monthly') {
             const tbody = document.getElementById('breakdownTableBody');
+            const tfoot = document.getElementById('breakdownTableFoot');
             const badge = document.getElementById('monthsTrackedBadge');
             const unitLabel = granularity === 'quarterly' ? 'Quarters' : (granularity === 'yearly' ? 'Years' : 'Months');
             badge.textContent = `${history.length} ${unitLabel} Tracked`;
@@ -4004,6 +4571,7 @@
                 const yieldVal = Number(row.inv_income || 0);
                 const mktVal = Number(row.price_change_dollars || 0);
                 const spendVal = Number(row.spending || 0);
+                const covVal = spendVal > 0 ? (yieldVal / spendVal) * 100 : (yieldVal > 0 ? 100 : 0);
                 const twrVal = Number(row.twr_percent ?? row.gain_percent ?? 0);
                 const netDeltaVal = Number(row.gain_dollars || 0);
                 const cumTwrVal = Number(row.cumulative_twr_percent ?? row.cumulative_gain_percent ?? 0);
@@ -4011,10 +4579,12 @@
                 const yieldClass = yieldVal > 0 ? 'val-positive' : (yieldVal < 0 ? 'val-negative' : '');
                 const mktClass = mktVal >= 0 ? 'val-positive' : 'val-negative';
                 const spendClass = spendVal > 0 ? 'val-negative' : '';
+                const covClass = covVal >= 100 ? 'val-positive' : '';
                 const twrPillClass = twrVal >= 0 ? 'trend-positive' : 'trend-negative';
                 const dollarClass = netDeltaVal >= 0 ? 'val-positive' : 'val-negative';
                 const cumClass = cumTwrVal >= 0 ? 'val-positive' : 'val-negative';
                 const spendFormatted = spendVal > 0 ? '-' + formatCurrency2(spendVal) : formatCurrency2(0);
+                const covFormatted = spendVal > 0 ? `${covVal.toFixed(1)}%` : (yieldVal > 0 ? '100%+' : '—');
 
                 return `
                     <tr>
@@ -4024,12 +4594,56 @@
                         <td class="${yieldClass}">${formatSignedCurrency2(yieldVal)}</td>
                         <td class="${mktClass}">${formatSignedCurrency2(mktVal)}</td>
                         <td class="${spendClass}">${spendFormatted}</td>
+                        <td class="${covClass}">${covFormatted}</td>
                         <td><span class="trend-pill ${twrPillClass}">${formatSignedPct(twrVal, 2)}</span></td>
                         <td class="${dollarClass}">${formatSignedCurrency2(netDeltaVal)}</td>
                         <td class="${cumClass}">${formatSignedPct(cumTwrVal, 2)}</td>
                     </tr>
                 `;
             }).join('');
+
+            if (tfoot) {
+                if (history.length === 0) {
+                    tfoot.innerHTML = '';
+                } else {
+                    const firstRow = history[0];
+                    const lastRow = history[history.length - 1];
+                    const totStart = Number(firstRow.start_nw || 0);
+                    const totEnd = Number(lastRow.end_nw || 0);
+                    const totYield = history.reduce((s, r) => s + Number(r.inv_income || 0), 0);
+                    const totMkt = history.reduce((s, r) => s + Number(r.price_change_dollars || 0), 0);
+                    const totSpend = history.reduce((s, r) => s + Number(r.spending || 0), 0);
+                    const totCov = totSpend > 0 ? (totYield / totSpend) * 100 : (totYield > 0 ? 100 : 0);
+                    const totNetDelta = totEnd - totStart;
+                    const totCumTwr = Number(lastRow.cumulative_twr_percent ?? lastRow.cumulative_gain_percent ?? 0);
+                    const avgPeriodTwr = history.reduce((s, r) => s + Number(r.twr_percent ?? r.gain_percent ?? 0), 0) / history.length;
+
+                    const totYieldClass = totYield > 0 ? 'val-positive' : (totYield < 0 ? 'val-negative' : '');
+                    const totMktClass = totMkt >= 0 ? 'val-positive' : 'val-negative';
+                    const totSpendClass = totSpend > 0 ? 'val-negative' : '';
+                    const totCovClass = totCov >= 100 ? 'val-positive' : '';
+                    const avgTwrPillClass = avgPeriodTwr >= 0 ? 'trend-positive' : 'trend-negative';
+                    const totDollarClass = totNetDelta >= 0 ? 'val-positive' : 'val-negative';
+                    const totCumClass = totCumTwr >= 0 ? 'val-positive' : 'val-negative';
+                    const totSpendFormatted = totSpend > 0 ? '-' + formatCurrency2(totSpend) : formatCurrency2(0);
+                    const totCovFormatted = totSpend > 0 ? `${totCov.toFixed(1)}%` : (totYield > 0 ? '100%+' : '—');
+
+                    tfoot.innerHTML = `
+                        <tr>
+                            <th scope="row">Total / Period (${history.length})</th>
+                            <td>${formatCurrency2(totStart)}</td>
+                            <td>${formatCurrency2(totEnd)}</td>
+                            <td class="${totYieldClass}">${formatSignedCurrency2(totYield)}</td>
+                            <td class="${totMktClass}">${formatSignedCurrency2(totMkt)}</td>
+                            <td class="${totSpendClass}">${totSpendFormatted}</td>
+                            <td class="${totCovClass}">${totCovFormatted}</td>
+                            <td title="Average ${unitLabel.slice(0, -1)} TWR"><span class="trend-pill ${avgTwrPillClass}">${formatSignedPct(avgPeriodTwr, 2)} avg</span></td>
+                            <td class="${totDollarClass}">${formatSignedCurrency2(totNetDelta)}</td>
+                            <td class="${totCumClass}">${formatSignedPct(totCumTwr, 2)}</td>
+                        </tr>
+                    `;
+                }
+            }
         }
 
         function setSyncingUiState(syncing, message) {

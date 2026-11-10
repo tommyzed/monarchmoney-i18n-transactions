@@ -1858,7 +1858,7 @@ LOADING_HTML = """
                     <div class="footer-brand" style="font-family: 'Inter', system-ui, -apple-system, sans-serif; font-weight: 700; font-size: 0.95rem; color: #112217;">ego<span style="color: #047857;">dev</span>null</div>
                 </a>
                 <div style="font-size: 0.82rem; color: #666; text-align: center;">
-                    <span style="font-style: italic;">v2.10 · 20261102.2249</span> &copy; 2026 Tom Olick
+                    <span style="font-style: italic;">v2.11 · 20261110.2136</span> &copy; 2026 Tom Olick
                 </div>
             </footer>
         </div>

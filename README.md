@@ -109,6 +109,12 @@ Monarch Money is amazing, but it lacks native support for foreign banks and curr
     -   **Elimination of Synthetic Interpolation**: Raw weekly and daily balances computed directly from Monarch account snapshots for retirement and taxable accounts.
     -   **Interactive KPI Calculation Modals**: In-depth calculation formulas, live historical spending assumptions, and financial guidance modals across all 11 summary cards.
     -   **Human-Readable Tooltip Dates**: Standardized month and quarter hover labels (e.g. `Nov 2025`, `Q2 2025`) across all interactive charts.
+*   **🏖️ v2.11: Pre-Retirement Bridge Analytics, Return Attribution & Trailing Spend Smoothing**:
+    -   **Scope-Aware Withdrawal Rates (SWR)**: Dual readouts comparing total portfolio SWR against accessible bridge SWR (taxable & cash accounts prior to age 59½).
+    -   **Real Purchasing Power & ATH Ceiling**: Added legend-toggleable Real Net Worth (deflated to current purchasing power) and High-Water Mark tracking lines on the net worth chart.
+    -   **Return Attribution Mode**: Interactive toggle on period change chart between percentage returns and full dollar attribution (Yield, Market Price Change, and Living Withdrawals).
+    -   **Trailing 12-Month Smoothing Curves**: Added 12M rolling average yield and 12M rolling living spending curves to the investment income chart to smooth out quarterly dividend spikes and lumpy seasonal costs.
+    -   **Sequence-of-Returns & Peak Alignment**: Unified intra-month weekly/daily snapshot highs across Period Peak, Max Drawdown, and chart points with dollar-denominated drawdown readouts.
 
 ## 🖼 Demos / Screenshots
 
