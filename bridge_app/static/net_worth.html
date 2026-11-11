@@ -1633,6 +1633,49 @@
                     </div>
                 </div>
 
+                <!-- Card C3: Dynamic Guardrail & Safe Spend Target -->
+                <div class="kpi-card accent-emerald">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Safe Spend Target (3.5%)</div>
+                        <button type="button" class="kpi-info-btn"
+                            aria-label="Info about Dynamic Guardrail and Safe Spend Target"
+                            onclick="openKpiModal('safe_spend_guardrail', event)"
+                            title="How Dynamic Guardrail &amp; Safe Spend Target is calculated &amp; how to use it">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="kpi-value" id="kpiSafeSpendTarget" style="color: var(--accent-green);">$0/mo</div>
+                    <div class="kpi-subtext">
+                        <span class="trend-pill trend-positive" id="kpiSafeSpendBadge">🟢 +$0/mo buffer</span>
+                        <span id="kpiSafeSpendSubtext">Current: $0/mo · $0/yr safe</span>
+                    </div>
+                </div>
+
+                <!-- Card C4: Passive Yield Run-Rate & Yield-on-Portfolio -->
+                <div class="kpi-card accent-green">
+                    <div class="kpi-header">
+                        <div class="kpi-label">Passive Yield Run-Rate</div>
+                        <button type="button" class="kpi-info-btn"
+                            aria-label="Info about Passive Yield Run-Rate"
+                            onclick="openKpiModal('passive_yield_run_rate', event)"
+                            title="How Passive Yield Run-Rate is calculated &amp; how to use it">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="kpi-value" id="kpiPassiveYieldRunRate" style="color: var(--accent-green);">$0/mo</div>
+                    <div class="kpi-subtext" id="kpiPassiveYieldSubtext">$0/yr · 0.00% portfolio yield · Covers 0% of spend</div>
+                </div>
+
                 <!-- Card 10: Income Coverage -->
                 <div class="kpi-card accent-blue">
                     <div class="kpi-header">
@@ -1822,7 +1865,7 @@
                 <div class="footer-brand">ego<span>dev</span>null</div>
             </a>
             <div class="footer-copyright">
-                <span style="font-style: italic;">v2.11 · 20261110.2136</span>
+                <span style="font-style: italic;">v2.11 · 20261111.1034</span>
             </div>
             <div class="footer-copyright">
                 &copy; 2026
@@ -2193,6 +2236,46 @@
                         <li><strong>Pre-Retirement vs. Post-Retirement Adjustments:</strong> Because the runway assumes your historical spending pace continues unchanged, mentally adjust if your post-retirement budget will differ (e.g., if a mortgage payoff or lower commuting costs will reduce monthly spend, your true runway will be longer; if healthcare or travel spending will rise, your true runway will be shorter).</li>
                     </ul>
                 `
+            },
+            safe_spend_guardrail: {
+                icon: '🛡️',
+                title: 'Dynamic Guardrail & Safe Spend Target (Guyton-Klinger)',
+                calc: `
+                    <p>Translates your currently scoped portfolio balance into an actionable <strong>monthly and annual safe spending target</strong> using early-retirement Guyton-Klinger guardrails:</p>
+                    <div class="kpi-formula-box">3.5% Perpetual Safe Target = (Scoped Portfolio Base × 0.035) ÷ 12<br>Monthly Buffer = 3.5% Safe Monthly Target − Actual Monthly Spend</div>
+                    <ul>
+                        <li><strong>3.5% Perpetual Safe Target (Headline):</strong> Recommended baseline for early retirees (age 50–55 with a 35–45+ year horizon) to preserve real purchasing power indefinitely.</li>
+                        <li><strong>4.0% Classic Trinity Target:</strong> Standard 30-year retirement spending benchmark.</li>
+                        <li><strong>5.0% Preservation Guardrail Ceiling:</strong> Under Guyton-Klinger rules, if a market downturn pushes your withdrawal rate above 5.0%, trimming discretionary spending by ~10% protects long-term principal.</li>
+                    </ul>
+                `,
+                usage: `
+                    <p>Turns abstract withdrawal percentages into a concrete monthly lifestyle budget:</p>
+                    <ul>
+                        <li><strong>🟢 Positive Buffer (Below 3.5% Target):</strong> Shows exactly how many extra dollars per month you could comfortably spend (or reinvest) while remaining inside the perpetual safe zone.</li>
+                        <li><strong>🟡 Moderate Zone (3.5% – 5.0%):</strong> Your spending is above the conservative 3.5% baseline but within normal dynamic guardrail tolerances.</li>
+                        <li><strong>🔴 Above 5.0% Ceiling:</strong> Signals that a market pullback or one-off spending spike has pushed your pace past the upper guardrail—pause discretionary splurges or draw from your cash buffer.</li>
+                    </ul>
+                `
+            },
+            passive_yield_run_rate: {
+                icon: '💵',
+                title: 'Passive Yield Run-Rate & Yield-on-Portfolio',
+                calc: `
+                    <p>Measures the annualized monthly and yearly cash flow generated organically by your portfolio's dividends, interest, and capital gains distributions:</p>
+                    <div class="kpi-formula-box">Monthly Yield Run-Rate = Annualized Investment Income ÷ 12<br>Portfolio Yield % = (Annualized Investment Income ÷ Scoped Portfolio Base) × 100</div>
+                    <ul>
+                        <li><strong>Included Cash Flows:</strong> Sums all Monarch transactions categorized under <em>Dividends</em>, <em>Interest</em>, and <em>Capital Gains</em> across the active period, normalized to a 12-month run-rate.</li>
+                        <li><strong>Scope-Aware Yield %:</strong> Divides annualized yield by the active <strong>Scope</strong> balance (<em>Total Portfolio</em>, <em>Taxable &amp; Accessible</em>, or <em>Retirement</em>).</li>
+                    </ul>
+                `,
+                usage: `
+                    <p>Tracks the pure cash-flow engine funding your retirement independent of market price swings:</p>
+                    <ul>
+                        <li>Compare the <strong>$/mo headline</strong> directly against your fixed monthly bills—every dollar of organic yield is a dollar of equity shares you never have to sell.</li>
+                        <li>Watch the <strong>Portfolio Yield %</strong> and <strong>Covers XX% of spend</strong> subtext as you shift from growth equities toward dividend/fixed-income assets over time.</li>
+                    </ul>
+                `
             }
         };
 
@@ -2269,6 +2352,31 @@
                         <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Selected Window Peak Snapshot:</div>
                         <div>• Period Peak Valuation: <strong>${formatCurrency0(kp.peakNw || 0)}</strong> (${pkLabel})</div>
                         <div>• Current Valuation: <strong>${formatCurrency0(kp.currentNw || 0)}</strong> (${diffFromPeak >= -0.5 ? 'At Peak' : `${formatSignedCurrency0(diffFromPeak)} / ${diffPct.toFixed(2)}% from peak`})</div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'safe_spend_guardrail' && ret) {
+                const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
+                const bufMo = ret.monthlySpendBuffer35 || 0;
+                const bufYr = (ret.safeSpendAnnual35 || 0) - (ret.annSpending || 0);
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
+                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Active Guardrail Benchmarks (${mosCount} Mo Scope Data):</div>
+                        <div>• 3.5% Perpetual Safe Target: <strong>${formatCurrency0(ret.safeSpendMonthly35 || 0)}/mo</strong> (${formatCurrency0(ret.safeSpendAnnual35 || 0)}/yr)</div>
+                        <div>• 4.0% Classic Target: <strong>${formatCurrency0(ret.safeSpendMonthly40 || 0)}/mo</strong> (${formatCurrency0(ret.safeSpendAnnual40 || 0)}/yr) · 5.0% Ceiling: <strong>${formatCurrency0(ret.guardrailCeilingMonthly50 || 0)}/mo</strong></div>
+                        <div>• Current Actual Spend: <strong>${formatCurrency0(ret.avgMonthlySpending || 0)}/mo</strong> (${formatCurrency0(ret.annSpending || 0)}/yr)</div>
+                        <div>• Guardrail Buffer (vs. 3.5%): <strong>${formatSignedCurrency0(bufMo)}/mo</strong> (${formatSignedCurrency0(bufYr)}/yr)</div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'passive_yield_run_rate' && ret) {
+                const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
+                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Active Passive Yield Run-Rate (${mosCount} Mo Scope Data):</div>
+                        <div>• Annualized Yield Run-Rate: <strong>${formatCurrency0(ret.avgMonthlyInvIncome || 0)}/mo</strong> (${formatCurrency0(ret.annInvIncome || 0)}/yr)</div>
+                        <div>• Annualized Mix: Dividends <strong>${formatCurrency0(ret.annDividends || 0)}/yr</strong> · Interest <strong>${formatCurrency0(ret.annInterest || 0)}/yr</strong> · Cap Gains <strong>${formatCurrency0(ret.annCapGains || 0)}/yr</strong></div>
+                        <div>• Portfolio Yield on Base (${formatCurrency0(ret.investableBase || 0)}): <strong>${(ret.yieldOnInvestablePercent || 0).toFixed(2)}%</strong> · Spend Coverage: <strong>${(ret.incomeCoveragePercent || 0).toFixed(1)}%</strong></div>
                     </div>
                 `;
                 calcHtml = liveAssumptionsHtml + calcHtml;
@@ -2904,6 +3012,9 @@
             const tSpending = evalMonths.reduce((s, m) => s + m.spending, 0);
             const tOtherInc = evalMonths.reduce((s, m) => s + m.other_income, 0);
             const tInvIncome = evalMonths.reduce((s, m) => s + m.inv_income, 0);
+            const tInterest = evalMonths.reduce((s, m) => s + m.interest, 0);
+            const tDividends = evalMonths.reduce((s, m) => s + m.dividends, 0);
+            const tCapGains = evalMonths.reduce((s, m) => s + m.capital_gains, 0);
             const tNetWithdrawal = Math.max(0, tSpending - tOtherInc);
             // Extrapolate or average the in-scope pace to a full 12 months using the actual
             // number of days covered (the latest month is usually partial, e.g. Nov 1–9), so
@@ -2913,6 +3024,9 @@
             const annSpending = tSpending * annScale;
             const annNetWithdrawal = tNetWithdrawal * annScale;
             const annInvIncome = tInvIncome * annScale;
+            const annInterest = tInterest * annScale;
+            const annDividends = tDividends * annScale;
+            const annCapGains = tCapGains * annScale;
             const avgMonthlySpending = annSpending / 12;
             const avgMonthlyNetWithdrawal = annNetWithdrawal / 12;
             const avgMonthlyInvIncome = annInvIncome / 12;
@@ -2985,6 +3099,15 @@
                 ? (accessibleBase / annSpending)
                 : 0;
 
+            // C3: Dynamic Guardrail & Safe Spend Target (3.5% Perpetual Safe, 4.0% Classic, 5.0% Guardrail Ceiling)
+            const safeSpendAnnual35 = investableBase * 0.035;
+            const safeSpendMonthly35 = safeSpendAnnual35 / 12;
+            const safeSpendAnnual40 = investableBase * 0.040;
+            const safeSpendMonthly40 = safeSpendAnnual40 / 12;
+            const guardrailCeilingAnnual50 = investableBase * 0.050;
+            const guardrailCeilingMonthly50 = guardrailCeilingAnnual50 / 12;
+            const monthlySpendBuffer35 = safeSpendMonthly35 - avgMonthlySpending;
+
             const monthsWithdrawingAtLoss = filteredMonths.reduce(
                 (cnt, m) => cnt + ((m.total_return_dollars < 0 && m.spending > 0) ? 1 : 0),
                 0
@@ -3035,10 +3158,20 @@
                     trailingMonthsUsed: tCount,
                     coveredMonths,
                     annInvIncome,
+                    annInterest,
+                    annDividends,
+                    annCapGains,
                     investableBase,
                     totalInvestableBase,
                     accessibleBase,
                     retirementOnlyBase,
+                    safeSpendAnnual35,
+                    safeSpendMonthly35,
+                    safeSpendAnnual40,
+                    safeSpendMonthly40,
+                    guardrailCeilingAnnual50,
+                    guardrailCeilingMonthly50,
+                    monthlySpendBuffer35,
                     incomeCoveragePercent,
                     yieldOnInvestablePercent,
                     periodYieldOnInvestablePercent,
@@ -3308,6 +3441,47 @@
                     swrSubEl.title = otherIncAnn > 0
                         ? `Net of non-portfolio income (${formatCurrency0(otherIncAnn)}/yr): ${formatCurrency0(ret.annNetWithdrawal)}/yr`
                         : '';
+                }
+
+                // Card C3: Safe Spend Target (3.5%)
+                const safeTargetEl = document.getElementById('kpiSafeSpendTarget');
+                if (safeTargetEl) {
+                    safeTargetEl.textContent = `${formatCurrency0(ret.safeSpendMonthly35 || 0)}/mo`;
+                    if (ret.withdrawalStatus === 'safe') safeTargetEl.style.color = 'var(--accent-green)';
+                    else if (ret.withdrawalStatus === 'caution') safeTargetEl.style.color = '#FBBF24';
+                    else safeTargetEl.style.color = 'var(--accent-red)';
+                }
+                const safeBadgeEl = document.getElementById('kpiSafeSpendBadge');
+                if (safeBadgeEl) {
+                    const buf = Number(ret.monthlySpendBuffer35 || 0);
+                    if (buf >= 0) {
+                        safeBadgeEl.textContent = `🟢 +${formatCurrency0(buf)}/mo buffer`;
+                        safeBadgeEl.className = 'trend-pill trend-positive';
+                    } else if ((ret.avgMonthlySpending || 0) <= (ret.guardrailCeilingMonthly50 || 0)) {
+                        safeBadgeEl.textContent = `🟡 ${formatSignedCurrency0(buf)}/mo vs 3.5%`;
+                        safeBadgeEl.className = 'trend-pill trend-warning';
+                    } else {
+                        const overCap = (ret.guardrailCeilingMonthly50 || 0) - (ret.avgMonthlySpending || 0);
+                        safeBadgeEl.textContent = `🔴 ${formatSignedCurrency0(overCap)}/mo vs 5% cap`;
+                        safeBadgeEl.className = 'trend-pill trend-negative';
+                    }
+                }
+                const safeSubEl = document.getElementById('kpiSafeSpendSubtext');
+                if (safeSubEl) {
+                    safeSubEl.textContent = `Current: ${formatCurrency0(ret.avgMonthlySpending || 0)}/mo · ${formatCurrency0(ret.safeSpendAnnual35 || 0)}/yr safe`;
+                }
+
+                // Card C4: Passive Yield Run-Rate
+                const yieldRunRateEl = document.getElementById('kpiPassiveYieldRunRate');
+                if (yieldRunRateEl) {
+                    yieldRunRateEl.textContent = `${formatCurrency0(ret.avgMonthlyInvIncome || 0)}/mo`;
+                    yieldRunRateEl.style.color = (ret.avgMonthlyInvIncome || 0) > 0 ? 'var(--accent-green)' : 'var(--text-main)';
+                }
+                const yieldRunRateSubEl = document.getElementById('kpiPassiveYieldSubtext');
+                if (yieldRunRateSubEl) {
+                    const annYieldPct = (ret.yieldOnInvestablePercent || 0).toFixed(2);
+                    const covPct = (ret.incomeCoveragePercent || 0).toFixed(0);
+                    yieldRunRateSubEl.textContent = `${formatCurrency0(ret.annInvIncome || 0)}/yr · ${annYieldPct}% portfolio yield · Covers ${covPct}% of spend`;
                 }
 
                 const covEl = document.getElementById('kpiIncomeCoverage');
