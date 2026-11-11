@@ -6,6 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>📈 Net Worth Performance — MM Bridge</title>
     <meta name="description" content="Net Worth Performance Analytics Dashboard powered by Monarch Money.">
+    <!-- MANDATORY: Declare support for both light and dark themes -->
+    <meta name="color-scheme" content="light dark">
+    <script>
+        try {
+            document.querySelector('meta[name="color-scheme"]').content = localStorage.getItem("color-scheme") ?? "light dark";
+        } catch (_) { }
+    </script>
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="apple-touch-icon" href="/logo.png">
@@ -20,28 +27,403 @@
         /* INIT_AUTH_STATE */
 
         :root {
-            --bg-canvas: #0c111e;
-            --bg-card: #121829;
-            --bg-card-hover: #172036;
-            --bg-surface: #1E293B;
-            --border-color: #1F293D;
-            --border-color-light: #2D3B55;
+            /* MANDATORY: Apply color-scheme to :root for viewport-wide theming */
+            color-scheme: light dark;
+            --color-scheme: light;
 
-            --text-main: #F9FAFB;
-            --text-muted: #9CA3AF;
-            --text-dim: #64748B;
+            /* Light mode raw tokens */
+            --bg-canvas-light: #F8FAFC;
+            --bg-card-light: #FFFFFF;
+            --bg-card-hover-light: #F1F5F9;
+            --bg-surface-light: #F1F5F9;
+            --bg-header-light: rgba(255, 255, 255, 0.90);
+            --bg-controls-light: rgba(255, 255, 255, 0.92);
+            --bg-controls-stuck-light: rgba(255, 255, 255, 0.97);
+            --bg-dropdown-light: #FFFFFF;
+            --bg-toggle-group-light: #E2E8F0;
+            --bg-toggle-active-light: rgba(37, 99, 235, 0.14);
+            --bg-subtle-hover-light: rgba(15, 23, 42, 0.05);
+            --bg-pill-neutral-light: rgba(15, 23, 42, 0.04);
+            --bg-table-thead-light: #F1F5F9;
+            --bg-table-tfoot-light: #E2E8F0;
+            --bg-modal-backdrop-light: rgba(15, 23, 42, 0.45);
+            --bg-modal-header-light: #F8FAFC;
+            --bg-modal-section-light: #F8FAFC;
+            --bg-formula-box-light: #EFF6FF;
 
-            --accent-blue: #3B82F6;
-            --accent-blue-glow: rgba(59, 130, 246, 0.25);
-            --accent-green: #10B981;
-            --accent-green-bg: rgba(16, 185, 129, 0.12);
-            --accent-red: #EF4444;
-            --accent-red-bg: rgba(239, 68, 68, 0.12);
-            --accent-purple: #8B5CF6;
+            --border-color-light-mode: #E2E8F0;
+            --border-color-strong-light: #CBD5E1;
+            --border-modal-light: #CBD5E1;
+            --border-subtle-light: rgba(15, 23, 42, 0.08);
+
+            --text-main-light: #0F172A;
+            --text-secondary-light: #334155;
+            --text-muted-light: #475569;
+            --text-dim-light: #64748B;
+
+            --accent-blue-light: #2563EB;
+            --accent-blue-text-light: #1D4ED8;
+            --accent-blue-strong-light: #1E40AF;
+            --accent-blue-pill-text-light: #1E40AF;
+            --accent-blue-glow-light: rgba(37, 99, 235, 0.18);
+            --accent-green-light: #059669;
+            --accent-green-text-light: #047857;
+            --accent-green-pill-text-light: #065F46;
+            --accent-green-bg-light: rgba(5, 150, 105, 0.12);
+            --accent-red-light: #DC2626;
+            --accent-red-bg-light: rgba(220, 38, 38, 0.10);
+            --accent-amber-light: #D97706;
+            --accent-amber-pill-text-light: #92400E;
+            --accent-amber-bg-light: rgba(217, 119, 6, 0.12);
+            --accent-purple-light: #7C3AED;
+            --accent-indigo-pill-text-light: #3730A3;
+
+            --shadow-card-light: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-controls-light: 0 4px 16px -2px rgba(15, 23, 42, 0.08);
+            --shadow-controls-stuck-light: 0 10px 24px -4px rgba(15, 23, 42, 0.14);
+            --shadow-dropdown-light: 0 12px 28px rgba(15, 23, 42, 0.14);
+            --shadow-modal-light: 0 24px 48px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.06);
+
+            /* Dark mode raw tokens */
+            --bg-canvas-dark: #0c111e;
+            --bg-card-dark: #121829;
+            --bg-card-hover-dark: #172036;
+            --bg-surface-dark: #1E293B;
+            --bg-header-dark: rgba(8, 12, 20, 0.92);
+            --bg-controls-dark: rgba(15, 23, 42, 0.92);
+            --bg-controls-stuck-dark: rgba(15, 23, 42, 0.96);
+            --bg-dropdown-dark: #141C2E;
+            --bg-toggle-group-dark: rgba(15, 23, 42, 0.85);
+            --bg-toggle-active-dark: rgba(59, 130, 246, 0.22);
+            --bg-subtle-hover-dark: rgba(255, 255, 255, 0.06);
+            --bg-pill-neutral-dark: rgba(255, 255, 255, 0.04);
+            --bg-table-thead-dark: #182234;
+            --bg-table-tfoot-dark: #152033;
+            --bg-modal-backdrop-dark: rgba(3, 7, 18, 0.72);
+            --bg-modal-header-dark: rgba(17, 24, 39, 0.6);
+            --bg-modal-section-dark: rgba(15, 23, 42, 0.65);
+            --bg-formula-box-dark: rgba(3, 7, 18, 0.65);
+
+            --border-color-dark-mode: #1F293D;
+            --border-color-strong-dark: #2D3B55;
+            --border-modal-dark: #334155;
+            --border-subtle-dark: rgba(255, 255, 255, 0.07);
+
+            --text-main-dark: #F9FAFB;
+            --text-secondary-dark: #E2E8F0;
+            --text-muted-dark: #9CA3AF;
+            --text-dim-dark: #64748B;
+
+            --accent-blue-dark: #3B82F6;
+            --accent-blue-text-dark: #60A5FA;
+            --accent-blue-strong-dark: #93C5FD;
+            --accent-blue-pill-text-dark: #bfdbfe;
+            --accent-blue-glow-dark: rgba(59, 130, 246, 0.25);
+            --accent-green-dark: #10B981;
+            --accent-green-text-dark: #6ee7b7;
+            --accent-green-pill-text-dark: #a7f3d0;
+            --accent-green-bg-dark: rgba(16, 185, 129, 0.12);
+            --accent-red-dark: #EF4444;
+            --accent-red-bg-dark: rgba(239, 68, 68, 0.12);
+            --accent-amber-dark: #FBBF24;
+            --accent-amber-pill-text-dark: #fde68a;
+            --accent-amber-bg-dark: rgba(245, 158, 11, 0.14);
+            --accent-purple-dark: #8B5CF6;
+            --accent-indigo-pill-text-dark: #c7d2fe;
+
+            --shadow-card-dark: none;
+            --shadow-controls-dark: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+            --shadow-controls-stuck-dark: 0 10px 28px -4px rgba(0, 0, 0, 0.55);
+            --shadow-dropdown-dark: 0 14px 34px rgba(0, 0, 0, 0.55);
+            --shadow-modal-dark: 0 24px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+
+            /* Default semantic tokens (Light mode fallback) */
+            --bg-canvas: var(--bg-canvas-light);
+            --bg-card: var(--bg-card-light);
+            --bg-card-hover: var(--bg-card-hover-light);
+            --bg-surface: var(--bg-surface-light);
+            --bg-header: var(--bg-header-light);
+            --bg-controls: var(--bg-controls-light);
+            --bg-controls-stuck: var(--bg-controls-stuck-light);
+            --bg-dropdown: var(--bg-dropdown-light);
+            --bg-toggle-group: var(--bg-toggle-group-light);
+            --bg-toggle-active: var(--bg-toggle-active-light);
+            --bg-subtle-hover: var(--bg-subtle-hover-light);
+            --bg-pill-neutral: var(--bg-pill-neutral-light);
+            --bg-table-thead: var(--bg-table-thead-light);
+            --bg-table-tfoot: var(--bg-table-tfoot-light);
+            --bg-modal-backdrop: var(--bg-modal-backdrop-light);
+            --bg-modal-header: var(--bg-modal-header-light);
+            --bg-modal-section: var(--bg-modal-section-light);
+            --bg-formula-box: var(--bg-formula-box-light);
+
+            --border-color: var(--border-color-light-mode);
+            --border-color-light: var(--border-color-strong-light);
+            --border-modal: var(--border-modal-light);
+            --border-subtle: var(--border-subtle-light);
+
+            --text-main: var(--text-main-light);
+            --text-secondary: var(--text-secondary-light);
+            --text-muted: var(--text-muted-light);
+            --text-dim: var(--text-dim-light);
+
+            --accent-blue: var(--accent-blue-light);
+            --accent-blue-text: var(--accent-blue-text-light);
+            --accent-blue-strong: var(--accent-blue-strong-light);
+            --accent-blue-pill-text: var(--accent-blue-pill-text-light);
+            --accent-blue-glow: var(--accent-blue-glow-light);
+            --accent-green: var(--accent-green-light);
+            --accent-green-text: var(--accent-green-text-light);
+            --accent-green-pill-text: var(--accent-green-pill-text-light);
+            --accent-green-bg: var(--accent-green-bg-light);
+            --accent-red: var(--accent-red-light);
+            --accent-red-bg: var(--accent-red-bg-light);
+            --accent-amber: var(--accent-amber-light);
+            --accent-amber-pill-text: var(--accent-amber-pill-text-light);
+            --accent-amber-bg: var(--accent-amber-bg-light);
+            --accent-purple: var(--accent-purple-light);
+            --accent-indigo-pill-text: var(--accent-indigo-pill-text-light);
+
+            --shadow-card: var(--shadow-card-light);
+            --shadow-controls: var(--shadow-controls-light);
+            --shadow-controls-stuck: var(--shadow-controls-stuck-light);
+            --shadow-dropdown: var(--shadow-dropdown-light);
+            --shadow-modal: var(--shadow-modal-light);
 
             --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             --font-mono: 'JetBrains Mono', monospace;
             --header-actual-height: 62px;
+
+            /* MANDATORY: Fallback for browsers without light-dark() support */
+            @media (prefers-color-scheme: dark) {
+                --color-scheme: dark;
+                --bg-canvas: var(--bg-canvas-dark);
+                --bg-card: var(--bg-card-dark);
+                --bg-card-hover: var(--bg-card-hover-dark);
+                --bg-surface: var(--bg-surface-dark);
+                --bg-header: var(--bg-header-dark);
+                --bg-controls: var(--bg-controls-dark);
+                --bg-controls-stuck: var(--bg-controls-stuck-dark);
+                --bg-dropdown: var(--bg-dropdown-dark);
+                --bg-toggle-group: var(--bg-toggle-group-dark);
+                --bg-toggle-active: var(--bg-toggle-active-dark);
+                --bg-subtle-hover: var(--bg-subtle-hover-dark);
+                --bg-pill-neutral: var(--bg-pill-neutral-dark);
+                --bg-table-thead: var(--bg-table-thead-dark);
+                --bg-table-tfoot: var(--bg-table-tfoot-dark);
+                --bg-modal-backdrop: var(--bg-modal-backdrop-dark);
+                --bg-modal-header: var(--bg-modal-header-dark);
+                --bg-modal-section: var(--bg-modal-section-dark);
+                --bg-formula-box: var(--bg-formula-box-dark);
+
+                --border-color: var(--border-color-dark-mode);
+                --border-color-light: var(--border-color-strong-dark);
+                --border-modal: var(--border-modal-dark);
+                --border-subtle: var(--border-subtle-dark);
+
+                --text-main: var(--text-main-dark);
+                --text-secondary: var(--text-secondary-dark);
+                --text-muted: var(--text-muted-dark);
+                --text-dim: var(--text-dim-dark);
+
+                --accent-blue: var(--accent-blue-dark);
+                --accent-blue-text: var(--accent-blue-text-dark);
+                --accent-blue-strong: var(--accent-blue-strong-dark);
+                --accent-blue-pill-text: var(--accent-blue-pill-text-dark);
+                --accent-blue-glow: var(--accent-blue-glow-dark);
+                --accent-green: var(--accent-green-dark);
+                --accent-green-text: var(--accent-green-text-dark);
+                --accent-green-pill-text: var(--accent-green-pill-text-dark);
+                --accent-green-bg: var(--accent-green-bg-dark);
+                --accent-red: var(--accent-red-dark);
+                --accent-red-bg: var(--accent-red-bg-dark);
+                --accent-amber: var(--accent-amber-dark);
+                --accent-amber-pill-text: var(--accent-amber-pill-text-dark);
+                --accent-amber-bg: var(--accent-amber-bg-dark);
+                --accent-purple: var(--accent-purple-dark);
+                --accent-indigo-pill-text: var(--accent-indigo-pill-text-dark);
+
+                --shadow-card: var(--shadow-card-dark);
+                --shadow-controls: var(--shadow-controls-dark);
+                --shadow-controls-stuck: var(--shadow-controls-stuck-dark);
+                --shadow-dropdown: var(--shadow-dropdown-dark);
+                --shadow-modal: var(--shadow-modal-dark);
+            }
+
+            &:has(> head > meta[name="color-scheme"][content="dark"]) {
+                color-scheme: dark;
+                --color-scheme: dark;
+                --bg-canvas: var(--bg-canvas-dark);
+                --bg-card: var(--bg-card-dark);
+                --bg-card-hover: var(--bg-card-hover-dark);
+                --bg-surface: var(--bg-surface-dark);
+                --bg-header: var(--bg-header-dark);
+                --bg-controls: var(--bg-controls-dark);
+                --bg-controls-stuck: var(--bg-controls-stuck-dark);
+                --bg-dropdown: var(--bg-dropdown-dark);
+                --bg-toggle-group: var(--bg-toggle-group-dark);
+                --bg-toggle-active: var(--bg-toggle-active-dark);
+                --bg-subtle-hover: var(--bg-subtle-hover-dark);
+                --bg-pill-neutral: var(--bg-pill-neutral-dark);
+                --bg-table-thead: var(--bg-table-thead-dark);
+                --bg-table-tfoot: var(--bg-table-tfoot-dark);
+                --bg-modal-backdrop: var(--bg-modal-backdrop-dark);
+                --bg-modal-header: var(--bg-modal-header-dark);
+                --bg-modal-section: var(--bg-modal-section-dark);
+                --bg-formula-box: var(--bg-formula-box-dark);
+
+                --border-color: var(--border-color-dark-mode);
+                --border-color-light: var(--border-color-strong-dark);
+                --border-modal: var(--border-modal-dark);
+                --border-subtle: var(--border-subtle-dark);
+
+                --text-main: var(--text-main-dark);
+                --text-secondary: var(--text-secondary-dark);
+                --text-muted: var(--text-muted-dark);
+                --text-dim: var(--text-dim-dark);
+
+                --accent-blue: var(--accent-blue-dark);
+                --accent-blue-text: var(--accent-blue-text-dark);
+                --accent-blue-strong: var(--accent-blue-strong-dark);
+                --accent-blue-pill-text: var(--accent-blue-pill-text-dark);
+                --accent-blue-glow: var(--accent-blue-glow-dark);
+                --accent-green: var(--accent-green-dark);
+                --accent-green-text: var(--accent-green-text-dark);
+                --accent-green-pill-text: var(--accent-green-pill-text-dark);
+                --accent-green-bg: var(--accent-green-bg-dark);
+                --accent-red: var(--accent-red-dark);
+                --accent-red-bg: var(--accent-red-bg-dark);
+                --accent-amber: var(--accent-amber-dark);
+                --accent-amber-pill-text: var(--accent-amber-pill-text-dark);
+                --accent-amber-bg: var(--accent-amber-bg-dark);
+                --accent-purple: var(--accent-purple-dark);
+                --accent-indigo-pill-text: var(--accent-indigo-pill-text-dark);
+
+                --shadow-card: var(--shadow-card-dark);
+                --shadow-controls: var(--shadow-controls-dark);
+                --shadow-controls-stuck: var(--shadow-controls-stuck-dark);
+                --shadow-dropdown: var(--shadow-dropdown-dark);
+                --shadow-modal: var(--shadow-modal-dark);
+            }
+
+            &:has(> head > meta[name="color-scheme"][content="light"]) {
+                color-scheme: light;
+                --color-scheme: light;
+                --bg-canvas: var(--bg-canvas-light);
+                --bg-card: var(--bg-card-light);
+                --bg-card-hover: var(--bg-card-hover-light);
+                --bg-surface: var(--bg-surface-light);
+                --bg-header: var(--bg-header-light);
+                --bg-controls: var(--bg-controls-light);
+                --bg-controls-stuck: var(--bg-controls-stuck-light);
+                --bg-dropdown: var(--bg-dropdown-light);
+                --bg-toggle-group: var(--bg-toggle-group-light);
+                --bg-toggle-active: var(--bg-toggle-active-light);
+                --bg-subtle-hover: var(--bg-subtle-hover-light);
+                --bg-pill-neutral: var(--bg-pill-neutral-light);
+                --bg-table-thead: var(--bg-table-thead-light);
+                --bg-table-tfoot: var(--bg-table-tfoot-light);
+                --bg-modal-backdrop: var(--bg-modal-backdrop-light);
+                --bg-modal-header: var(--bg-modal-header-light);
+                --bg-modal-section: var(--bg-modal-section-light);
+                --bg-formula-box: var(--bg-formula-box-light);
+
+                --border-color: var(--border-color-light-mode);
+                --border-color-light: var(--border-color-strong-light);
+                --border-modal: var(--border-modal-light);
+                --border-subtle: var(--border-subtle-light);
+
+                --text-main: var(--text-main-light);
+                --text-secondary: var(--text-secondary-light);
+                --text-muted: var(--text-muted-light);
+                --text-dim: var(--text-dim-light);
+
+                --accent-blue: var(--accent-blue-light);
+                --accent-blue-text: var(--accent-blue-text-light);
+                --accent-blue-strong: var(--accent-blue-strong-light);
+                --accent-blue-pill-text: var(--accent-blue-pill-text-light);
+                --accent-blue-glow: var(--accent-blue-glow-light);
+                --accent-green: var(--accent-green-light);
+                --accent-green-text: var(--accent-green-text-light);
+                --accent-green-pill-text: var(--accent-green-pill-text-light);
+                --accent-green-bg: var(--accent-green-bg-light);
+                --accent-red: var(--accent-red-light);
+                --accent-red-bg: var(--accent-red-bg-light);
+                --accent-amber: var(--accent-amber-light);
+                --accent-amber-pill-text: var(--accent-amber-pill-text-light);
+                --accent-amber-bg: var(--accent-amber-bg-light);
+                --accent-purple: var(--accent-purple-light);
+                --accent-indigo-pill-text: var(--accent-indigo-pill-text-light);
+
+                --shadow-card: var(--shadow-card-light);
+                --shadow-controls: var(--shadow-controls-light);
+                --shadow-controls-stuck: var(--shadow-controls-stuck-light);
+                --shadow-dropdown: var(--shadow-dropdown-light);
+                --shadow-modal: var(--shadow-modal-light);
+            }
+
+            /* Automatic resolution via CSS light-dark() */
+            @supports (color: light-dark(white, black)) {
+                --bg-canvas: light-dark(var(--bg-canvas-light), var(--bg-canvas-dark));
+                --bg-card: light-dark(var(--bg-card-light), var(--bg-card-dark));
+                --bg-card-hover: light-dark(var(--bg-card-hover-light), var(--bg-card-hover-dark));
+                --bg-surface: light-dark(var(--bg-surface-light), var(--bg-surface-dark));
+                --bg-header: light-dark(var(--bg-header-light), var(--bg-header-dark));
+                --bg-controls: light-dark(var(--bg-controls-light), var(--bg-controls-dark));
+                --bg-controls-stuck: light-dark(var(--bg-controls-stuck-light), var(--bg-controls-stuck-dark));
+                --bg-dropdown: light-dark(var(--bg-dropdown-light), var(--bg-dropdown-dark));
+                --bg-toggle-group: light-dark(var(--bg-toggle-group-light), var(--bg-toggle-group-dark));
+                --bg-toggle-active: light-dark(var(--bg-toggle-active-light), var(--bg-toggle-active-dark));
+                --bg-subtle-hover: light-dark(var(--bg-subtle-hover-light), var(--bg-subtle-hover-dark));
+                --bg-pill-neutral: light-dark(var(--bg-pill-neutral-light), var(--bg-pill-neutral-dark));
+                --bg-table-thead: light-dark(var(--bg-table-thead-light), var(--bg-table-thead-dark));
+                --bg-table-tfoot: light-dark(var(--bg-table-tfoot-light), var(--bg-table-tfoot-dark));
+                --bg-modal-backdrop: light-dark(var(--bg-modal-backdrop-light), var(--bg-modal-backdrop-dark));
+                --bg-modal-header: light-dark(var(--bg-modal-header-light), var(--bg-modal-header-dark));
+                --bg-modal-section: light-dark(var(--bg-modal-section-light), var(--bg-modal-section-dark));
+                --bg-formula-box: light-dark(var(--bg-formula-box-light), var(--bg-formula-box-dark));
+
+                --border-color: light-dark(var(--border-color-light-mode), var(--border-color-dark-mode));
+                --border-color-light: light-dark(var(--border-color-strong-light), var(--border-color-strong-dark));
+                --border-modal: light-dark(var(--border-modal-light), var(--border-modal-dark));
+                --border-subtle: light-dark(var(--border-subtle-light), var(--border-subtle-dark));
+
+                --text-main: light-dark(var(--text-main-light), var(--text-main-dark));
+                --text-secondary: light-dark(var(--text-secondary-light), var(--text-secondary-dark));
+                --text-muted: light-dark(var(--text-muted-light), var(--text-muted-dark));
+                --text-dim: light-dark(var(--text-dim-light), var(--text-dim-dark));
+
+                --accent-blue: light-dark(var(--accent-blue-light), var(--accent-blue-dark));
+                --accent-blue-text: light-dark(var(--accent-blue-text-light), var(--accent-blue-text-dark));
+                --accent-blue-strong: light-dark(var(--accent-blue-strong-light), var(--accent-blue-strong-dark));
+                --accent-blue-pill-text: light-dark(var(--accent-blue-pill-text-light), var(--accent-blue-pill-text-dark));
+                --accent-blue-glow: light-dark(var(--accent-blue-glow-light), var(--accent-blue-glow-dark));
+                --accent-green: light-dark(var(--accent-green-light), var(--accent-green-dark));
+                --accent-green-text: light-dark(var(--accent-green-text-light), var(--accent-green-text-dark));
+                --accent-green-pill-text: light-dark(var(--accent-green-pill-text-light), var(--accent-green-pill-text-dark));
+                --accent-green-bg: light-dark(var(--accent-green-bg-light), var(--accent-green-bg-dark));
+                --accent-red: light-dark(var(--accent-red-light), var(--accent-red-dark));
+                --accent-red-bg: light-dark(var(--accent-red-bg-light), var(--accent-red-bg-dark));
+                --accent-amber: light-dark(var(--accent-amber-light), var(--accent-amber-dark));
+                --accent-amber-pill-text: light-dark(var(--accent-amber-pill-text-light), var(--accent-amber-pill-text-dark));
+                --accent-amber-bg: light-dark(var(--accent-amber-bg-light), var(--accent-amber-bg-dark));
+                --accent-purple: light-dark(var(--accent-purple-light), var(--accent-purple-dark));
+                --accent-indigo-pill-text: light-dark(var(--accent-indigo-pill-text-light), var(--accent-indigo-pill-text-dark));
+            }
+
+            accent-color: var(--accent-blue);
+        }
+
+        @container not style(--color-scheme: dark) {
+            .if-dark {
+                display: none !important;
+            }
+        }
+
+        @container not style(--color-scheme: light) {
+            .if-light {
+                display: none !important;
+            }
         }
 
         * {
@@ -99,13 +481,13 @@
             border: 0;
         }
 
-        /* Sticky Header - Darker than the page body */
+        /* Sticky Header */
         .header {
             position: sticky;
             top: 0;
             z-index: 100;
             padding: 0.85rem 0;
-            background: rgba(8, 12, 20, 0.92);
+            background: var(--bg-header);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border-color);
@@ -165,10 +547,41 @@
         }
 
         .header-title .header-text {
-            background: linear-gradient(135deg, #10b981, #6ee7b7);
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-green-text));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .theme-toggle-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .theme-toggle-btn:focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 2px;
         }
 
         .dashboard-container {
@@ -193,20 +606,20 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 16px;
-            background: rgba(15, 23, 42, 0.92);
+            background: var(--bg-controls);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--border-color);
             padding: 0.85rem 1.25rem;
             border-radius: 12px;
-            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+            box-shadow: var(--shadow-controls);
             transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
         }
 
         .controls-bar.is-stuck {
-            border-color: rgba(96, 165, 250, 0.3);
-            box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.55);
-            background: rgba(15, 23, 42, 0.96);
+            border-color: rgba(96, 165, 250, 0.35);
+            box-shadow: var(--shadow-controls-stuck);
+            background: var(--bg-controls-stuck);
         }
 
         .controls-left {
@@ -232,7 +645,7 @@
             border-radius: 999px;
             font-size: 0.80rem;
             font-weight: 500;
-            background: rgba(255, 255, 255, 0.04);
+            background: var(--bg-pill-neutral);
             border: 1px solid var(--border-color);
             color: var(--text-muted);
             transition: all 0.2s;
@@ -240,26 +653,26 @@
 
         .freshness-pill.fresh {
             border-color: rgba(16, 185, 129, 0.35);
-            background: rgba(16, 185, 129, 0.08);
-            color: #a7f3d0;
+            background: var(--accent-green-bg);
+            color: var(--accent-green-pill-text);
         }
 
         .freshness-pill.moderate {
             border-color: rgba(96, 165, 250, 0.35);
-            background: rgba(96, 165, 250, 0.08);
-            color: #bfdbfe;
+            background: rgba(59, 130, 246, 0.10);
+            color: var(--accent-blue-pill-text);
         }
 
         .freshness-pill.stale {
             border-color: rgba(245, 158, 11, 0.35);
-            background: rgba(245, 158, 11, 0.08);
-            color: #fde68a;
+            background: var(--accent-amber-bg);
+            color: var(--accent-amber-pill-text);
         }
 
         .freshness-pill.syncing {
             border-color: rgba(99, 102, 241, 0.5);
             background: rgba(99, 102, 241, 0.12);
-            color: #c7d2fe;
+            color: var(--accent-indigo-pill-text);
         }
 
         .freshness-dot {
@@ -273,9 +686,9 @@
             display: inline-block;
             width: 14px;
             height: 14px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid var(--border-color-light);
             border-radius: 50%;
-            border-top-color: white;
+            border-top-color: var(--accent-blue);
             animation: spin 0.8s linear infinite;
         }
 
@@ -320,10 +733,10 @@
             top: calc(100% + 8px);
             right: 0;
             min-width: 210px;
-            background: #141C2E;
+            background: var(--bg-dropdown);
             border: 1px solid var(--border-color-light);
             border-radius: 12px;
-            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+            box-shadow: var(--shadow-dropdown);
             padding: 0.45rem;
             z-index: 501;
         }
@@ -365,13 +778,13 @@
         }
 
         button.menu-item.action-item {
-            color: #6ee7b7;
+            color: var(--accent-green-text);
             font-weight: 600;
         }
 
         button.menu-item.action-item:hover {
-            background: rgba(16, 185, 129, 0.15);
-            color: #a7f3d0;
+            background: var(--accent-green-bg);
+            color: var(--accent-green-pill-text);
         }
 
         button.menu-item:disabled {
@@ -380,8 +793,8 @@
         }
 
         .menu-item.active-route {
-            background: rgba(59, 130, 246, 0.14);
-            color: #60A5FA;
+            background: var(--bg-toggle-active);
+            color: var(--accent-blue-text);
             font-weight: 600;
         }
 
@@ -405,7 +818,8 @@
             border: 1px solid var(--border-color);
             border-radius: 10px;
             padding: 0.85rem 1rem;
-            transition: transform 0.2s ease, background 0.2s ease;
+            box-shadow: var(--shadow-card);
+            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
             display: flex;
             flex-direction: column;
             gap: 0.35rem;
@@ -490,10 +904,10 @@
 
         .kpi-info-btn:hover,
         .kpi-info-btn:focus-visible {
-            color: #60A5FA;
+            color: var(--accent-blue-text);
             background: rgba(59, 130, 246, 0.15);
             border-color: rgba(96, 165, 250, 0.35);
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.25);
+            box-shadow: 0 0 8px var(--accent-blue-glow);
             outline: none;
         }
 
@@ -502,7 +916,7 @@
             position: fixed;
             inset: 0;
             z-index: 2000;
-            background: rgba(3, 7, 18, 0.72);
+            background: var(--bg-modal-backdrop);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             display: flex;
@@ -523,14 +937,14 @@
 
         .kpi-modal-card {
             background: var(--bg-card);
-            border: 1px solid #334155;
+            border: 1px solid var(--border-modal);
             border-radius: 14px;
             width: 100%;
             max-width: 560px;
             max-height: 88vh;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            box-shadow: var(--shadow-modal);
             transform: translateY(10px) scale(0.98);
             transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             overflow: hidden;
@@ -547,7 +961,7 @@
             gap: 0.75rem;
             padding: 1.1rem 1.35rem;
             border-bottom: 1px solid var(--border-color);
-            background: rgba(17, 24, 39, 0.6);
+            background: var(--bg-modal-header);
         }
 
         .kpi-modal-title-wrap {
@@ -586,7 +1000,7 @@
 
         .kpi-modal-close:hover {
             color: var(--text-main);
-            background: rgba(255, 255, 255, 0.08);
+            background: var(--bg-subtle-hover);
             border-color: var(--border-color);
         }
 
@@ -599,8 +1013,8 @@
         }
 
         .kpi-modal-section {
-            background: rgba(15, 23, 42, 0.65);
-            border: 1px solid rgba(51, 65, 85, 0.6);
+            background: var(--bg-modal-section);
+            border: 1px solid var(--border-color-light);
             border-radius: 10px;
             padding: 0.95rem 1.1rem;
             display: flex;
@@ -613,7 +1027,7 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: #60A5FA;
+            color: var(--accent-blue-text);
             display: flex;
             align-items: center;
             gap: 0.4rem;
@@ -622,7 +1036,7 @@
         .kpi-modal-section-content {
             font-size: 0.86rem;
             line-height: 1.55;
-            color: #E2E8F0;
+            color: var(--text-secondary);
         }
 
         .kpi-modal-section-content p {
@@ -644,11 +1058,11 @@
         .kpi-formula-box {
             font-family: var(--font-mono);
             font-size: 0.78rem;
-            background: rgba(3, 7, 18, 0.65);
-            border: 1px solid rgba(75, 85, 99, 0.5);
+            background: var(--bg-formula-box);
+            border: 1px solid var(--border-color-light);
             border-radius: 6px;
             padding: 0.5rem 0.7rem;
-            color: #93C5FD;
+            color: var(--accent-blue-strong);
             margin: 0.35rem 0;
             overflow-x: auto;
         }
@@ -658,7 +1072,7 @@
             border-top: 1px solid var(--border-color);
             display: flex;
             justify-content: flex-end;
-            background: rgba(17, 24, 39, 0.6);
+            background: var(--bg-modal-header);
         }
 
         .kpi-modal-gotit-btn {
@@ -761,8 +1175,8 @@
         }
 
         .trend-warning {
-            color: #FBBF24;
-            background: rgba(245, 158, 11, 0.14);
+            color: var(--accent-amber);
+            background: var(--accent-amber-bg);
         }
 
         .control-group {
@@ -820,6 +1234,7 @@
             border: 1px solid var(--border-color);
             border-radius: 14px;
             padding: 1.5rem;
+            box-shadow: var(--shadow-card);
             display: flex;
             flex-direction: column;
             gap: 1.15rem;
@@ -871,7 +1286,7 @@
         .mode-toggle-group {
             display: inline-flex;
             align-items: center;
-            background: rgba(15, 23, 42, 0.85);
+            background: var(--bg-toggle-group);
             border: 1px solid var(--border-color-light);
             border-radius: 8px;
             padding: 2px;
@@ -894,14 +1309,14 @@
 
         .mode-toggle-btn:hover {
             color: var(--text-main);
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--bg-subtle-hover);
         }
 
         .mode-toggle-btn[aria-pressed="true"],
         .mode-toggle-btn.active {
-            background: rgba(59, 130, 246, 0.22);
-            color: #93C5FD;
-            box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.4);
+            background: var(--bg-toggle-active);
+            color: var(--accent-blue-strong);
+            box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.4);
         }
 
         .mode-toggle-btn:focus-visible {
@@ -924,8 +1339,8 @@
         }
 
         .timeframe-select:hover {
-            border-color: rgba(255, 255, 255, 0.25);
-            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent-blue);
+            background: var(--bg-card-hover);
         }
 
         .timeframe-select:focus {
@@ -934,7 +1349,7 @@
         }
 
         .timeframe-select option {
-            background: #111827;
+            background: var(--bg-card);
             color: var(--text-main);
         }
 
@@ -984,19 +1399,19 @@
             position: sticky;
             inset-block-start: 0;
             z-index: 2;
-            background: #182234;
+            background: var(--bg-table-thead);
         }
 
         table.breakdown-table tfoot {
             position: sticky;
             inset-block-end: 0;
             z-index: 2;
-            background: #152033;
+            background: var(--bg-table-tfoot);
         }
 
         table.breakdown-table tfoot th,
         table.breakdown-table tfoot td {
-            background: #152033;
+            background: var(--bg-table-tfoot);
             border-top: 2px solid var(--border-color-light);
             border-bottom: none;
             font-weight: 700;
@@ -1010,8 +1425,8 @@
             inset-inline-start: 0;
             z-index: 3;
             text-align: left;
-            background: #152033;
-            color: #93C5FD;
+            background: var(--bg-table-tfoot);
+            color: var(--accent-blue-strong);
         }
 
         table.breakdown-table th,
@@ -1028,7 +1443,7 @@
             letter-spacing: 0.05em;
             color: var(--text-muted);
             text-align: right;
-            background: #182234;
+            background: var(--bg-table-thead);
         }
 
         table.breakdown-table thead th:first-child {
@@ -1107,7 +1522,7 @@
             }
 
             table.breakdown-table tfoot tr {
-                background: #152033;
+                background: var(--bg-table-tfoot);
                 border-color: rgba(96, 165, 250, 0.4);
             }
 
@@ -1130,7 +1545,7 @@
                 justify-content: space-between;
                 align-items: center;
                 padding: 0.45rem 0.25rem;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                border-bottom: 1px solid var(--border-subtle);
                 border-top: none;
             }
 
@@ -1242,7 +1657,7 @@
             padding: 0.75rem 1.15rem;
             font-size: 0.875rem;
             font-weight: 600;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+            box-shadow: var(--shadow-dropdown);
             opacity: 0;
             transform: translateY(12px);
             pointer-events: none;
@@ -1259,7 +1674,7 @@
         .app-footer {
             margin-top: 3rem;
             padding: 40px 0;
-            border-top: 1px solid rgba(255, 255, 255, 0.07);
+            border-top: 1px solid var(--border-subtle);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -1273,7 +1688,7 @@
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             font-weight: 700;
             font-size: 0.95rem;
-            color: #f0fdf4;
+            color: var(--text-main);
             letter-spacing: -0.01em;
             text-decoration: none;
             display: inline-flex;
@@ -1286,7 +1701,7 @@
         }
 
         .footer-brand span {
-            color: #10b981;
+            color: var(--accent-green);
         }
 
         .app-footer-links {
@@ -1308,7 +1723,7 @@
 
         .app-footer-links a:hover {
             opacity: 1;
-            color: #f0fdf4;
+            color: var(--text-main);
         }
 
         .footer-copyright {
@@ -1352,18 +1767,50 @@
                     <span class="header-text">Net Worth</span>
                 </h1>
             </div>
-            <div style="position: relative;">
-                <button class="hamburger-btn" id="menuToggle" aria-label="Open Menu">
-                    <span class="hamburger-bar"></span>
-                    <span class="hamburger-bar"></span>
-                    <span class="hamburger-bar"></span>
+            <div class="header-right">
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleColorScheme()"
+                    title="Toggle Light / Dark Theme">
+                    <span class="if-dark" style="display: inline-flex; align-items: center;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <span class="sr-only">Switch to light theme</span>
+                    </span>
+                    <span class="if-light" style="display: inline-flex; align-items: center;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                        <span class="sr-only">Switch to dark theme</span>
+                    </span>
                 </button>
-                <div class="menu-dropdown" id="menuDropdown">
-                    <button class="menu-item action-item" id="menuRefreshBtn" onclick="triggerRefreshFromMenu(event)">
-                        <span id="menuRefreshIcon">🔄</span>
-                        <span id="menuRefreshText">Refresh Data</span>
+                <div style="position: relative;">
+                    <button class="hamburger-btn" id="menuToggle" aria-label="Open Menu">
+                        <span class="hamburger-bar"></span>
+                        <span class="hamburger-bar"></span>
+                        <span class="hamburger-bar"></span>
                     </button>
-                    <div class="menu-divider"></div>
+                    <div class="menu-dropdown" id="menuDropdown">
+                        <button class="menu-item action-item" id="menuRefreshBtn" onclick="triggerRefreshFromMenu(event)">
+                            <span id="menuRefreshIcon">🔄</span>
+                            <span id="menuRefreshText">Refresh Data</span>
+                        </button>
+                        <button class="menu-item" id="menuThemeToggleBtn" onclick="toggleColorSchemeFromMenu(event)">
+                            <span class="if-dark">☀️</span>
+                            <span class="if-dark">Light Mode</span>
+                            <span class="if-light">🌙</span>
+                            <span class="if-light">Dark Mode</span>
+                        </button>
+                        <div class="menu-divider"></div>
                     <a href="/" class="menu-item">
                         <span>🏡</span>
                         <span>Receipt Sync</span>
@@ -1381,10 +1828,11 @@
                         <span>FIRE Dashboard</span>
                     </a>
                     <div class="menu-divider"></div>
-                    <a href="#" id="updateAppLink" class="menu-item">
-                        <span>🔄</span>
-                        <span>Update App</span>
-                    </a>
+                        <a href="#" id="updateAppLink" class="menu-item">
+                            <span>🔄</span>
+                            <span>Update App</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1865,7 +2313,7 @@
                 <div class="footer-brand">ego<span>dev</span>null</div>
             </a>
             <div class="footer-copyright">
-                <span style="font-style: italic;">v2.11 · 20261111.1034</span>
+                <span style="font-style: italic;">v2.11 · 20261111.1123</span>
             </div>
             <div class="footer-copyright">
                 &copy; 2026
@@ -2298,8 +2746,8 @@
                 const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
                 const netMosLabel = (ret.netCashBufferMonths || 0) >= 999 ? '∞ mos (yield covers 100%)' : `${(ret.netCashBufferMonths || 0).toFixed(1)} mos`;
                 const liveAssumptionsHtml = `
-                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
-                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (${mosCount} Mo Scope Data):</div>
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (${mosCount} Mo Scope Data):</div>
                         <div>• Assumed Monthly Spend: <strong>${formatCurrency0(ret.avgMonthlySpending || 0)}/mo</strong> (${formatCurrency0(ret.annSpending || 0)}/yr)</div>
                         <div>• Gross Cash Buffer: <strong>${(ret.cashBufferMonths || 0).toFixed(1)} mos</strong> · Net-of-Yield Cash Runway: <strong>${netMosLabel}</strong></div>
                         <div>• Depository Cash Reserves: <strong>${formatCurrency0(ret.cashBalance || 0)}</strong> · Scoped Base: <strong>${formatCurrency0(ret.investableBase || 0)}</strong></div>
@@ -2309,8 +2757,8 @@
             } else if (metricKey === 'withdrawal_rate' && ret) {
                 const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
                 const liveAssumptionsHtml = `
-                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
-                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (${mosCount} Mo Scope Data):</div>
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Current Active Assumptions (${mosCount} Mo Scope Data):</div>
                         <div>• Annualized Total Spending: <strong>${formatCurrency0(ret.annSpending || 0)}/yr</strong> (${formatCurrency0(ret.avgMonthlySpending || 0)}/mo)</div>
                         <div>• Scoped Portfolio Base: <strong>${formatCurrency0(ret.investableBase || 0)}</strong> (Total: ${formatCurrency0(ret.totalInvestableBase || 0)} · Accessible: ${formatCurrency0(ret.accessibleBase || 0)})</div>
                         <div>• Scoped SWR: <strong>${(ret.withdrawalRatePercent || 0).toFixed(2)}%</strong> · Total SWR: <strong>${(ret.totalPortfolioSwrPercent || 0).toFixed(2)}%</strong> · Accessible Bridge SWR: <strong>${(ret.accessibleBridgeSwrPercent || 0).toFixed(2)}%</strong></div>
@@ -2322,8 +2770,8 @@
                 const realYield = ret.totalInvIncome !== undefined ? ret.totalInvIncome : ret.annInvIncome;
                 const realSpend = ret.totalSpending !== undefined ? ret.totalSpending : ret.annSpending;
                 const liveAssumptionsHtml = `
-                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
-                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Selected Scope Actuals (${mosCount} Mo):</div>
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Selected Scope Actuals (${mosCount} Mo):</div>
                         <div>• Period Investment Yield: <strong>${formatCurrency0(realYield || 0)}</strong> (Annualized: <strong>${formatCurrency0(ret.annInvIncome || 0)}/yr</strong>)</div>
                         <div>• Period Total Spending: <strong>${formatCurrency0(realSpend || 0)}</strong></div>
                         <div>• Coverage Ratio: <strong>${(ret.incomeCoveragePercent || 0).toFixed(1)}%</strong> · Annualized Yield on Base: <strong>${(ret.yieldOnInvestablePercent || 0).toFixed(2)}%</strong></div>
@@ -2334,8 +2782,8 @@
                 const pkH = formatMonthHuman(ret.maxDrawdownPeakMonth) || ret.maxDrawdownPeakMonth;
                 const trH = formatMonthHuman(ret.maxDrawdownMonth) || ret.maxDrawdownMonth;
                 const liveAssumptionsHtml = `
-                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
-                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Selected Scope Drawdown &amp; Sequence Risk:</div>
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Selected Scope Drawdown &amp; Sequence Risk:</div>
                         <div>• Max Drawdown from ATH: <strong>${(ret.maxDrawdownPercent || 0).toFixed(2)}%</strong> / <strong>${formatCurrency0(ret.maxDrawdownDollars || 0)}</strong> (${pkH} → ${trH})</div>
                         <div>• Current Distance from ATH: <strong>${(ret.currentDrawdownPercent || 0).toFixed(2)}%</strong></div>
                         <div>• Months Withdrawing at a Loss: <strong>${ret.monthsWithdrawingAtLoss ?? 0} months</strong></div>
@@ -2348,8 +2796,8 @@
                 const diffFromPeak = (kp.currentNw || 0) - (kp.peakNw || 0);
                 const diffPct = (kp.peakNw || 0) > 0 ? (diffFromPeak / kp.peakNw) * 100 : 0;
                 const liveAssumptionsHtml = `
-                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
-                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Selected Window Peak Snapshot:</div>
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Selected Window Peak Snapshot:</div>
                         <div>• Period Peak Valuation: <strong>${formatCurrency0(kp.peakNw || 0)}</strong> (${pkLabel})</div>
                         <div>• Current Valuation: <strong>${formatCurrency0(kp.currentNw || 0)}</strong> (${diffFromPeak >= -0.5 ? 'At Peak' : `${formatSignedCurrency0(diffFromPeak)} / ${diffPct.toFixed(2)}% from peak`})</div>
                     </div>
@@ -2360,8 +2808,8 @@
                 const bufMo = ret.monthlySpendBuffer35 || 0;
                 const bufYr = (ret.safeSpendAnnual35 || 0) - (ret.annSpending || 0);
                 const liveAssumptionsHtml = `
-                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
-                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Active Guardrail Benchmarks (${mosCount} Mo Scope Data):</div>
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Active Guardrail Benchmarks (${mosCount} Mo Scope Data):</div>
                         <div>• 3.5% Perpetual Safe Target: <strong>${formatCurrency0(ret.safeSpendMonthly35 || 0)}/mo</strong> (${formatCurrency0(ret.safeSpendAnnual35 || 0)}/yr)</div>
                         <div>• 4.0% Classic Target: <strong>${formatCurrency0(ret.safeSpendMonthly40 || 0)}/mo</strong> (${formatCurrency0(ret.safeSpendAnnual40 || 0)}/yr) · 5.0% Ceiling: <strong>${formatCurrency0(ret.guardrailCeilingMonthly50 || 0)}/mo</strong></div>
                         <div>• Current Actual Spend: <strong>${formatCurrency0(ret.avgMonthlySpending || 0)}/mo</strong> (${formatCurrency0(ret.annSpending || 0)}/yr)</div>
@@ -2372,8 +2820,8 @@
             } else if (metricKey === 'passive_yield_run_rate' && ret) {
                 const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
                 const liveAssumptionsHtml = `
-                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: #F9FAFB;">
-                        <div style="color: #60A5FA; font-weight: 700; margin-bottom: 0.25rem;">Active Passive Yield Run-Rate (${mosCount} Mo Scope Data):</div>
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Active Passive Yield Run-Rate (${mosCount} Mo Scope Data):</div>
                         <div>• Annualized Yield Run-Rate: <strong>${formatCurrency0(ret.avgMonthlyInvIncome || 0)}/mo</strong> (${formatCurrency0(ret.annInvIncome || 0)}/yr)</div>
                         <div>• Annualized Mix: Dividends <strong>${formatCurrency0(ret.annDividends || 0)}/yr</strong> · Interest <strong>${formatCurrency0(ret.annInterest || 0)}/yr</strong> · Cap Gains <strong>${formatCurrency0(ret.annCapGains || 0)}/yr</strong></div>
                         <div>• Portfolio Yield on Base (${formatCurrency0(ret.investableBase || 0)}): <strong>${(ret.yieldOnInvestablePercent || 0).toFixed(2)}%</strong> · Spend Coverage: <strong>${(ret.incomeCoveragePercent || 0).toFixed(1)}%</strong></div>
@@ -3400,7 +3848,7 @@
                 if (swrEl) {
                     swrEl.textContent = `${ret.withdrawalRatePercent.toFixed(2)}%`;
                     if (ret.withdrawalStatus === 'safe') swrEl.style.color = 'var(--accent-green)';
-                    else if (ret.withdrawalStatus === 'caution') swrEl.style.color = '#FBBF24';
+                    else if (ret.withdrawalStatus === 'caution') swrEl.style.color = 'var(--accent-amber)';
                     else swrEl.style.color = 'var(--accent-red)';
                 }
                 const swrBadgeEl = document.getElementById('kpiWithdrawalBadge');
@@ -3448,7 +3896,7 @@
                 if (safeTargetEl) {
                     safeTargetEl.textContent = `${formatCurrency0(ret.safeSpendMonthly35 || 0)}/mo`;
                     if (ret.withdrawalStatus === 'safe') safeTargetEl.style.color = 'var(--accent-green)';
-                    else if (ret.withdrawalStatus === 'caution') safeTargetEl.style.color = '#FBBF24';
+                    else if (ret.withdrawalStatus === 'caution') safeTargetEl.style.color = 'var(--accent-amber)';
                     else safeTargetEl.style.color = 'var(--accent-red)';
                 }
                 const safeBadgeEl = document.getElementById('kpiSafeSpendBadge');
@@ -3500,7 +3948,7 @@
                 const ddEl = document.getElementById('kpiMaxDrawdown');
                 if (ddEl) {
                     ddEl.textContent = `${ret.maxDrawdownPercent.toFixed(2)}%`;
-                    ddEl.style.color = ret.maxDrawdownPercent < -5 ? 'var(--accent-red)' : (ret.maxDrawdownPercent < 0 ? '#FBBF24' : 'var(--accent-green)');
+                    ddEl.style.color = ret.maxDrawdownPercent < -5 ? 'var(--accent-red)' : (ret.maxDrawdownPercent < 0 ? 'var(--accent-amber)' : 'var(--accent-green)');
                 }
                 const ddSubEl = document.getElementById('kpiMaxDrawdownSubtext');
                 if (ddSubEl) {
@@ -3729,6 +4177,8 @@
                 return Number(runningAth.toFixed(2));
             });
 
+            const ct = getChartThemeColors();
+
             netWorthDollarChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -3743,7 +4193,7 @@
                             fill: true,
                             tension: 0.25,
                             pointBackgroundColor: '#10B981',
-                            pointBorderColor: '#111827',
+                            pointBorderColor: ct.pointBorder,
                             pointBorderWidth: 1.5,
                             pointRadius: points.length > 50 ? 2 : (points.length > 25 ? 3 : 4),
                             pointHoverRadius: 6,
@@ -3752,7 +4202,7 @@
                         {
                             label: "Real Net Worth (Today's $)",
                             data: realTodayBalances,
-                            borderColor: '#38BDF8',
+                            borderColor: ct.skyLine,
                             backgroundColor: 'transparent',
                             borderWidth: 2,
                             borderDash: [6, 4],
@@ -3787,13 +4237,13 @@
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { color: '#9CA3AF', font: { size: 11 } }
+                            labels: { color: ct.legendColor, font: { size: 11 } }
                         },
                         tooltip: {
-                            backgroundColor: '#1E293B',
-                            titleColor: '#F9FAFB',
-                            bodyColor: '#E2E8F0',
-                            borderColor: '#374151',
+                            backgroundColor: ct.tooltipBg,
+                            titleColor: ct.tooltipTitle,
+                            bodyColor: ct.tooltipBody,
+                            borderColor: ct.tooltipBorder,
                             borderWidth: 1,
                             padding: 12,
                             displayColors: true,
@@ -3824,7 +4274,7 @@
                     scales: {
                         x: {
                             ticks: {
-                                color: '#9CA3AF',
+                                color: ct.tickColor,
                                 maxRotation: 45,
                                 minRotation: 0,
                                 autoSkip: true,
@@ -3832,19 +4282,19 @@
                                 font: { family: "'JetBrains Mono', monospace", size: 10 }
                             },
                             grid: {
-                                color: 'rgba(255, 255, 255, 0.05)'
+                                color: ct.gridXColor
                             }
                         },
                         y: {
                             ticks: {
-                                color: '#9CA3AF',
+                                color: ct.tickColor,
                                 font: { family: "'JetBrains Mono', monospace", size: 11 },
                                 callback: function (value) {
                                     return formatCompactAxisDollar(value);
                                 }
                             },
                             grid: {
-                                color: 'rgba(255, 255, 255, 0.08)'
+                                color: ct.gridYColor
                             }
                         }
                     }
@@ -3854,6 +4304,8 @@
 
         function renderInteractiveCharts(history, filteredMonths) {
             if (typeof Chart === 'undefined') return;
+
+            const ct = getChartThemeColors();
 
             // Chart 1: Net Worth Dollar Trajectory
             renderNetWorthDollarChart();
@@ -3899,11 +4351,11 @@
                                     type: 'line',
                                     label: 'Net Δ Net Worth ($)',
                                     data: history.map(h => Number((h.gain_dollars || 0).toFixed(2))),
-                                    borderColor: '#F9FAFB',
-                                    backgroundColor: 'rgba(249, 250, 251, 0.15)',
+                                    borderColor: ct.netDeltaLine,
+                                    backgroundColor: ct.netDeltaFill,
                                     borderWidth: 2.2,
-                                    pointBackgroundColor: '#F9FAFB',
-                                    pointBorderColor: '#0F172A',
+                                    pointBackgroundColor: ct.netDeltaLine,
+                                    pointBorderColor: ct.pointBorder,
                                     pointRadius: 3.5,
                                     tension: 0.2,
                                     order: 0
@@ -3941,13 +4393,13 @@
                             plugins: {
                                 legend: {
                                     display: true,
-                                    labels: { color: '#9CA3AF', font: { size: 11 } }
+                                    labels: { color: ct.legendColor, font: { size: 11 } }
                                 },
                                 tooltip: {
-                                    backgroundColor: '#1E293B',
-                                    titleColor: '#F9FAFB',
-                                    bodyColor: '#E2E8F0',
-                                    borderColor: '#374151',
+                                    backgroundColor: ct.tooltipBg,
+                                    titleColor: ct.tooltipTitle,
+                                    bodyColor: ct.tooltipBody,
+                                    borderColor: ct.tooltipBorder,
                                     borderWidth: 1,
                                     padding: 12,
                                     callbacks: {
@@ -3975,23 +4427,23 @@
                                 x: {
                                     stacked: true,
                                     ticks: {
-                                        color: '#9CA3AF',
+                                        color: ct.tickColor,
                                         maxRotation: 45,
                                         minRotation: 45,
                                         font: { family: "'JetBrains Mono', monospace", size: 11 }
                                     },
-                                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                                    grid: { color: ct.gridXColor }
                                 },
                                 y: {
                                     stacked: true,
                                     ticks: {
-                                        color: '#9CA3AF',
+                                        color: ct.tickColor,
                                         font: { family: "'JetBrains Mono', monospace", size: 11 },
                                         callback: function (value) {
                                             return formatCompactAxisDollar(value);
                                         }
                                     },
-                                    grid: { color: 'rgba(255, 255, 255, 0.08)' }
+                                    grid: { color: ct.gridYColor }
                                 }
                             }
                         }
@@ -4010,12 +4462,12 @@
                                     type: 'line',
                                     label: 'True Investment ROI (TWR %)',
                                     data: history.map(h => Number((h.twr_percent ?? h.gain_percent ?? 0).toFixed(2))),
-                                    borderColor: '#38BDF8',
-                                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                                    borderColor: ct.skyLine,
+                                    backgroundColor: ct.skyFill,
                                     borderWidth: 2,
                                     borderDash: [4, 3],
-                                    pointBackgroundColor: '#38BDF8',
-                                    pointBorderColor: '#0F172A',
+                                    pointBackgroundColor: ct.skyLine,
+                                    pointBorderColor: ct.pointBorder,
                                     pointRadius: 3,
                                     tension: 0.25,
                                     order: 0
@@ -4037,13 +4489,13 @@
                             plugins: {
                                 legend: {
                                     display: true,
-                                    labels: { color: '#9CA3AF', font: { size: 11 } }
+                                    labels: { color: ct.legendColor, font: { size: 11 } }
                                 },
                                 tooltip: {
-                                    backgroundColor: '#1E293B',
-                                    titleColor: '#F9FAFB',
-                                    bodyColor: '#E2E8F0',
-                                    borderColor: '#374151',
+                                    backgroundColor: ct.tooltipBg,
+                                    titleColor: ct.tooltipTitle,
+                                    bodyColor: ct.tooltipBody,
+                                    borderColor: ct.tooltipBorder,
                                     borderWidth: 1,
                                     padding: 12,
                                     displayColors: true,
@@ -4073,25 +4525,25 @@
                             scales: {
                                 x: {
                                     ticks: {
-                                        color: '#9CA3AF',
+                                        color: ct.tickColor,
                                         maxRotation: 45,
                                         minRotation: 45,
                                         font: { family: "'JetBrains Mono', monospace", size: 11 }
                                     },
                                     grid: {
-                                        color: 'rgba(255, 255, 255, 0.05)'
+                                        color: ct.gridXColor
                                     }
                                 },
                                 y: {
                                     ticks: {
-                                        color: '#9CA3AF',
+                                        color: ct.tickColor,
                                         font: { family: "'JetBrains Mono', monospace", size: 11 },
                                         callback: function (value) {
                                             return `${value}%`;
                                         }
                                     },
                                     grid: {
-                                        color: 'rgba(255, 255, 255, 0.08)'
+                                        color: ct.gridYColor
                                     }
                                 }
                             }
@@ -4190,7 +4642,7 @@
                                 type: 'line',
                                 label: rollingLabel,
                                 data: rollingAvgYieldSeries,
-                                borderColor: '#FBBF24',
+                                borderColor: ct.amberLine,
                                 backgroundColor: 'transparent',
                                 borderWidth: 2.3,
                                 pointRadius: 2,
@@ -4209,7 +4661,7 @@
                             {
                                 label: 'Interest',
                                 data: history.map(h => Number((h.interest || 0).toFixed(2))),
-                                backgroundColor: '#38BDF8',
+                                backgroundColor: ct.skyLine,
                                 stack: 'yield',
                                 order: 1
                             },
@@ -4229,13 +4681,13 @@
                         plugins: {
                             legend: {
                                 display: true,
-                                labels: { color: '#9CA3AF', font: { size: 11 } }
+                                labels: { color: ct.legendColor, font: { size: 11 } }
                             },
                             tooltip: {
-                                backgroundColor: '#1E293B',
-                                titleColor: '#F9FAFB',
-                                bodyColor: '#E2E8F0',
-                                borderColor: '#374151',
+                                backgroundColor: ct.tooltipBg,
+                                titleColor: ct.tooltipTitle,
+                                bodyColor: ct.tooltipBody,
+                                borderColor: ct.tooltipBorder,
                                 borderWidth: 1,
                                 padding: 12,
                                 callbacks: {
@@ -4266,23 +4718,23 @@
                             x: {
                                 stacked: true,
                                 ticks: {
-                                    color: '#9CA3AF',
+                                    color: ct.tickColor,
                                     maxRotation: 45,
                                     minRotation: 0,
                                     font: { family: "'JetBrains Mono', monospace", size: 10 }
                                 },
-                                grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                                grid: { color: ct.gridXColor }
                             },
                             y: {
                                 stacked: true,
                                 ticks: {
-                                    color: '#9CA3AF',
+                                    color: ct.tickColor,
                                     font: { family: "'JetBrains Mono', monospace", size: 11 },
                                     callback: function (value) {
                                         return formatCompactAxisDollar(value);
                                     }
                                 },
-                                grid: { color: 'rgba(255, 255, 255, 0.08)' }
+                                grid: { color: ct.gridYColor }
                             }
                         }
                     }
@@ -4347,7 +4799,7 @@
                             fill: true,
                             tension: 0.35,
                             pointBackgroundColor: '#10B981',
-                            pointBorderColor: '#1E293B',
+                            pointBorderColor: ct.pointBorderCard,
                             pointBorderWidth: 2,
                             pointRadius: 4,
                             pointHoverRadius: 7
@@ -4356,14 +4808,14 @@
                             label: 'Nominal True ROI (TWR %)',
                             yAxisID: 'y',
                             data: realSeries.map(r => Number(r.nomTwr.toFixed(2))),
-                            borderColor: '#38BDF8',
+                            borderColor: ct.skyLine,
                             backgroundColor: 'transparent',
                             borderWidth: 2,
                             borderDash: [4, 3],
                             fill: false,
                             tension: 0.35,
-                            pointBackgroundColor: '#38BDF8',
-                            pointBorderColor: '#1E293B',
+                            pointBackgroundColor: ct.skyLine,
+                            pointBorderColor: ct.pointBorderCard,
                             pointBorderWidth: 1.5,
                             pointRadius: 2.5,
                             pointHoverRadius: 5
@@ -4378,7 +4830,7 @@
                             fill: false,
                             tension: 0.35,
                             pointBackgroundColor: '#3B82F6',
-                            pointBorderColor: '#1E293B',
+                            pointBorderColor: ct.pointBorderCard,
                             pointBorderWidth: 1.5,
                             pointRadius: 3,
                             pointHoverRadius: 6
@@ -4394,7 +4846,7 @@
                             fill: false,
                             tension: 0.35,
                             pointBackgroundColor: '#F97316',
-                            pointBorderColor: '#1E293B',
+                            pointBorderColor: ct.pointBorderCard,
                             pointBorderWidth: 1.5,
                             pointRadius: 3,
                             pointHoverRadius: 5
@@ -4408,13 +4860,13 @@
                     plugins: {
                         legend: {
                             display: true,
-                            labels: { color: '#9CA3AF', font: { size: 11 } }
+                            labels: { color: ct.legendColor, font: { size: 11 } }
                         },
                         tooltip: {
-                            backgroundColor: '#1E293B',
-                            titleColor: '#F9FAFB',
-                            bodyColor: '#E2E8F0',
-                            borderColor: '#374151',
+                            backgroundColor: ct.tooltipBg,
+                            titleColor: ct.tooltipTitle,
+                            bodyColor: ct.tooltipBody,
+                            borderColor: ct.tooltipBorder,
                             borderWidth: 1,
                             padding: 12,
                             callbacks: {
@@ -4438,13 +4890,13 @@
                     scales: {
                         x: {
                             ticks: {
-                                color: '#9CA3AF',
+                                color: ct.tickColor,
                                 maxRotation: 45,
                                 minRotation: 0,
                                 font: { family: "'JetBrains Mono', monospace", size: 10 }
                             },
                             grid: {
-                                color: 'rgba(255, 255, 255, 0.05)'
+                                color: ct.gridXColor
                             }
                         },
                         y: {
@@ -4452,18 +4904,18 @@
                             title: {
                                 display: true,
                                 text: 'Cumulative Growth & Inflation (%)',
-                                color: '#9CA3AF',
+                                color: ct.legendColor,
                                 font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' }
                             },
                             ticks: {
-                                color: '#9CA3AF',
+                                color: ct.tickColor,
                                 font: { family: "'JetBrains Mono', monospace", size: 11 },
                                 callback: function (value) {
                                     return `${value}%`;
                                 }
                             },
                             grid: {
-                                color: 'rgba(255, 255, 255, 0.08)'
+                                color: ct.gridYColor
                             }
                         }
                     }
@@ -4501,7 +4953,7 @@
                             }),
                             pointBorderColor: history.map(h => {
                                 const val = Number((h.ath_change_percent ?? h.drawdown_percent ?? 0).toFixed(2));
-                                return val === 0 ? '#A7F3D0' : '#1E293B';
+                                return val === 0 ? '#A7F3D0' : ct.pointBorderCard;
                             }),
                             pointBorderWidth: 1.5,
                             pointRadius: 4,
@@ -4515,10 +4967,10 @@
                         plugins: {
                             legend: { display: false },
                             tooltip: {
-                                backgroundColor: '#1E293B',
-                                titleColor: '#F9FAFB',
-                                bodyColor: '#E2E8F0',
-                                borderColor: '#374151',
+                                backgroundColor: ct.tooltipBg,
+                                titleColor: ct.tooltipTitle,
+                                bodyColor: ct.tooltipBody,
+                                borderColor: ct.tooltipBorder,
                                 borderWidth: 1,
                                 padding: 12,
                                 displayColors: false,
@@ -4553,23 +5005,23 @@
                         scales: {
                             x: {
                                 ticks: {
-                                    color: '#9CA3AF',
+                                    color: ct.tickColor,
                                     maxRotation: 45,
                                     minRotation: 0,
                                     font: { family: "'JetBrains Mono', monospace", size: 10 }
                                 },
-                                grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                                grid: { color: ct.gridXColor }
                             },
                             y: {
                                 max: 0,
                                 ticks: {
-                                    color: '#9CA3AF',
+                                    color: ct.tickColor,
                                     font: { family: "'JetBrains Mono', monospace", size: 11 },
                                     callback: function (value) {
                                         return `${value}%`;
                                     }
                                 },
-                                grid: { color: 'rgba(255, 255, 255, 0.08)' }
+                                grid: { color: ct.gridYColor }
                             }
                         }
                     }
@@ -4658,13 +5110,13 @@
                         plugins: {
                             legend: {
                                 display: true,
-                                labels: { color: '#9CA3AF', font: { size: 11 } }
+                                labels: { color: ct.legendColor, font: { size: 11 } }
                             },
                             tooltip: {
-                                backgroundColor: '#1E293B',
-                                titleColor: '#F9FAFB',
-                                bodyColor: '#E2E8F0',
-                                borderColor: '#374151',
+                                backgroundColor: ct.tooltipBg,
+                                titleColor: ct.tooltipTitle,
+                                bodyColor: ct.tooltipBody,
+                                borderColor: ct.tooltipBorder,
                                 borderWidth: 1,
                                 padding: 12,
                                 callbacks: {
@@ -4708,24 +5160,24 @@
                             x: {
                                 stacked: true,
                                 ticks: {
-                                    color: '#9CA3AF',
+                                    color: ct.tickColor,
                                     maxRotation: 45,
                                     minRotation: 0,
                                     font: { family: "'JetBrains Mono', monospace", size: 10 }
                                 },
-                                grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                                grid: { color: ct.gridXColor }
                             },
                             y: {
                                 stacked: true,
                                 max: isPctMode ? 100 : undefined,
                                 ticks: {
-                                    color: '#9CA3AF',
+                                    color: ct.tickColor,
                                     font: { family: "'JetBrains Mono', monospace", size: 11 },
                                     callback: function (value) {
                                         return isPctMode ? `${value}%` : formatCompactAxisDollar(value);
                                     }
                                 },
-                                grid: { color: 'rgba(255, 255, 255, 0.08)' }
+                                grid: { color: ct.gridYColor }
                             }
                         }
                     }
@@ -4972,6 +5424,86 @@
             triggerRefresh();
         }
 
+        function getResolvedColorScheme() {
+            const meta = document.querySelector('meta[name="color-scheme"]');
+            const content = meta ? meta.content : 'light dark';
+            if (content === 'dark' || content === 'light') return content;
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
+        function getChartThemeColors() {
+            const isLight = getResolvedColorScheme() === 'light';
+            return {
+                isLight,
+                legendColor: isLight ? '#475569' : '#9CA3AF',
+                tickColor: isLight ? '#475569' : '#9CA3AF',
+                gridXColor: isLight ? 'rgba(15, 23, 42, 0.06)' : 'rgba(255, 255, 255, 0.05)',
+                gridYColor: isLight ? 'rgba(15, 23, 42, 0.09)' : 'rgba(255, 255, 255, 0.08)',
+                tooltipBg: isLight ? '#FFFFFF' : '#1E293B',
+                tooltipTitle: isLight ? '#0F172A' : '#F9FAFB',
+                tooltipBody: isLight ? '#334155' : '#E2E8F0',
+                tooltipBorder: isLight ? '#CBD5E1' : '#374151',
+                pointBorder: isLight ? '#FFFFFF' : '#111827',
+                pointBorderCard: isLight ? '#FFFFFF' : '#1E293B',
+                netDeltaLine: isLight ? '#0F172A' : '#F9FAFB',
+                netDeltaFill: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(249, 250, 251, 0.15)',
+                skyLine: isLight ? '#0284C7' : '#38BDF8',
+                skyFill: isLight ? 'rgba(2, 132, 199, 0.12)' : 'rgba(56, 189, 248, 0.15)',
+                amberLine: isLight ? '#D97706' : '#FBBF24'
+            };
+        }
+
+        function onColorSchemeChanged() {
+            const view = currentFilteredView || netWorthData;
+            if (view && Array.isArray(view.history) && view.history.length > 0) {
+                renderInteractiveCharts(view.history, view.filteredMonths || view.scopedMonths);
+            }
+        }
+
+        function toggleColorScheme() {
+            const meta = document.querySelector('meta[name="color-scheme"]');
+            const current = getResolvedColorScheme();
+            const target = current === 'dark' ? 'light' : 'dark';
+            const sysScheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+            try {
+                if (target !== sysScheme) {
+                    localStorage.setItem('color-scheme', target);
+                    if (meta) meta.content = target;
+                } else {
+                    localStorage.removeItem('color-scheme');
+                    if (meta) meta.content = 'light dark';
+                }
+            } catch (_) {
+                if (meta) meta.content = target !== sysScheme ? target : 'light dark';
+            }
+
+            onColorSchemeChanged();
+        }
+
+        function toggleColorSchemeFromMenu(event) {
+            if (event) event.stopPropagation();
+            document.getElementById('menuDropdown')?.classList.remove('show');
+            toggleColorScheme();
+        }
+
+        function setupColorSchemeListeners() {
+            const mql = window.matchMedia('(prefers-color-scheme: dark)');
+            mql.addEventListener('change', () => {
+                onColorSchemeChanged();
+            });
+
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'color-scheme') {
+                    const meta = document.querySelector('meta[name="color-scheme"]');
+                    if (meta) {
+                        meta.content = e.newValue ?? 'light dark';
+                    }
+                    onColorSchemeChanged();
+                }
+            });
+        }
+
         function setupStickyControlsBar() {
             const headerEl = document.querySelector('.header');
             const controlsBarEl = document.querySelector('.controls-bar');
@@ -5014,6 +5546,7 @@
 
         function initApp() {
             setupStickyControlsBar();
+            setupColorSchemeListeners();
 
             try {
                 const storedScope = localStorage.getItem(STORAGE_KEY_SCOPE);
