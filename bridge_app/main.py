@@ -4,6 +4,7 @@ import os
 import json
 import hmac
 import logging
+import re
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Form, BackgroundTasks, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse
@@ -384,6 +385,25 @@ def _read_static_html(path: str) -> str:
     content = pathlib.Path(path).read_text(encoding="utf-8")
     _STATIC_HTML_CACHE[path] = (mtime, content)
     return content
+
+
+# Single source of truth for the shared app footer: the <footer class="app-footer"> block in index.html.
+# Other pages contain the APP_FOOTER_PLACEHOLDER comment, which is swapped for that block at serve time,
+# so the footer (including the BUILD_ID) only ever needs to be edited in index.html.
+APP_FOOTER_PLACEHOLDER = "<!-- APP_FOOTER -->"
+_APP_FOOTER_SOURCE = "bridge_app/static/index.html"
+_APP_FOOTER_RE = re.compile(r'<footer class="app-footer">.*?</footer>', re.DOTALL)
+
+
+def _get_shared_footer() -> str:
+    """Extract the canonical footer markup from index.html (re-read automatically when the file changes)."""
+    match = _APP_FOOTER_RE.search(_read_static_html(_APP_FOOTER_SOURCE))
+    return match.group(0) if match else ""
+
+
+def _inject_shared_footer(html: str) -> str:
+    """Replace the footer placeholder in a page with the canonical footer from index.html."""
+    return html.replace(APP_FOOTER_PLACEHOLDER, _get_shared_footer())
 
 @app.get("/s")
 async def activate(request: Request, s: str):
@@ -4485,6 +4505,7 @@ async def fire_page(request: Request):
         "/* INIT_AUTH_STATE */", 
         f"</style><script>window.IS_AUTHENTICATED = {is_auth_str};</script><style>"
     )
+    fire_html = _inject_shared_footer(fire_html)
     
     return HTMLResponse(content=fire_html)
 
@@ -4793,6 +4814,7 @@ async def spending_page(request: Request):
         "/* INIT_AUTH_STATE */", 
         f"</style><script>window.IS_AUTHENTICATED = {is_auth_str};</script><style>"
     )
+    spending_html = _inject_shared_footer(spending_html)
     
     return HTMLResponse(content=spending_html)
 
@@ -4934,6 +4956,7 @@ async def net_worth_page(request: Request):
         "/* INIT_AUTH_STATE */",
         f"</style><script>window.IS_AUTHENTICATED = {is_auth_str};</script><style>",
     )
+    net_worth_html = _inject_shared_footer(net_worth_html)
 
     return HTMLResponse(content=net_worth_html)
 
