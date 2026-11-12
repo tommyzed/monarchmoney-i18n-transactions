@@ -1791,17 +1791,6 @@ LOADING_HTML = """
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔥</span>
                         <span>FIRE Dashboard</span>
                     </a>
-                    <div class="menu-divider"></div>
-                    <a href="intent://accounts#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Faccounts;end"
-                        target="_blank" class="deep-link-item">
-                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">💳</span>
-                        <span>Accounts</span>
-                    </a>
-                    <a href="intent://transactions?needsReview=true&needsReviewUnassigned=true&transactionVisibility=all_transactions#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%3FisPending%3Dtrue;end"
-                        target="_blank" class="deep-link-item">
-                        <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">🔍</span>
-                        <span>Needs Review</span>
-                    </a>
                     <a href="intent://transactions?isPending=true#Intent;scheme=monarchmoney;package=com.monarchmoney.mobile;S.browser_fallback_url=https%3A%2F%2Fapp.monarch.com%2Ftransactions%3FisPending%3Dtrue;end"
                         target="_blank" class="deep-link-item">
                         <span style="font-size: 1.1rem; display: inline-block; width: 20px; text-align: center;">⏳</span>
