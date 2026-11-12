@@ -64,6 +64,6 @@ def test_api_png_endpoint_requires_authentication():
     assert response.status_code == 404
 
     # Public static asset ending in .png (not under /api/) remains accessible
-    logo_response = client.get("/logo.png")
+    logo_response = client.get("/logo-v2.png")
     assert logo_response.status_code == 200
 

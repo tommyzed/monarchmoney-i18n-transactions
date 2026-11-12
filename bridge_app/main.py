@@ -404,8 +404,8 @@ async def activate(request: Request, s: str):
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <link rel="manifest" href="/manifest.json">
-            <link rel="icon" type="image/png" href="/logo.png">
-            <link rel="apple-touch-icon" href="/logo.png">
+            <link rel="icon" type="image/png" href="/logo-v2.png">
+            <link rel="apple-touch-icon" href="/logo-v2.png">
             <style>
                 body { font-family: sans-serif; text-align: center; padding: 2rem; background: #f0fdf4; color: #166534; }
                 .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
@@ -1150,8 +1150,8 @@ LOADING_HTML = """
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="manifest" href="/manifest.json">
-        <link rel="icon" type="image/png" href="/logo.png">
-        <link rel="apple-touch-icon" href="/logo.png">
+        <link rel="icon" type="image/png" href="/logo-v2.png">
+        <link rel="apple-touch-icon" href="/logo-v2.png">
         <title>💶 Monarch Money Bridge</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

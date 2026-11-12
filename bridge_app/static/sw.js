@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mm-bridge-static-v1';
+const CACHE_NAME = 'mm-bridge-static-v2';
 
 const STATIC_ASSET_PATTERN = /\.(?:png|gif|ico|svg|webp|woff2?)$/i;
 const CDN_HOSTS = new Set([
