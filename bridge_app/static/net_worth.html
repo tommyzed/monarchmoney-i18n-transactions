@@ -1883,175 +1883,292 @@
             <span id="statusBannerText">Syncing Net Worth snapshots from Monarch Money...</span>
         </div>
 
-        <!-- Section 3.2: KPI Summary Cards -->
-        <div class="kpi-rows-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <!-- Row 1: Total Portfolio, Total Dollar Gain, Annualized Net Growth, Investment ROI (TWR) -->
-            <section class="kpi-grid" aria-label="Core Performance KPIs">
-                <!-- Card 1: Total Portfolio -->
-                <div class="kpi-card accent-blue">
-                    <div class="kpi-header">
-                        <div class="kpi-label" id="kpiCurrentNetWorthLabel">Total Portfolio</div>
-                        <button type="button" class="kpi-info-btn" aria-label="Info about Total Portfolio"
-                            onclick="openKpiModal('current_net_worth', event)"
-                            title="How Total Portfolio is calculated &amp; how to use it">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                        </button>
+        <!-- Section 3.2: Portfolio Overview KPI Summary Cards -->
+        <section class="kpi-section-block" aria-label="Portfolio Overview">
+            <div class="kpi-section-header">
+                <h2 class="kpi-section-title">💰 Portfolio Overview</h2>
+            </div>
+            <div class="kpi-rows-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <!-- Row 1: Total Portfolio, Total Dollar Gain, Annualized Net Growth -->
+                <div class="kpi-grid" aria-label="Core Performance KPIs">
+                    <!-- Card 1: Total Portfolio -->
+                    <div class="kpi-card accent-blue">
+                        <div class="kpi-header">
+                            <div class="kpi-label" id="kpiCurrentNetWorthLabel">Total Portfolio</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Total Portfolio"
+                                onclick="openKpiModal('current_net_worth', event)"
+                                title="How Total Portfolio is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiCurrentNetWorth">$0</div>
+                        <div class="kpi-subtext" id="kpiStartingSubtext">Starting: $0</div>
                     </div>
-                    <div class="kpi-value" id="kpiCurrentNetWorth">$0</div>
-                    <div class="kpi-subtext" id="kpiStartingSubtext">Starting: $0</div>
+
+                    <!-- Card 2: Total Dollar Gain -->
+                    <div class="kpi-card accent-green">
+                        <div class="kpi-header">
+                            <div class="kpi-label">Total Dollar Gain</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Total Dollar Gain"
+                                onclick="openKpiModal('total_dollar_gain', event)"
+                                title="How Total Dollar Gain is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiTotalDollarGain">+$0</div>
+                        <div class="kpi-subtext">
+                            <span id="kpiTotalSinceLabel">since Jan 1, 2024</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Annualized Net Growth -->
+                    <div class="kpi-card accent-amber">
+                        <div class="kpi-header">
+                            <div class="kpi-label">Annualized Net Growth</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Annualized Net Growth"
+                                onclick="openKpiModal('annualized_gain', event)"
+                                title="How Annualized Net Growth is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiAnnualizedGain">+0.00%</div>
+                        <div class="kpi-subtext">
+                            <span class="trend-pill trend-positive" id="kpiTotalPctPill">+0.00% cum.</span>
+                            <span>Ann. · Includes flows</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Card 2: Total Dollar Gain -->
-                <div class="kpi-card accent-green">
-                    <div class="kpi-header">
-                        <div class="kpi-label">Total Dollar Gain</div>
-                        <button type="button" class="kpi-info-btn" aria-label="Info about Total Dollar Gain"
-                            onclick="openKpiModal('total_dollar_gain', event)"
-                            title="How Total Dollar Gain is calculated &amp; how to use it">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                        </button>
+                <!-- Row 2: Period Peak, Best Month, Worst Month, Max Drawdown -->
+                <div class="kpi-grid" aria-label="Milestones and Volatility KPIs">
+                    <!-- Card 4: Period Peak -->
+                    <div class="kpi-card accent-purple">
+                        <div class="kpi-header">
+                            <div class="kpi-label">Period Peak</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Period Peak"
+                                onclick="openKpiModal('period_peak', event)"
+                                title="How Period Peak is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiPeakNetWorth">$0</div>
+                        <div class="kpi-subtext" id="kpiPeakMonthSubtext">Reached in —</div>
                     </div>
-                    <div class="kpi-value" id="kpiTotalDollarGain">+$0</div>
-                    <div class="kpi-subtext">
-                        <span id="kpiTotalSinceLabel">since Jan 1, 2024</span>
+
+                    <!-- Card 5: Best Month -->
+                    <div class="kpi-card accent-emerald">
+                        <div class="kpi-header">
+                            <div class="kpi-label" id="kpiBestPeriodLabel">Best Month</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Best Month"
+                                onclick="openKpiModal('best_month', event)"
+                                title="How Best Month is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiBestMonthGain" style="color: var(--accent-green);">+0.00%</div>
+                        <div class="kpi-subtext" id="kpiBestMonthSubtext">Recorded in —</div>
+                    </div>
+
+                    <!-- Card 6: Worst Month -->
+                    <div class="kpi-card accent-red">
+                        <div class="kpi-header">
+                            <div class="kpi-label" id="kpiWorstPeriodLabel">Worst Month</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Worst Month"
+                                onclick="openKpiModal('worst_month', event)"
+                                title="How Worst Month is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiWorstMonthGain" style="color: var(--accent-red);">-0.00%</div>
+                        <div class="kpi-subtext" id="kpiWorstMonthSubtext">Recorded in —</div>
+                    </div>
+
+                    <!-- Card 7: Max Drawdown -->
+                    <div class="kpi-card accent-red">
+                        <div class="kpi-header">
+                            <div class="kpi-label">Max Drawdown</div>
+                            <button type="button" class="kpi-info-btn"
+                                aria-label="Info about Max Drawdown and Sequence Risk"
+                                onclick="openKpiModal('max_drawdown', event)"
+                                title="How Max Drawdown &amp; Sequence Risk is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiMaxDrawdown" style="color: var(--accent-green);">0.00%</div>
+                        <div class="kpi-subtext" id="kpiMaxDrawdownSubtext">No drawdown</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3.2a: Dedicated Investments Section -->
+        <section class="kpi-section-block" aria-label="Investments">
+            <div class="kpi-section-header">
+                <h2 class="kpi-section-title">📈 Investments</h2>
+            </div>
+            <div class="kpi-rows-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <!-- Investments Row 1: Total Investments, Pure Investment Return ($), Annualized Investment ROI (TWR), Real Investment ROI -->
+                <div class="kpi-grid" aria-label="Investments Core KPIs">
+                    <!-- Inv Card 1: Total Investments -->
+                    <div class="kpi-card accent-blue">
+                        <div class="kpi-header">
+                            <div class="kpi-label" id="kpiTotalInvestmentsLabel">Total Investments</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Total Investments"
+                                onclick="openKpiModal('total_investments', event)"
+                                title="How Total Investments is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiTotalInvestments">$0</div>
+                        <div class="kpi-subtext" id="kpiInvestmentsStartingSubtext">Starting: $0</div>
+                    </div>
+
+                    <!-- Inv Card 2: Pure Investment Return ($) -->
+                    <div class="kpi-card accent-green">
+                        <div class="kpi-header">
+                            <div class="kpi-label">Pure Investment Return ($)</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Pure Investment Return"
+                                onclick="openKpiModal('pure_inv_return', event)"
+                                title="How Pure Investment Return is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiPureInvReturn">+$0</div>
+                        <div class="kpi-subtext" id="kpiPureInvReturnSubtext">+$0 price Δ · +$0 yield</div>
+                    </div>
+
+                    <!-- Inv Card 3: Annualized Investment ROI (TWR) -->
+                    <div class="kpi-card accent-emerald">
+                        <div class="kpi-header">
+                            <div class="kpi-label">Annualized Investment ROI (TWR)</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Investment ROI (TWR)"
+                                onclick="openKpiModal('twr_roi', event)"
+                                title="How True Investment ROI (TWR) is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiTwrAnnualized">+0.00%</div>
+                        <div class="kpi-subtext">
+                            <span class="trend-pill trend-positive" id="kpiTwrTotalPill">+0.00% cum.</span>
+                            <span>Ann. · Excludes flows</span>
+                        </div>
+                    </div>
+
+                    <!-- Inv Card 4: Real Investment ROI (After CPI) -->
+                    <div class="kpi-card accent-blue">
+                        <div class="kpi-header">
+                            <div class="kpi-label">Real Investment ROI (After CPI)</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Real Investment ROI"
+                                onclick="openKpiModal('real_twr_roi', event)"
+                                title="How Real Investment ROI (After CPI) is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiRealTwrAnnualized">+0.00%</div>
+                        <div class="kpi-subtext">
+                            <span class="trend-pill trend-positive" id="kpiRealTwrTotalPill">+0.00% real cum.</span>
+                            <span id="kpiRealTwrCpiSubtext">CPI +0.0%/yr</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Card 3: Annualized Net Growth -->
-                <div class="kpi-card accent-amber">
-                    <div class="kpi-header">
-                        <div class="kpi-label">Annualized Net Growth</div>
-                        <button type="button" class="kpi-info-btn" aria-label="Info about Annualized Net Growth"
-                            onclick="openKpiModal('annualized_gain', event)"
-                            title="How Annualized Net Growth is calculated &amp; how to use it">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                        </button>
+                <!-- Investments Row 2: Period Passive Yield ($), Taxable vs. Retirement Mix -->
+                <div class="kpi-grid" aria-label="Investments Yield and Mix KPIs">
+                    <!-- Inv Card 5: Period Passive Yield ($) -->
+                    <div class="kpi-card accent-amber">
+                        <div class="kpi-header">
+                            <div class="kpi-label">Period Passive Yield ($)</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Period Passive Yield"
+                                onclick="openKpiModal('period_passive_yield', event)"
+                                title="How Period Passive Yield is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiPeriodPassiveYield">$0</div>
+                        <div class="kpi-subtext" id="kpiPeriodPassiveYieldSubtext">$0 Div · $0 Int</div>
                     </div>
-                    <div class="kpi-value" id="kpiAnnualizedGain">+0.00%</div>
-                    <div class="kpi-subtext">
-                        <span class="trend-pill trend-positive" id="kpiTotalPctPill">+0.00% cum.</span>
-                        <span>Ann. · Includes flows</span>
-                    </div>
-                </div>
 
-                <!-- Card 4: Investment ROI (TWR) -->
-                <div class="kpi-card accent-emerald">
-                    <div class="kpi-header">
-                        <div class="kpi-label">Annualized Investment ROI (TWR)</div>
-                        <button type="button" class="kpi-info-btn" aria-label="Info about Investment ROI (TWR)"
-                            onclick="openKpiModal('twr_roi', event)"
-                            title="How True Investment ROI (TWR) is calculated &amp; how to use it">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="kpi-value" id="kpiTwrAnnualized">+0.00%</div>
-                    <div class="kpi-subtext">
-                        <span class="trend-pill trend-positive" id="kpiTwrTotalPill">+0.00% cum.</span>
-                        <span>Ann. · Excludes flows</span>
+                    <!-- Inv Card 7: Taxable vs. Retirement Mix -->
+                    <div class="kpi-card accent-purple">
+                        <div class="kpi-header">
+                            <div class="kpi-label">Taxable vs. Retirement Mix</div>
+                            <button type="button" class="kpi-info-btn" aria-label="Info about Taxable vs. Retirement Mix"
+                                onclick="openKpiModal('investments_mix', event)"
+                                title="How Taxable vs. Retirement Mix is calculated &amp; how to use it">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kpi-value" id="kpiInvestmentsMix">0% / 0%</div>
+                        <div class="kpi-subtext" id="kpiInvestmentsMixSubtext">$0 Tax. · $0 Ret.</div>
                     </div>
                 </div>
-            </section>
-
-            <!-- Row 2: Period Peak, Best Month, Worst Month, Max Drawdown -->
-            <section class="kpi-grid" aria-label="Milestones and Volatility KPIs">
-                <!-- Card 5: Period Peak -->
-                <div class="kpi-card accent-purple">
-                    <div class="kpi-header">
-                        <div class="kpi-label">Period Peak</div>
-                        <button type="button" class="kpi-info-btn" aria-label="Info about Period Peak"
-                            onclick="openKpiModal('period_peak', event)"
-                            title="How Period Peak is calculated &amp; how to use it">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="kpi-value" id="kpiPeakNetWorth">$0</div>
-                    <div class="kpi-subtext" id="kpiPeakMonthSubtext">Reached in —</div>
-                </div>
-
-                <!-- Card 6: Best Month -->
-                <div class="kpi-card accent-emerald">
-                    <div class="kpi-header">
-                        <div class="kpi-label" id="kpiBestPeriodLabel">Best Month</div>
-                        <button type="button" class="kpi-info-btn" aria-label="Info about Best Month"
-                            onclick="openKpiModal('best_month', event)"
-                            title="How Best Month is calculated &amp; how to use it">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="kpi-value" id="kpiBestMonthGain" style="color: var(--accent-green);">+0.00%</div>
-                    <div class="kpi-subtext" id="kpiBestMonthSubtext">Recorded in —</div>
-                </div>
-
-                <!-- Card 7: Worst Month -->
-                <div class="kpi-card accent-red">
-                    <div class="kpi-header">
-                        <div class="kpi-label" id="kpiWorstPeriodLabel">Worst Month</div>
-                        <button type="button" class="kpi-info-btn" aria-label="Info about Worst Month"
-                            onclick="openKpiModal('worst_month', event)"
-                            title="How Worst Month is calculated &amp; how to use it">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="kpi-value" id="kpiWorstMonthGain" style="color: var(--accent-red);">-0.00%</div>
-                    <div class="kpi-subtext" id="kpiWorstMonthSubtext">Recorded in —</div>
-                </div>
-
-                <!-- Card 8: Max Drawdown -->
-                <div class="kpi-card accent-red">
-                    <div class="kpi-header">
-                        <div class="kpi-label">Max Drawdown</div>
-                        <button type="button" class="kpi-info-btn"
-                            aria-label="Info about Max Drawdown and Sequence Risk"
-                            onclick="openKpiModal('max_drawdown', event)"
-                            title="How Max Drawdown &amp; Sequence Risk is calculated &amp; how to use it">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="kpi-value" id="kpiMaxDrawdown" style="color: var(--accent-green);">0.00%</div>
-                    <div class="kpi-subtext" id="kpiMaxDrawdownSubtext">No drawdown</div>
-                </div>
-            </section>
-        </div>
+            </div>
+        </section>
 
         <!-- Section 3.2b: Row 3 (new) - Sustainability -->
         <section class="kpi-section-block" aria-label="Retirement and Sustainability">
@@ -2713,6 +2830,92 @@
                         <li>Watch the <strong>Portfolio Yield %</strong> and <strong>Covers XX% of spend</strong> subtext as you shift from growth equities toward dividend/fixed-income assets over time.</li>
                     </ul>
                 `
+            },
+            total_investments: {
+                icon: '📈',
+                title: 'Total Investments',
+                calc: `
+                    <p>Your latest balance across investment accounts for the selected <strong>Scope</strong>, excluding cash/depository accounts and non-investment assets:</p>
+                    <div class="kpi-formula-box">Total Investments = Σ (Scoped Brokerage &amp; Retirement Account Balances)</div>
+                    <ul>
+                        <li><strong>Total Portfolio Scope:</strong> Sum of all taxable brokerage and tax-advantaged retirement accounts (401k, IRA, Roth, HSA, 529).</li>
+                        <li><strong>Taxable / Accessible Scope:</strong> Non-retirement taxable brokerage accounts only (excludes bank cash).</li>
+                        <li><strong>Retirement Scope:</strong> Tax-advantaged retirement accounts only.</li>
+                        <li>The subtext shows the opening investment balance for the active <strong>Period</strong> and the percentage of your portfolio currently invested.</li>
+                    </ul>
+                `,
+                usage: `
+                    <p>Isolates your productive market-invested capital from cash reserves and illiquid assets:</p>
+                    <ul>
+                        <li>Compare against <strong>Total Portfolio</strong> to see how much capital is working in equities/funds versus sitting in depository cash.</li>
+                        <li>Switch <strong>Scope</strong> to verify how much invested capital sits in taxable accounts for early-retirement bridging versus locked retirement accounts.</li>
+                    </ul>
+                `
+            },
+            real_twr_roi: {
+                icon: '🛡️',
+                title: 'Real Investment ROI (After CPI)',
+                calc: `
+                    <p>Deflates your cash-flow-adjusted <strong>True Investment ROI (TWR)</strong> by official U.S. BLS CPI-U consumer price inflation over the exact same window using the Fisher equation:</p>
+                    <div class="kpi-formula-box">Real Cumulative TWR = [ (1 + Nominal TWR) ÷ (CPI_end ÷ CPI_start) − 1 ] × 100<br>Real Annualized ROI = [ (1 + Real Cumulative TWR)^(12 ÷ N) − 1 ] × 100</div>
+                    <p>Measures true purchasing-power compounding independent of deposits, living spending, and currency inflation.</p>
+                `,
+                usage: `
+                    <p>The single most honest yardstick for long-term wealth preservation and FIRE readiness:</p>
+                    <ul>
+                        <li><strong>&gt; +4% real/yr:</strong> Strongly outpacing inflation—your portfolio can comfortably support a 3.5%–4.0% real withdrawal rate while growing purchasing power.</li>
+                        <li><strong>0% to +4% real/yr:</strong> Modest real expansion; stay disciplined on spending guardrails.</li>
+                        <li><strong>Negative:</strong> Inflation exceeded nominal investment returns during this window (common during short bear markets or inflation spikes).</li>
+                    </ul>
+                `
+            },
+            pure_inv_return: {
+                icon: '⚖️',
+                title: 'Pure Investment Return ($)',
+                calc: `
+                    <p>Sums your monthly investment earnings in dollars across the selected <strong>Period</strong>, stripping out external cash flows (salary deposits or living withdrawals):</p>
+                    <div class="kpi-formula-box">Pure Investment Return $ = Σ (ΔNW − Net External Flow)<br>= Market Price Appreciation $ + Passive Yield $</div>
+                    <p>The subtext breaks that total into <strong>Market Price Δ</strong> (capital gains/losses) and <strong>Passive Yield</strong> (dividends, interest, and realized distributions).</p>
+                `,
+                usage: `
+                    <p>Answers: <em>"How many actual dollars did my portfolio earn organically over this window?"</em></p>
+                    <ul>
+                        <li>Unlike <strong>Total Dollar Gain</strong>, living off your portfolio doesn't penalize this number—even if your balance fell due to withdrawals, Pure Return shows what the market paid you.</li>
+                        <li>Compare <strong>Price Δ</strong> vs. <strong>Yield</strong> to see how much of your dollar return came from cash distributions versus price appreciation.</li>
+                    </ul>
+                `
+            },
+            period_passive_yield: {
+                icon: '🪙',
+                title: 'Period Passive Yield ($)',
+                calc: `
+                    <p>Total realized passive cash income recorded across the selected <strong>Period</strong> in Monarch Money under <em>Dividends</em>, <em>Interest</em>, and <em>Capital Gains</em> distributions:</p>
+                    <div class="kpi-formula-box">Period Passive Yield $ = Σ Dividends + Σ Interest + Σ Capital Gains Distributions</div>
+                    <p>Reflects actual un-annualized dollars received during the chosen window (unlike the annualized run-rate card in Sustainability).</p>
+                `,
+                usage: `
+                    <p>Tracks tangible cash distributions generated by your portfolio over the active timeframe:</p>
+                    <ul>
+                        <li>Use alongside <strong>Passive Yield Run-Rate</strong> (Sustainability) to inspect actual cumulative cash received in YTD, Trailing 12M, or All-Time views.</li>
+                        <li>Watch the mix of <strong>Dividends</strong> vs. <strong>Interest</strong> to gauge cash-yield vs. equity-yield contributions.</li>
+                    </ul>
+                `
+            },
+            investments_mix: {
+                icon: '🗂️',
+                title: 'Taxable vs. Retirement Mix',
+                calc: `
+                    <p>Splits your total investment accounts into accessible <strong>Taxable Brokerage</strong> versus tax-advantaged <strong>Retirement Accounts</strong> (401k, IRA, Roth, HSA, 529):</p>
+                    <div class="kpi-formula-box">Taxable Share % = Taxable Brokerage ÷ (Taxable Brokerage + Retirement) × 100<br>Retirement Share % = 100% − Taxable Share %</div>
+                    <p>Computed from your latest monthly account-type breakdown (excludes depository cash and non-investment assets).</p>
+                `,
+                usage: `
+                    <p>Guides tax-location strategy and early-retirement withdrawal sequencing:</p>
+                    <ul>
+                        <li><strong>Early Retirement (Age &lt; 59½):</strong> Ensure your <strong>Taxable</strong> bucket (plus cash buffer) can bridge living expenses until penalty-free retirement account access or Roth conversion ladders mature.</li>
+                        <li><strong>Asset Location:</strong> Favor tax-inefficient income assets inside tax-advantaged retirement accounts and broad low-turnover ETFs in taxable brokerage.</li>
+                    </ul>
+                `
             }
         };
 
@@ -2731,6 +2934,7 @@
 
             let calcHtml = info.calc || '';
             const ret = currentFilteredView?.retirement || netWorthData?.retirement;
+            const inv = currentFilteredView?.investments || netWorthData?.investments;
             if (metricKey === 'cash_buffer' && ret) {
                 const mosCount = Number(ret.coveredMonths || ret.trailingMonthsUsed || 12).toFixed(1).replace(/\.0$/, '');
                 const netMosLabel = (ret.netCashBufferMonths || 0) >= 999 ? '∞ mos (yield covers 100%)' : `${(ret.netCashBufferMonths || 0).toFixed(1)} mos`;
@@ -2814,6 +3018,53 @@
                         <div>• Annualized Yield Run-Rate: <strong>${formatCurrency0(ret.avgMonthlyInvIncome || 0)}/mo</strong> (${formatCurrency0(ret.annInvIncome || 0)}/yr)</div>
                         <div>• Annualized Mix: Dividends <strong>${formatCurrency0(ret.annDividends || 0)}/yr</strong> · Interest <strong>${formatCurrency0(ret.annInterest || 0)}/yr</strong> · Cap Gains <strong>${formatCurrency0(ret.annCapGains || 0)}/yr</strong></div>
                         <div>• Portfolio Yield on Base (${formatCurrency0(ret.investableBase || 0)}): <strong>${(ret.yieldOnInvestablePercent || 0).toFixed(2)}%</strong> · Spend Coverage: <strong>${(ret.incomeCoveragePercent || 0).toFixed(1)}%</strong></div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'total_investments' && inv) {
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Selected Scope Investment Balance:</div>
+                        <div>• Ending Investments: <strong>${formatCurrency0(inv.currentInvestments || 0)}</strong> (Starting: <strong>${formatCurrency0(inv.startingInvestments || 0)}</strong>)</div>
+                        <div>• Portfolio Share: <strong>${(inv.sharePercent || 0).toFixed(1)}%</strong> · Depository Cash: <strong>${formatCurrency0(ret?.cashBalance || 0)}</strong></div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'real_twr_roi' && inv) {
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Inflation-Adjusted TWR Breakdown:</div>
+                        <div>• Nominal TWR: <strong>${formatSignedPct(ret?.twrAnnualizedPercent || 0, 2)}/yr</strong> (${formatSignedPct(ret?.twrTotalPercent || 0, 2)} cum.)</div>
+                        <div>• US CPI Inflation: <strong>${formatSignedPct(inv.cpiAnnualizedPercent || 0, 2)}/yr</strong> (${formatSignedPct(inv.cpiCumPercent || 0, 2)} cum.)</div>
+                        <div>• Real TWR (After CPI): <strong>${formatSignedPct(inv.realTwrAnnualizedPercent || 0, 2)}/yr</strong> (${formatSignedPct(inv.realTwrTotalPercent || 0, 2)} cum.)</div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'pure_inv_return' && inv) {
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Selected Period Return Decomposition:</div>
+                        <div>• Pure Investment Return: <strong>${formatSignedCurrency0(inv.totalReturnDollars || 0)}</strong></div>
+                        <div>• Market Price Appreciation: <strong>${formatSignedCurrency0(inv.totalPriceChangeDollars || 0)}</strong> · Passive Yield: <strong>${formatSignedCurrency0(inv.totalInvIncome || 0)}</strong></div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'period_passive_yield' && inv) {
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Selected Period Realized Yield:</div>
+                        <div>• Total Period Yield: <strong>${formatCurrency0(inv.totalInvIncome || 0)}</strong> (<strong>${(inv.periodYieldPercent || 0).toFixed(2)}%</strong> of current investments)</div>
+                        <div>• Dividends: <strong>${formatCurrency0(inv.totalDividends || 0)}</strong> · Interest: <strong>${formatCurrency0(inv.totalInterest || 0)}</strong> · Cap Gains: <strong>${formatCurrency0(inv.totalCapGains || 0)}</strong></div>
+                    </div>
+                `;
+                calcHtml = liveAssumptionsHtml + calcHtml;
+            } else if (metricKey === 'investments_mix' && inv) {
+                const liveAssumptionsHtml = `
+                    <div class="kpi-formula-box" style="margin-bottom: 0.65rem; border-color: rgba(96, 165, 250, 0.45); color: var(--text-main);">
+                        <div style="color: var(--accent-blue-text); font-weight: 700; margin-bottom: 0.25rem;">Current Account-Type Allocation:</div>
+                        <div>• Taxable Brokerage: <strong>${formatCurrency0(inv.taxableBrokerageBal || 0)}</strong> (<strong>${(inv.taxableMixPercent || 0).toFixed(1)}%</strong>)</div>
+                        <div>• Retirement Accounts: <strong>${formatCurrency0(inv.retirementOnlyBal || 0)}</strong> (<strong>${(inv.retirementMixPercent || 0).toFixed(1)}%</strong>)</div>
+                        <div>• Total Investments: <strong>${formatCurrency0((inv.taxableBrokerageBal || 0) + (inv.retirementOnlyBal || 0))}</strong> · Cash Reserves: <strong>${formatCurrency0(ret?.cashBalance || 0)}</strong></div>
                     </div>
                 `;
                 calcHtml = liveAssumptionsHtml + calcHtml;
@@ -3109,6 +3360,17 @@
             return (months.length - 1) + lastFraction;
         }
 
+        function getPrevMonthKey(monthStr) {
+            const raw = String(monthStr || '').slice(0, 7);
+            const [yrStr, moStr] = raw.split('-');
+            const yr = parseInt(yrStr, 10);
+            const mo = parseInt(moStr, 10);
+            if (!yr || !mo) return raw;
+            const prevMo = mo === 1 ? 12 : (mo - 1);
+            const prevYr = mo === 1 ? (yr - 1) : yr;
+            return `${prevYr}-${String(prevMo).padStart(2, '0')}`;
+        }
+
         function computeFilteredView(rawHistory, retirementAnalytics, scope, startPeriod, granularity) {
             const normScope = (!scope || scope === 'all' || scope === 'investable' || scope === 'liquid') ? 'total' : scope;
             const sortedRaw = [...(rawHistory || [])].sort((a, b) => String(a.month).localeCompare(String(b.month)));
@@ -3118,7 +3380,8 @@
             );
 
             // Step 1: Map each month to the selected scope
-            const scopedMonths = sortedRaw.map(item => {
+            let prevInvEnd = null;
+            const scopedMonths = sortedRaw.map((item, idx) => {
                 const interest = Number(item.interest ?? 0);
                 const dividends = Number(item.dividends ?? 0);
                 const capitalGains = Number(item.capital_gains ?? 0);
@@ -3159,6 +3422,31 @@
                     twrPercent = startNw !== 0 ? (gainDollars / startNw) * 100 : 0;
                 }
 
+                // Track pure investment-account balances (excludes depository cash & non-investment assets)
+                const bt = item.balances_by_type || {};
+                const rawBrokerage = bt.brokerage !== undefined
+                    ? Number(bt.brokerage)
+                    : (Number(bt.taxable_brokerage || 0) + Number(bt.retirement || 0));
+                const rawTaxableInv = Number(bt.taxable_brokerage ?? 0);
+                const rawRetInv = bt.retirement !== undefined
+                    ? Number(bt.retirement)
+                    : Number(item.retirement_end_balance ?? 0);
+                const invEnd = normScope === 'taxable'
+                    ? rawTaxableInv
+                    : (normScope === 'retirement' ? rawRetInv : rawBrokerage);
+
+                const rawStartBal = Number(item.start_balance ?? item.start_nw ?? 0);
+                const rawEndBal = Number(item.end_balance ?? item.end_nw ?? 0);
+                let invStart = invEnd;
+                if (idx > 0 && prevInvEnd !== null) {
+                    invStart = prevInvEnd;
+                } else if (normScope === 'retirement' && item.retirement_start_balance !== undefined) {
+                    invStart = Number(item.retirement_start_balance);
+                } else if (rawEndBal > 0) {
+                    invStart = invEnd * (rawStartBal / rawEndBal);
+                }
+                prevInvEnd = invEnd;
+
                 const gainPercent = startNw !== 0 ? (gainDollars / startNw) * 100 : 0;
 
                 return {
@@ -3167,6 +3455,8 @@
                     period: item.month || '',
                     start_nw: startNw,
                     end_nw: endNw,
+                    inv_start: invStart,
+                    inv_end: invEnd,
                     gain_dollars: gainDollars,
                     gain_percent: gainPercent,
                     interest,
@@ -3179,7 +3469,7 @@
                     total_return_dollars: totalReturnDollars,
                     price_change_dollars: priceChangeDollars,
                     twr_percent: twrPercent,
-                    balances_by_type: item.balances_by_type || {},
+                    balances_by_type: bt,
                     end_date: item.end_date || ''
                 };
             });
@@ -3550,6 +3840,51 @@
                 0
             );
 
+            // Dedicated Investments Section Metrics
+            const fallbackInvCurrent = normScope === 'taxable'
+                ? taxableBrokerageBal
+                : (normScope === 'retirement' ? retirementOnlyBase : invBal);
+            const rawLastInvEnd = lastItem ? Number(lastItem.inv_end || 0) : 0;
+            const currentInvestments = rawLastInvEnd > 0 ? rawLastInvEnd : fallbackInvCurrent;
+            const startingInvestments = firstItem ? Number(firstItem.inv_start || 0) : 0;
+            const investmentsDollarGain = currentInvestments - startingInvestments;
+            const investmentsPctGain = startingInvestments !== 0
+                ? (investmentsDollarGain / startingInvestments) * 100
+                : 0;
+
+            const totalPortfolioEndBal = lastItem ? Number(lastItem.end_balance ?? lastItem.end_nw ?? currentNw) : currentNw;
+            const shareDenom = normScope === 'retirement' ? totalPortfolioEndBal : currentNw;
+            const invSharePercent = shareDenom > 0 ? (currentInvestments / shareDenom) * 100 : 0;
+
+            const periodTotalReturnDollars = filteredMonths.reduce((s, m) => s + Number(m.total_return_dollars || 0), 0);
+            const periodPriceChangeDollars = filteredMonths.reduce((s, m) => s + Number(m.price_change_dollars || 0), 0);
+            const periodInvIncome = filteredMonths.reduce((s, m) => s + Number(m.inv_income || 0), 0);
+            const periodInterest = filteredMonths.reduce((s, m) => s + Number(m.interest || 0), 0);
+            const periodDividends = filteredMonths.reduce((s, m) => s + Number(m.dividends || 0), 0);
+            const periodCapGains = filteredMonths.reduce((s, m) => s + Number(m.capital_gains || 0), 0);
+            const periodYieldPercent = currentInvestments > 0 ? (periodInvIncome / currentInvestments) * 100 : 0;
+
+            // Real Investment ROI (After US CPI) over exact filteredMonths span
+            const startCpiKey = firstItem ? getPrevMonthKey(firstItem.month) : '';
+            const endCpiKey = lastItem ? String(lastItem.month || '').slice(0, 7) : '';
+            const startCpi = startCpiKey ? getUsCpiForMonth(startCpiKey) : 308.417;
+            const endCpi = endCpiKey ? getUsCpiForMonth(endCpiKey) : startCpi;
+            const cpiFactor = startCpi > 0 ? (endCpi / startCpi) : 1;
+            const cpiCumPercent = (cpiFactor - 1) * 100;
+            const cpiAnnualizedPercent = (monthsCount > 0 && cpiFactor > 0)
+                ? (Math.pow(cpiFactor, 12 / monthsCount) - 1) * 100
+                : 0;
+            const realTwrTotalPercent = cpiFactor > 0
+                ? (((1 + twrTotalPercent / 100) / cpiFactor) - 1) * 100
+                : twrTotalPercent;
+            const realTwrAnnualizedPercent = (monthsCount > 0 && (1 + realTwrTotalPercent / 100) > 0)
+                ? (Math.pow(1 + realTwrTotalPercent / 100, 12 / monthsCount) - 1) * 100
+                : 0;
+
+            const totalInvMix = taxableBrokerageBal + retirementOnlyBase;
+            const taxableMixPercent = totalInvMix > 0 ? (taxableBrokerageBal / totalInvMix) * 100 : 0;
+            const retirementMixPercent = totalInvMix > 0 ? (retirementOnlyBase / totalInvMix) * 100 : 0;
+
             return {
                 scope,
                 startPeriod,
@@ -3575,6 +3910,30 @@
                     annualizedGain,
                     avgMonthlyGain,
                     sinceMonth: firstItem ? firstItem.month : '2024-01'
+                },
+                investments: {
+                    currentInvestments,
+                    startingInvestments,
+                    dollarGain: investmentsDollarGain,
+                    pctGain: investmentsPctGain,
+                    sharePercent: invSharePercent,
+                    sinceMonth: firstItem ? firstItem.month : '2024-01',
+                    realTwrTotalPercent,
+                    realTwrAnnualizedPercent,
+                    cpiCumPercent,
+                    cpiAnnualizedPercent,
+                    totalReturnDollars: periodTotalReturnDollars,
+                    totalPriceChangeDollars: periodPriceChangeDollars,
+                    totalInvIncome: periodInvIncome,
+                    totalInterest: periodInterest,
+                    totalDividends: periodDividends,
+                    totalCapGains: periodCapGains,
+                    periodYieldPercent,
+                    taxableBrokerageBal,
+                    retirementOnlyBal: retirementOnlyBase,
+                    totalInvMix,
+                    taxableMixPercent,
+                    retirementMixPercent
                 },
                 retirement: {
                     hasTypeBreakdown,
@@ -3715,6 +4074,7 @@
                 weekly_history: weeklyHistory,
                 daily_history: dailyHistory,
                 kpis: filteredView.kpis,
+                investments: filteredView.investments,
                 retirement: filteredView.retirement
             };
         }
@@ -3745,14 +4105,15 @@
             netWorthData.history = filteredView.history;
             netWorthData.filteredMonths = filteredView.filteredMonths;
             netWorthData.kpis = filteredView.kpis;
+            netWorthData.investments = filteredView.investments;
             netWorthData.retirement = filteredView.retirement;
 
-            renderKpis(filteredView.kpis, filteredView.history, lastUpdatedAt, filteredView.retirement);
+            renderKpis(filteredView.kpis, filteredView.history, lastUpdatedAt, filteredView.retirement, filteredView.investments);
             renderInteractiveCharts(filteredView.history, filteredView.filteredMonths);
             renderBreakdownTable(filteredView.history, granularity);
         }
 
-        function renderKpis(kpis, history, updatedAt, retirement) {
+        function renderKpis(kpis, history, updatedAt, retirement, investments) {
             const scope = document.getElementById('scopeFilterSelect')?.value || 'total';
             const granularity = document.getElementById('granularitySelect')?.value || 'monthly';
             const periodUnit = granularity === 'quarterly' ? 'Quarter' : (granularity === 'yearly' ? 'Year' : 'Month');
@@ -3817,6 +4178,78 @@
             if (annualizedEl) {
                 annualizedEl.textContent = formatSignedPct(kpis.annualizedGain, 2);
                 annualizedEl.style.color = kpis.annualizedGain >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
+
+            // Render Dedicated Investments Section
+            const inv = investments || currentFilteredView?.investments;
+            if (inv) {
+                const invLabelEl = document.getElementById('kpiTotalInvestmentsLabel');
+                if (invLabelEl) {
+                    if (scope === 'taxable') invLabelEl.textContent = 'Taxable Investments';
+                    else if (scope === 'retirement') invLabelEl.textContent = 'Retirement Investments';
+                    else invLabelEl.textContent = 'Total Investments';
+                }
+
+                const invTotalEl = document.getElementById('kpiTotalInvestments');
+                if (invTotalEl) {
+                    invTotalEl.textContent = formatCurrency0(inv.currentInvestments);
+                }
+                const invStartSubEl = document.getElementById('kpiInvestmentsStartingSubtext');
+                if (invStartSubEl) {
+                    const shareTarget = scope === 'taxable' ? 'accessible' : (scope === 'retirement' ? 'total NW' : 'portfolio');
+                    invStartSubEl.textContent = `Starting: ${formatCurrency0(inv.startingInvestments)} · ${inv.sharePercent.toFixed(1)}% of ${shareTarget}`;
+                }
+
+                const realTwrAnnEl = document.getElementById('kpiRealTwrAnnualized');
+                if (realTwrAnnEl) {
+                    realTwrAnnEl.textContent = formatSignedPct(inv.realTwrAnnualizedPercent, 2);
+                    realTwrAnnEl.style.color = inv.realTwrAnnualizedPercent >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+                }
+                const realTwrPillEl = document.getElementById('kpiRealTwrTotalPill');
+                if (realTwrPillEl) {
+                    realTwrPillEl.textContent = `${formatSignedPct(inv.realTwrTotalPercent, 2)} real cum.`;
+                    realTwrPillEl.className = 'trend-pill ' + (inv.realTwrTotalPercent >= 0 ? 'trend-positive' : 'trend-negative');
+                }
+                const realTwrCpiEl = document.getElementById('kpiRealTwrCpiSubtext');
+                if (realTwrCpiEl) {
+                    realTwrCpiEl.textContent = `CPI ${formatSignedPct(inv.cpiAnnualizedPercent, 1)}/yr`;
+                }
+
+                const pureRetEl = document.getElementById('kpiPureInvReturn');
+                if (pureRetEl) {
+                    pureRetEl.textContent = formatSignedCurrency0(inv.totalReturnDollars);
+                    pureRetEl.style.color = inv.totalReturnDollars >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+                }
+                const pureRetSubEl = document.getElementById('kpiPureInvReturnSubtext');
+                if (pureRetSubEl) {
+                    pureRetSubEl.textContent = `${formatSignedCurrency0(inv.totalPriceChangeDollars)} price Δ · ${formatSignedCurrency0(inv.totalInvIncome)} yield`;
+                }
+
+                const periodYieldEl = document.getElementById('kpiPeriodPassiveYield');
+                if (periodYieldEl) {
+                    periodYieldEl.textContent = formatCurrency0(inv.totalInvIncome);
+                }
+                const periodYieldSubEl = document.getElementById('kpiPeriodPassiveYieldSubtext');
+                if (periodYieldSubEl) {
+                    const baseParts = `${formatCurrency0(inv.totalDividends)} Div · ${formatCurrency0(inv.totalInterest)} Int`;
+                    if (inv.totalCapGains > 0) {
+                        periodYieldSubEl.textContent = `${baseParts} · ${formatCurrency0(inv.totalCapGains)} CG`;
+                    } else {
+                        periodYieldSubEl.textContent = `${baseParts} · ${inv.periodYieldPercent.toFixed(2)}% yield`;
+                    }
+                }
+
+                const mixEl = document.getElementById('kpiInvestmentsMix');
+                const mixSubEl = document.getElementById('kpiInvestmentsMixSubtext');
+                if (mixEl && mixSubEl) {
+                    if (inv.totalInvMix > 0) {
+                        mixEl.textContent = `${inv.taxableMixPercent.toFixed(1)}% / ${inv.retirementMixPercent.toFixed(1)}%`;
+                        mixSubEl.textContent = `${formatCurrency0(inv.taxableBrokerageBal)} Tax. · ${formatCurrency0(inv.retirementOnlyBal)} Ret.`;
+                    } else {
+                        mixEl.textContent = '—';
+                        mixSubEl.textContent = 'Breakdown unavailable';
+                    }
+                }
             }
 
             // Render Retirement ROI & Sustainability Strip
@@ -5328,7 +5761,7 @@
 
                 if (extracted.history.length > 0) {
                     const granularity = document.getElementById('granularitySelect')?.value || 'monthly';
-                    renderKpis(extracted.kpis, extracted.history, payload.updated_at, extracted.retirement);
+                    renderKpis(extracted.kpis, extracted.history, payload.updated_at, extracted.retirement, extracted.investments);
                     renderInteractiveCharts(extracted.history, extracted.filteredMonths);
                     renderBreakdownTable(extracted.history, granularity);
                 }
