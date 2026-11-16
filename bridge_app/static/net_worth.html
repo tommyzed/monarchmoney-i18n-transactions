@@ -4593,6 +4593,8 @@
                 const factor = ptCpi > 0 ? (latestCpiVal / ptCpi) : 1;
                 return Number((p.balance * factor).toFixed(2));
             });
+            const realStartBaselineVal = realTodayBalances.length > 0 ? realTodayBalances[0] : 0;
+            const realBaselineSeries = points.map(() => realStartBaselineVal);
             let runningAth = 0;
             const athCeilingBalances = points.map(p => {
                 if (p.balance > runningAth) runningAth = p.balance;
@@ -4646,6 +4648,18 @@
                             pointRadius: 0,
                             pointHoverRadius: 4,
                             order: 3
+                        },
+                        {
+                            label: 'Real Baseline (0% Gain vs. CPI)',
+                            data: realBaselineSeries,
+                            borderColor: ct.amberLine,
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.75,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            order: 4
                         }
                     ]
                 },
