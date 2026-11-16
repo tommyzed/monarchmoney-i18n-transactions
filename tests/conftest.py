@@ -6,6 +6,8 @@ import pytest
 os.environ["TESTING"] = "1"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///file:testdb?mode=memory&cache=shared&uri=true"
 os.environ.setdefault("GEMINI_MODEL", "gemini-test-model")
+os.environ.setdefault("MM_EMAIL", "test@test.com")
+os.environ.setdefault("MM_ACCOUNT", "Test Account")
 
 import bridge_app.database
 import bridge_app.models

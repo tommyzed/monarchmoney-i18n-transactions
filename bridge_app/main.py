@@ -1,3 +1,7 @@
+from .env_check import get_required_env, validate_startup_env
+
+validate_startup_env()
+
 import uuid
 import asyncio
 import os
@@ -53,6 +57,8 @@ DEMO_DEFAULTS = {
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    validate_startup_env()
+
     try:
         get_gemini_model()
     except RuntimeError as e:
@@ -3540,7 +3546,7 @@ async def handle_manual_entry(
     """
     try:
         job_id = str(uuid.uuid4())
-        mm_account = os.environ.get("MM_ACCOUNT", "Euro Transactions")
+        mm_account = get_required_env("MM_ACCOUNT")
         
         manual_data = {
             "amount": amount,
@@ -3607,7 +3613,7 @@ async def handle_share(
         # Read file immediately before response closes
         content = await file.read()
         job_id = str(uuid.uuid4())
-        mm_account = os.environ.get("MM_ACCOUNT", "Euro Transactions")
+        mm_account = get_required_env("MM_ACCOUNT")
         
         # Start background task
         background_tasks.add_task(process_background_job, job_id, content, currency)
@@ -3625,7 +3631,7 @@ async def get_settings():
     Return basic bridge configuration for frontend display.
     """
     return {
-        "account_name": os.environ.get("MM_ACCOUNT", "Euro Transactions"),
+        "account_name": get_required_env("MM_ACCOUNT"),
         "cash_account_name": "Cash On Hand"
     }
 

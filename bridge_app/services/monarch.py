@@ -49,24 +49,18 @@ async def _get_tags_cached(mm: MonarchMoney):
 
 async def get_latest_credentials(db: AsyncSession) -> Credentials:
     """
-    Retrieve the most relevant and recently updated Credentials record.
-    Checks MM_EMAIL environment variable first, then orders by last_update_date and id descending.
+    Retrieve the most relevant and recently updated Credentials record for MM_EMAIL.
     """
     from sqlalchemy import select
-    mm_email = os.getenv("MM_EMAIL")
-    if mm_email:
-        mm_email = mm_email.strip()
-        stmt = (
-            select(Credentials)
-            .where(Credentials.email == mm_email)
-            .order_by(Credentials.last_update_date.desc().nullslast(), Credentials.id.desc())
-        )
-        res = await db.execute(stmt)
-        creds = res.scalars().first()
-        if creds:
-            return creds
+    mm_email = (os.getenv("MM_EMAIL") or "").strip()
+    if not mm_email:
+        raise RuntimeError("MM_EMAIL environment variable is not set")
 
-    stmt = select(Credentials).order_by(Credentials.last_update_date.desc().nullslast(), Credentials.id.desc())
+    stmt = (
+        select(Credentials)
+        .where(Credentials.email == mm_email)
+        .order_by(Credentials.last_update_date.desc().nullslast(), Credentials.id.desc())
+    )
     res = await db.execute(stmt)
     return res.scalars().first()
 
@@ -201,7 +195,9 @@ async def push_transaction(mm: MonarchMoney, data: dict):
         if not target_account:
             raise ValueError(f"No account found with ID '{cash_account_id}' for cash transaction ({env_var}).")
     else:
-        target_name = os.environ.get("MM_ACCOUNT", "Euro Transactions")
+        target_name = (os.environ.get("MM_ACCOUNT") or "").strip()
+        if not target_name:
+            raise ValueError("MM_ACCOUNT environment variable is not set")
 
         target_account = next((acc for acc in accounts.get('accounts', []) if acc.get('displayName') == target_name), None)
 

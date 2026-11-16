@@ -26,7 +26,7 @@ def get_gemini_model() -> str:
 
 
 def extract_transaction_data(image_bytes: bytes, historical_merchant_names: Optional[list] = None) -> dict:
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
     if not api_key:
         return {"error": "GEMINI_API_KEY not set"}
 
