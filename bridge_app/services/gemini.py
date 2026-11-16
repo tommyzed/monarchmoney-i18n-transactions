@@ -17,10 +17,23 @@ def _get_genai_client(api_key: str) -> genai.Client:
     return client
 
 
+def get_gemini_model() -> str:
+    """Return the configured Gemini model name or raise if GEMINI_MODEL is unset."""
+    model_name = os.getenv("GEMINI_MODEL", "").strip()
+    if not model_name:
+        raise RuntimeError("GEMINI_MODEL environment variable is not set")
+    return model_name
+
+
 def extract_transaction_data(image_bytes: bytes, historical_merchant_names: Optional[list] = None) -> dict:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return {"error": "GEMINI_API_KEY not set"}
+
+    try:
+        model_name = get_gemini_model()
+    except RuntimeError as e:
+        return {"error": str(e)}
 
     # Initialize or reuse cached Client
     client = _get_genai_client(api_key)
@@ -66,7 +79,6 @@ Do NOT include any markdown fences or extra text — only the raw JSON object.
             image.thumbnail((2048, 2048), Image.Resampling.LANCZOS)
 
         # New SDK call
-        model_name = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
         response = client.models.generate_content(
             model=model_name,
             contents=[prompt, image]

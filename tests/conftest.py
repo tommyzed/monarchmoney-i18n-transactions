@@ -5,6 +5,7 @@ import pytest
 # Enforce test environment flags BEFORE anything imports bridge_app
 os.environ["TESTING"] = "1"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///file:testdb?mode=memory&cache=shared&uri=true"
+os.environ.setdefault("GEMINI_MODEL", "gemini-test-model")
 
 import bridge_app.database
 import bridge_app.models

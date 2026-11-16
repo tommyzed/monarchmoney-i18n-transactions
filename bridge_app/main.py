@@ -23,6 +23,7 @@ from .services.orchestrator import (
     invalidate_mapping_caches,
     invalidate_merchant_star_cache,
 )
+from .services.gemini import get_gemini_model
 from .services.monarch import get_monarch_client, get_latest_credentials
 from .models import MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant, SpendingReport, NetWorthReport
 from sqlalchemy.future import select
@@ -52,6 +53,12 @@ DEMO_DEFAULTS = {
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        get_gemini_model()
+    except RuntimeError as e:
+        print(f"❌ LIFESPAN: {e}")
+        raise
+
     print("📦 LIFESPAN: Checking database connection (this might take a moment if connecting remotely)...")
     try:
         from sqlalchemy import text
@@ -595,6 +602,8 @@ async def process_background_job(job_id: str, content: bytes, user_currency: str
             display_error = "Database connection timed out. Please try again later."
         elif "GEMINI_API_KEY" in err_msg:
             display_error = "Server configuration error: Gemini API Key missing."
+        elif "GEMINI_MODEL" in err_msg:
+            display_error = "Server configuration error: Gemini Model missing."
         elif "Monarch" in err_msg:
             display_error = f"Monarch Error: {err_msg}"
         elif "Currency" in err_msg:
