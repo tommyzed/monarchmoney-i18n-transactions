@@ -1800,7 +1800,8 @@
                         <span class="hamburger-bar"></span>
                     </button>
                     <div class="menu-dropdown" id="menuDropdown">
-                        <button class="menu-item action-item" id="menuRefreshBtn" onclick="triggerRefreshFromMenu(event)">
+                        <button class="menu-item action-item" id="menuRefreshBtn"
+                            onclick="triggerRefreshFromMenu(event)">
                             <span id="menuRefreshIcon">🔄</span>
                             <span id="menuRefreshText">Refresh Data</span>
                         </button>
@@ -1811,23 +1812,23 @@
                             <span class="if-light">Dark Mode</span>
                         </button>
                         <div class="menu-divider"></div>
-                    <a href="/" class="menu-item">
-                        <span>🏡</span>
-                        <span>Receipt Sync</span>
-                    </a>
-                    <a href="/spending" class="menu-item">
-                        <span>📊</span>
-                        <span>Spending Report</span>
-                    </a>
-                    <a href="/net-worth" class="menu-item active-route">
-                        <span>📈</span>
-                        <span>Net Worth</span>
-                    </a>
-                    <a href="/fire" class="menu-item">
-                        <span>🔥</span>
-                        <span>FIRE Dashboard</span>
-                    </a>
-                    <div class="menu-divider"></div>
+                        <a href="/" class="menu-item">
+                            <span>🏡</span>
+                            <span>Receipt Sync</span>
+                        </a>
+                        <a href="/spending" class="menu-item">
+                            <span>📊</span>
+                            <span>Spending Report</span>
+                        </a>
+                        <a href="/net-worth" class="menu-item active-route">
+                            <span>📈</span>
+                            <span>Net Worth</span>
+                        </a>
+                        <a href="/fire" class="menu-item">
+                            <span>🔥</span>
+                            <span>FIRE Dashboard</span>
+                        </a>
+                        <div class="menu-divider"></div>
                         <a href="#" id="updateAppLink" class="menu-item">
                             <span>🔄</span>
                             <span>Update App</span>
@@ -2152,7 +2153,8 @@
                     <div class="kpi-card accent-purple">
                         <div class="kpi-header">
                             <div class="kpi-label">Taxable vs. Retirement Mix</div>
-                            <button type="button" class="kpi-info-btn" aria-label="Info about Taxable vs. Retirement Mix"
+                            <button type="button" class="kpi-info-btn"
+                                aria-label="Info about Taxable vs. Retirement Mix"
                                 onclick="openKpiModal('investments_mix', event)"
                                 title="How Taxable vs. Retirement Mix is calculated &amp; how to use it">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -2225,8 +2227,7 @@
                 <div class="kpi-card accent-green">
                     <div class="kpi-header">
                         <div class="kpi-label">Passive Yield Run-Rate</div>
-                        <button type="button" class="kpi-info-btn"
-                            aria-label="Info about Passive Yield Run-Rate"
+                        <button type="button" class="kpi-info-btn" aria-label="Info about Passive Yield Run-Rate"
                             onclick="openKpiModal('passive_yield_run_rate', event)"
                             title="How Passive Yield Run-Rate is calculated &amp; how to use it">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -2238,7 +2239,8 @@
                         </button>
                     </div>
                     <div class="kpi-value" id="kpiPassiveYieldRunRate" style="color: var(--accent-green);">$0/mo</div>
-                    <div class="kpi-subtext" id="kpiPassiveYieldSubtext">$0/yr · 0.00% portfolio yield · Covers 0% of spend</div>
+                    <div class="kpi-subtext" id="kpiPassiveYieldSubtext">$0/yr · 0.00% portfolio yield · Covers 0% of
+                        spend</div>
                 </div>
 
                 <!-- Card 10: Income Coverage -->
@@ -2309,8 +2311,8 @@
                         <div class="mode-toggle-group" role="group" aria-label="Period Change Display Mode">
                             <button type="button" class="mode-toggle-btn active" id="monthlyModePctBtn"
                                 aria-pressed="true" onclick="setMonthlyChartMode('pct')">% Change (ΔNW vs. TWR)</button>
-                            <button type="button" class="mode-toggle-btn" id="monthlyModeAttrBtn"
-                                aria-pressed="false" onclick="setMonthlyChartMode('attribution')">$ Attribution</button>
+                            <button type="button" class="mode-toggle-btn" id="monthlyModeAttrBtn" aria-pressed="false"
+                                onclick="setMonthlyChartMode('attribution')">$ Attribution</button>
                         </div>
                     </div>
                 </div>
@@ -2337,8 +2339,11 @@
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title" id="cumulativeChartTitle">📈 Cumulative Growth &amp; Inflation Benchmark (%)</h2>
-                        <p class="section-subtitle" id="cumulativeChartSubtitle">Unified comparison of Real True ROI (TWR %), Nominal True ROI (TWR %), Nominal Net Worth Growth (%), and Cumulative US CPI Inflation (%)</p>
+                        <h2 class="section-title" id="cumulativeChartTitle">📈 Cumulative Growth &amp; Inflation
+                            Benchmark (%)</h2>
+                        <p class="section-subtitle" id="cumulativeChartSubtitle">Unified comparison of Real True ROI
+                            (TWR %), Nominal True ROI (TWR %), Nominal Net Worth Growth (%), and Cumulative US CPI
+                            Inflation (%)</p>
                     </div>
                 </div>
                 <div class="chart-wrapper">
@@ -2373,8 +2378,8 @@
                         <div class="mode-toggle-group" role="group" aria-label="Portfolio Composition Display Mode">
                             <button type="button" class="mode-toggle-btn active" id="compModeDollarBtn"
                                 aria-pressed="true" onclick="setCompositionChartMode('dollar')">$ Dollars</button>
-                            <button type="button" class="mode-toggle-btn" id="compModePctBtn"
-                                aria-pressed="false" onclick="setCompositionChartMode('percent')">% Allocation</button>
+                            <button type="button" class="mode-toggle-btn" id="compModePctBtn" aria-pressed="false"
+                                onclick="setCompositionChartMode('percent')">% Allocation</button>
                         </div>
                     </div>
                 </div>
@@ -4949,10 +4954,6 @@
                                             return [
                                                 `────────────────────────`,
                                                 `Dollar Change: ${formatSignedCurrency2(item.gain_dollars)}`,
-                                                `Market Price Δ: ${formatSignedCurrency2(item.price_change_dollars)}`,
-                                                `Passive Yield: ${formatSignedCurrency2(item.inv_income)}`,
-                                                `Living Spend: -${formatCurrency2(item.spending)}`,
-                                                `End ${scopeName}: ${formatCurrency2(item.end_nw)}`
                                             ];
                                         }
                                     }
