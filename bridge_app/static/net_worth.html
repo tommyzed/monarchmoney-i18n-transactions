@@ -2325,9 +2325,19 @@
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title">💵 Passive Investment Income vs. Spending</h2>
+                        <h2 class="section-title" id="investmentIncomeTitle">💵 Passive Investment Income vs. Spending
+                        </h2>
                         <p class="section-subtitle" id="investmentIncomeSubtitle">Realized dividends, interest, and
-                            capital gains with 3M rolling average yield compared against living expenses</p>
+                            capital gains compared against living expenses</p>
+                    </div>
+                    <div class="chart-controls">
+                        <div class="mode-toggle-group" role="group" aria-label="Investment Income Display Mode">
+                            <button type="button" class="mode-toggle-btn active" id="incomeModeBreakdownBtn"
+                                aria-pressed="true"
+                                onclick="setInvestmentIncomeChartMode('breakdown')">Breakdown</button>
+                            <button type="button" class="mode-toggle-btn" id="incomeModeRollingBtn" aria-pressed="false"
+                                onclick="setInvestmentIncomeChartMode('rolling')">Rolling Avg &amp; Net</button>
+                        </div>
                     </div>
                 </div>
                 <div class="chart-wrapper">
@@ -2475,6 +2485,7 @@
         let cachedDailyHistory = [];
         let currentFilteredView = null;
         let monthlyChartMode = 'pct';
+        let investmentIncomeChartMode = 'breakdown';
         let compositionChartMode = 'dollar';
 
         function setMonthlyChartMode(mode) {
@@ -2487,6 +2498,22 @@
                 pctBtn.setAttribute('aria-pressed', String(!isAttr));
                 attrBtn.classList.toggle('active', isAttr);
                 attrBtn.setAttribute('aria-pressed', String(isAttr));
+            }
+            if (currentFilteredView) {
+                renderInteractiveCharts(currentFilteredView.history, currentFilteredView.filteredMonths);
+            }
+        }
+
+        function setInvestmentIncomeChartMode(mode) {
+            investmentIncomeChartMode = mode === 'rolling' ? 'rolling' : 'breakdown';
+            const breakdownBtn = document.getElementById('incomeModeBreakdownBtn');
+            const rollingBtn = document.getElementById('incomeModeRollingBtn');
+            if (breakdownBtn && rollingBtn) {
+                const isRolling = investmentIncomeChartMode === 'rolling';
+                breakdownBtn.classList.toggle('active', !isRolling);
+                breakdownBtn.setAttribute('aria-pressed', String(!isRolling));
+                rollingBtn.classList.toggle('active', isRolling);
+                rollingBtn.setAttribute('aria-pressed', String(isRolling));
             }
             if (currentFilteredView) {
                 renderInteractiveCharts(currentFilteredView.history, currentFilteredView.filteredMonths);
@@ -5030,10 +5057,27 @@
                     investmentIncomeChartInstance.destroy();
                 }
 
-                // Compute rolling 3-month (or 4-quarter) average yield & spending per period to smooth seasonal spikes.
+                const isRollingIncomeMode = investmentIncomeChartMode === 'rolling';
+                const shortWinLen = granularity === 'quarterly' ? 2 : (granularity === 'yearly' ? 2 : 3);
+                const longWinLen = granularity === 'quarterly' ? 4 : (granularity === 'yearly' ? 3 : 12);
+                const shortRollingDesc = granularity === 'quarterly' ? '2Q' : (granularity === 'yearly' ? '2Y' : '3M');
+                const longRollingDesc = granularity === 'quarterly' ? '4Q' : (granularity === 'yearly' ? '3Y' : '12M');
+                const incTitleEl = document.getElementById('investmentIncomeTitle');
+                const incSubEl = document.getElementById('investmentIncomeSubtitle');
+                if (incTitleEl) {
+                    incTitleEl.textContent = isRollingIncomeMode
+                        ? `💵 Net Passive Income − Spending (${shortRollingDesc} & ${longRollingDesc} Rolling)`
+                        : '💵 Passive Investment Income vs. Spending';
+                }
+                if (incSubEl) {
+                    incSubEl.textContent = isRollingIncomeMode
+                        ? `Net gap (Passive Income − Living Spending) with ${shortRollingDesc} and ${longRollingDesc} rolling averages`
+                        : 'Realized dividends, interest, and capital gains compared against living expenses';
+                }
+
+                // Compute rolling net gap averages per period to smooth seasonal spikes.
                 // When in monthly view, look back across full scopedMonths so the start of a filtered window (e.g. YTD/12M)
-                // still reflects a true trailing 3-month rolling average.
-                const windowLen = granularity === 'quarterly' ? 4 : (granularity === 'yearly' ? 2 : 3);
+                // still reflects a true trailing rolling average.
                 const fullMonthlySource = (granularity === 'monthly' && Array.isArray(currentFilteredView?.scopedMonths) && currentFilteredView.scopedMonths.length > 0)
                     ? currentFilteredView.scopedMonths
                     : null;
@@ -5042,111 +5086,157 @@
                     fullMonthlySource.forEach((m, i) => fullMonthIndexMap.set(m.month, i));
                 }
 
-                const rollingAvgYieldSeries = history.map((item, idx) => {
-                    if (fullMonthlySource && fullMonthIndexMap.has(item.month)) {
-                        const fullIdx = fullMonthIndexMap.get(item.month);
-                        const startIdx = Math.max(0, fullIdx - windowLen + 1);
-                        const slice = fullMonthlySource.slice(startIdx, fullIdx + 1);
-                        const sumYield = slice.reduce((acc, m) => acc + Number(m.inv_income || 0), 0);
-                        return Number((sumYield / slice.length).toFixed(2));
-                    }
-                    const startIdx = Math.max(0, idx - windowLen + 1);
-                    const slice = history.slice(startIdx, idx + 1);
-                    const sumYield = slice.reduce((acc, m) => acc + Number(m.inv_income || 0), 0);
-                    return Number((sumYield / slice.length).toFixed(2));
+                const computeRollingAvg = (getVal, winLen) => history.map((item, idx) => {
+                    const useFull = fullMonthlySource && fullMonthIndexMap.has(item.month);
+                    const source = useFull ? fullMonthlySource : history;
+                    const endIdx = useFull ? fullMonthIndexMap.get(item.month) : idx;
+                    const startIdx = Math.max(0, endIdx - winLen + 1);
+                    const slice = source.slice(startIdx, endIdx + 1);
+                    const sum = slice.reduce((acc, m) => acc + getVal(m), 0);
+                    return Number((sum / slice.length).toFixed(2));
                 });
 
-                const rollingAvgSpendSeries = history.map((item, idx) => {
-                    if (fullMonthlySource && fullMonthIndexMap.has(item.month)) {
-                        const fullIdx = fullMonthIndexMap.get(item.month);
-                        const startIdx = Math.max(0, fullIdx - windowLen + 1);
-                        const slice = fullMonthlySource.slice(startIdx, fullIdx + 1);
-                        const sumSpend = slice.reduce((acc, m) => acc + Number(m.spending || 0), 0);
-                        return Number((sumSpend / slice.length).toFixed(2));
-                    }
-                    const startIdx = Math.max(0, idx - windowLen + 1);
-                    const slice = history.slice(startIdx, idx + 1);
-                    const sumSpend = slice.reduce((acc, m) => acc + Number(m.spending || 0), 0);
-                    return Number((sumSpend / slice.length).toFixed(2));
-                });
+                const getNetGap = m => Number(m.inv_income || 0) - Number(m.spending || 0);
+                const rollingAvgNetShortSeries = computeRollingAvg(getNetGap, shortWinLen);
+                const rollingAvgNetLongSeries = computeRollingAvg(getNetGap, longWinLen);
+                const netGapSeries = history.map(h => Number(getNetGap(h).toFixed(2)));
 
-                const rollingLabel = granularity === 'quarterly'
-                    ? '4Q Rolling Avg Yield'
-                    : (granularity === 'yearly' ? 'Multi-Yr Avg Yield' : '3M Rolling Avg Yield');
-                const rollingSpendLabel = granularity === 'quarterly'
-                    ? '4Q Rolling Living Spending'
-                    : (granularity === 'yearly' ? 'Multi-Yr Avg Spending' : '3M Rolling Living Spending');
+                const rollingNetShortLabel = `${shortRollingDesc} Rolling Net`;
+                const rollingNetLongLabel = `${longRollingDesc} Rolling Net`;
                 const livingSpendColor = ct.isLight ? '#DB2777' : '#F472B6';
+                const rollingNetLongColor = ct.isLight ? '#7C3AED' : '#A855F7';
+
+                const incDatasets = isRollingIncomeMode
+                    ? [
+                        {
+                            type: 'line',
+                            label: rollingNetShortLabel,
+                            data: rollingAvgNetShortSeries,
+                            borderColor: ct.skyLine,
+                            backgroundColor: 'transparent',
+                            borderWidth: 2.5,
+                            borderDash: [6, 4],
+                            pointBackgroundColor: ct.skyLine,
+                            pointBorderColor: ct.pointBorder,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            tension: 0.35,
+                            order: 0
+                        },
+                        {
+                            type: 'line',
+                            label: rollingNetLongLabel,
+                            data: rollingAvgNetLongSeries,
+                            borderColor: rollingNetLongColor,
+                            backgroundColor: 'transparent',
+                            borderWidth: 2.5,
+                            borderDash: [6, 4],
+                            pointBackgroundColor: rollingNetLongColor,
+                            pointBorderColor: ct.pointBorder,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            tension: 0.35,
+                            order: 0
+                        },
+                        {
+                            label: 'Net (Passive Income − Spending)',
+                            data: netGapSeries,
+                            backgroundColor: netGapSeries.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.72)' : 'rgba(239, 68, 68, 0.72)'),
+                            borderColor: netGapSeries.map(v => v >= 0 ? '#10B981' : '#EF4444'),
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            order: 1
+                        }
+                    ]
+                    : [
+                        {
+                            type: 'line',
+                            label: 'Living Spending',
+                            data: history.map(h => Number((h.spending || 0).toFixed(2))),
+                            borderColor: livingSpendColor,
+                            backgroundColor: ct.isLight ? 'rgba(219, 39, 119, 0.12)' : 'rgba(244, 114, 182, 0.16)',
+                            borderWidth: 2,
+                            borderDash: [5, 4],
+                            pointBackgroundColor: livingSpendColor,
+                            pointBorderColor: ct.pointBorder,
+                            pointRadius: 2.5,
+                            pointHoverRadius: 5,
+                            tension: 0.25,
+                            stack: 'spending_line',
+                            order: 0
+                        },
+                        {
+                            label: 'Dividends',
+                            data: history.map(h => Number((h.dividends || 0).toFixed(2))),
+                            backgroundColor: '#10B981',
+                            stack: 'yield',
+                            order: 1
+                        },
+                        {
+                            label: 'Interest',
+                            data: history.map(h => Number((h.interest || 0).toFixed(2))),
+                            backgroundColor: ct.skyLine,
+                            stack: 'yield',
+                            order: 1
+                        },
+                        {
+                            label: 'Capital Gains',
+                            data: history.map(h => Number((h.capital_gains || 0).toFixed(2))),
+                            backgroundColor: '#A855F7',
+                            stack: 'yield',
+                            order: 1
+                        }
+                    ];
+
+                const incTooltipCallbacks = isRollingIncomeMode
+                    ? {
+                        title: function (tooltipItems) {
+                            const raw = tooltipItems[0]?.label || '';
+                            return formatMonthHuman(raw) || raw;
+                        },
+                        label: function (context) {
+                            const val = Number(context.parsed.y || 0);
+                            return `${context.dataset.label}: ${formatSignedCurrency2(val)}`;
+                        },
+                        afterBody: function (tooltipItems) {
+                            const idx = tooltipItems[0]?.dataIndex;
+                            const item = history[idx];
+                            if (!item) return [];
+                            const cov = item.spending > 0 ? ((item.inv_income / item.spending) * 100).toFixed(1) + '%' : 'N/A';
+                            return [
+                                `────────────────────────`,
+                                `Period Passive Income: ${formatCurrency2(item.inv_income)}`,
+                                `Period Living Spending: ${formatCurrency2(item.spending)}`,
+                                `Period Coverage: ${cov}`
+                            ];
+                        }
+                    }
+                    : {
+                        title: function (tooltipItems) {
+                            const raw = tooltipItems[0]?.label || '';
+                            return formatMonthHuman(raw) || raw;
+                        },
+                        afterBody: function (tooltipItems) {
+                            const idx = tooltipItems[0]?.dataIndex;
+                            const item = history[idx];
+                            if (!item) return [];
+                            const cov = item.spending > 0 ? ((item.inv_income / item.spending) * 100).toFixed(1) + '%' : 'N/A';
+                            const netGap = (item.inv_income || 0) - (item.spending || 0);
+                            return [
+                                `────────────────────────`,
+                                `Total Period Yield: ${formatCurrency2(item.inv_income)}`,
+                                `Period Coverage: ${cov}`,
+                                `Net Yield vs. Spend: ${formatSignedCurrency2(netGap)}`
+                            ];
+                        }
+                    };
 
                 investmentIncomeChartInstance = new Chart(incCtx, {
                     type: 'bar',
                     data: {
                         labels,
-                        datasets: [
-                            {
-                                type: 'line',
-                                label: 'Living Spending',
-                                data: history.map(h => Number((h.spending || 0).toFixed(2))),
-                                borderColor: livingSpendColor,
-                                backgroundColor: ct.isLight ? 'rgba(219, 39, 119, 0.12)' : 'rgba(244, 114, 182, 0.16)',
-                                borderWidth: 2,
-                                borderDash: [5, 4],
-                                pointBackgroundColor: livingSpendColor,
-                                pointBorderColor: ct.pointBorder,
-                                pointRadius: 2.5,
-                                pointHoverRadius: 5,
-                                tension: 0.25,
-                                stack: 'spending_line',
-                                order: 0
-                            },
-                            {
-                                type: 'line',
-                                label: rollingSpendLabel,
-                                data: rollingAvgSpendSeries,
-                                borderColor: '#EF4444',
-                                backgroundColor: 'transparent',
-                                borderWidth: 2.3,
-                                pointRadius: 2,
-                                pointHoverRadius: 5,
-                                tension: 0.35,
-                                stack: 'rolling_spending_line',
-                                order: 0
-                            },
-                            {
-                                type: 'line',
-                                label: rollingLabel,
-                                data: rollingAvgYieldSeries,
-                                borderColor: ct.amberLine,
-                                backgroundColor: 'transparent',
-                                borderWidth: 2.3,
-                                pointRadius: 2,
-                                pointHoverRadius: 5,
-                                tension: 0.35,
-                                stack: 'rolling_yield_line',
-                                order: 0
-                            },
-                            {
-                                label: 'Dividends',
-                                data: history.map(h => Number((h.dividends || 0).toFixed(2))),
-                                backgroundColor: '#10B981',
-                                stack: 'yield',
-                                order: 1
-                            },
-                            {
-                                label: 'Interest',
-                                data: history.map(h => Number((h.interest || 0).toFixed(2))),
-                                backgroundColor: ct.skyLine,
-                                stack: 'yield',
-                                order: 1
-                            },
-                            {
-                                label: 'Capital Gains',
-                                data: history.map(h => Number((h.capital_gains || 0).toFixed(2))),
-                                backgroundColor: '#A855F7',
-                                stack: 'yield',
-                                order: 1
-                            }
-                        ]
+                        datasets: incDatasets
                     },
                     options: {
                         responsive: true,
@@ -5164,33 +5254,12 @@
                                 borderColor: ct.tooltipBorder,
                                 borderWidth: 1,
                                 padding: 12,
-                                callbacks: {
-                                    title: function (tooltipItems) {
-                                        const raw = tooltipItems[0]?.label || '';
-                                        return formatMonthHuman(raw) || raw;
-                                    },
-                                    afterBody: function (tooltipItems) {
-                                        const idx = tooltipItems[0]?.dataIndex;
-                                        const item = history[idx];
-                                        if (!item) return [];
-                                        const cov = item.spending > 0 ? ((item.inv_income / item.spending) * 100).toFixed(1) + '%' : 'N/A';
-                                        const rollSpend = rollingAvgSpendSeries[idx] || 0;
-                                        const rollYield = rollingAvgYieldSeries[idx] || 0;
-                                        const rollCov = rollSpend > 0 ? ((rollYield / rollSpend) * 100).toFixed(1) + '%' : 'N/A';
-                                        const netGap = (item.inv_income || 0) - (item.spending || 0);
-                                        return [
-                                            `────────────────────────`,
-                                            `Total Period Yield: ${formatCurrency2(item.inv_income)}`,
-                                            `Period Coverage: ${cov} (Rolling: ${rollCov})`,
-                                            `Net Yield vs. Spend: ${formatSignedCurrency2(netGap)}`
-                                        ];
-                                    }
-                                }
+                                callbacks: incTooltipCallbacks
                             }
                         },
                         scales: {
                             x: {
-                                stacked: true,
+                                stacked: !isRollingIncomeMode,
                                 ticks: {
                                     color: ct.tickColor,
                                     maxRotation: 45,
@@ -5200,7 +5269,7 @@
                                 grid: { color: ct.gridXColor }
                             },
                             y: {
-                                stacked: true,
+                                stacked: !isRollingIncomeMode,
                                 ticks: {
                                     color: ct.tickColor,
                                     font: { family: "'JetBrains Mono', monospace", size: 11 },
