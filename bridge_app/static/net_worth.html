@@ -4619,13 +4619,14 @@
 
             const labels = points.map(p => formatPointDateLabel(p.date, startPeriod));
             const balances = points.map(p => p.balance);
-            const latestCpiVal = points.length > 0 ? getUsCpiForMonth(points[points.length - 1].date) : 338.200;
-            const realTodayBalances = points.map(p => {
+            const startCpiVal = points.length > 0 ? getUsCpiForMonth(points[0].date) : 338.200;
+            const startMonthLabel = formatMonthHuman(String(points[0].date || '').slice(0, 7)) || 'Start';
+            const realStartBalances = points.map(p => {
                 const ptCpi = getUsCpiForMonth(p.date);
-                const factor = ptCpi > 0 ? (latestCpiVal / ptCpi) : 1;
+                const factor = ptCpi > 0 ? (startCpiVal / ptCpi) : 1;
                 return Number((p.balance * factor).toFixed(2));
             });
-            const realStartBaselineVal = realTodayBalances.length > 0 ? realTodayBalances[0] : 0;
+            const realStartBaselineVal = realStartBalances.length > 0 ? realStartBalances[0] : 0;
             const realBaselineSeries = points.map(() => realStartBaselineVal);
             let runningAth = 0;
             const athCeilingBalances = points.map(p => {
@@ -4656,8 +4657,8 @@
                             order: 1
                         },
                         {
-                            label: "Real Net Worth (Today's $)",
-                            data: realTodayBalances,
+                            label: `Real Net Worth (${startMonthLabel} $)`,
+                            data: realStartBalances,
                             borderColor: ct.skyLine,
                             backgroundColor: 'transparent',
                             borderWidth: 2,
