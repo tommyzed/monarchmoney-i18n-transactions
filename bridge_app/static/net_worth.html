@@ -2303,14 +2303,14 @@
             <section class="section-card">
                 <div class="section-header">
                     <div class="section-title-group">
-                        <h2 class="section-title" id="monthlyBarChartTitle">📊 Month / Month % (Raw ΔNW vs. TWR)</h2>
-                        <p class="section-subtitle" id="monthlyBarChartSubtitle">% gain or loss for each month relative
-                            to the previous month</p>
+                        <h2 class="section-title" id="monthlyBarChartTitle">📊 Month / Month Net Worth Change (%)</h2>
+                        <p class="section-subtitle" id="monthlyBarChartSubtitle">% gain or loss for each month with
+                            smoothed 3M rolling average</p>
                     </div>
                     <div class="chart-controls">
                         <div class="mode-toggle-group" role="group" aria-label="Period Change Display Mode">
                             <button type="button" class="mode-toggle-btn active" id="monthlyModePctBtn"
-                                aria-pressed="true" onclick="setMonthlyChartMode('pct')">% Change (ΔNW vs. TWR)</button>
+                                aria-pressed="true" onclick="setMonthlyChartMode('pct')">% Change</button>
                             <button type="button" class="mode-toggle-btn" id="monthlyModeAttrBtn" aria-pressed="false"
                                 onclick="setMonthlyChartMode('attribution')">$ Attribution</button>
                         </div>
@@ -2327,7 +2327,7 @@
                     <div class="section-title-group">
                         <h2 class="section-title">💵 Passive Investment Income vs. Spending</h2>
                         <p class="section-subtitle" id="investmentIncomeSubtitle">Realized dividends, interest, and
-                            capital gains with 12M rolling average yield compared against living expenses</p>
+                            capital gains with 3M rolling average yield compared against living expenses</p>
                     </div>
                 </div>
                 <div class="chart-wrapper">
@@ -4764,15 +4764,16 @@
                 : (scope === 'retirement' ? 'Retirement Accounts' : 'Total Portfolio');
 
             const isAttrMode = monthlyChartMode === 'attribution';
+            const rollingWindowDesc = granularity === 'quarterly' ? '4Q' : (granularity === 'yearly' ? 'multi-year' : '3M');
             if (barTitleEl) {
                 barTitleEl.textContent = isAttrMode
                     ? `⚖️ ${periodUnit} Return & Cash-Flow Attribution ($)`
-                    : `📊 ${periodUnit} / ${periodUnit} % (Raw ΔNW vs. True ROI TWR)`;
+                    : `📊 ${periodUnit} / ${periodUnit} Net Worth Change (%)`;
             }
             if (barSubEl) {
                 barSubEl.textContent = isAttrMode
                     ? `Decomposition of ${periodUnit.toLowerCase()} net worth change into Market Price Δ, Passive Yield, and Living Withdrawals (${scopeDesc})`
-                    : `Net Worth % change (after spending) compared with cash-flow-adjusted True Investment ROI TWR % (${scopeDesc})`;
+                    : `Net Worth % change per ${periodUnit.toLowerCase()} with smoothed ${rollingWindowDesc} rolling average (${scopeDesc})`;
             }
 
             const barCanvas = document.getElementById('monthlyBarChart');
@@ -4857,8 +4858,7 @@
                                             if (!item) return [];
                                             return [
                                                 `────────────────────────`,
-                                                `True ROI (TWR): ${formatSignedPct(item.twr_percent, 2)}`,
-                                                `Raw ΔNW %: ${formatSignedPct(item.gain_percent, 2)}`
+                                                `ΔNW %: ${formatSignedPct(item.gain_percent, 2)}`
                                             ];
                                         }
                                     }
@@ -4894,6 +4894,33 @@
                         ? 'Taxable / Accessible ΔNW (%)'
                         : (scope === 'retirement' ? 'Retirement ΔNW (%)' : `${periodUnit} Net Worth Δ (%)`);
 
+                    const momWindowLen = granularity === 'quarterly' ? 4 : (granularity === 'yearly' ? 2 : 3);
+                    const fullMonthlySource = (granularity === 'monthly' && Array.isArray(currentFilteredView?.scopedMonths) && currentFilteredView.scopedMonths.length > 0)
+                        ? currentFilteredView.scopedMonths
+                        : null;
+                    const fullMonthIndexMap = new Map();
+                    if (fullMonthlySource) {
+                        fullMonthlySource.forEach((m, i) => fullMonthIndexMap.set(m.month, i));
+                    }
+
+                    const rollingAvgPctSeries = history.map((item, idx) => {
+                        if (fullMonthlySource && fullMonthIndexMap.has(item.month)) {
+                            const fullIdx = fullMonthIndexMap.get(item.month);
+                            const startIdx = Math.max(0, fullIdx - momWindowLen + 1);
+                            const slice = fullMonthlySource.slice(startIdx, fullIdx + 1);
+                            const sumPct = slice.reduce((acc, m) => acc + Number(m.gain_percent || 0), 0);
+                            return Number((sumPct / slice.length).toFixed(2));
+                        }
+                        const startIdx = Math.max(0, idx - momWindowLen + 1);
+                        const slice = history.slice(startIdx, idx + 1);
+                        const sumPct = slice.reduce((acc, m) => acc + Number(m.gain_percent || 0), 0);
+                        return Number((sumPct / slice.length).toFixed(2));
+                    });
+
+                    const rollingPctLabel = granularity === 'quarterly'
+                        ? '4Q Rolling Avg ΔNW (%)'
+                        : (granularity === 'yearly' ? 'Multi-Yr Rolling Avg ΔNW (%)' : '3M Rolling Avg ΔNW (%)');
+
                     monthlyBarChartInstance = new Chart(barCtx, {
                         type: 'bar',
                         data: {
@@ -4901,16 +4928,18 @@
                             datasets: [
                                 {
                                     type: 'line',
-                                    label: 'True Investment ROI (TWR %)',
-                                    data: history.map(h => Number((h.twr_percent ?? h.gain_percent ?? 0).toFixed(2))),
+                                    label: rollingPctLabel,
+                                    data: rollingAvgPctSeries,
                                     borderColor: ct.skyLine,
-                                    backgroundColor: ct.skyFill,
-                                    borderWidth: 2,
-                                    borderDash: [4, 3],
+                                    backgroundColor: 'transparent',
+                                    borderWidth: 2.5,
+                                    borderDash: [6, 4],
                                     pointBackgroundColor: ct.skyLine,
                                     pointBorderColor: ct.pointBorder,
-                                    pointRadius: 3,
-                                    tension: 0.25,
+                                    pointRadius: 0,
+                                    pointHoverRadius: 5,
+                                    tension: 0.4,
+                                    cubicInterpolationMode: 'monotone',
                                     order: 0
                                 },
                                 {
@@ -4944,6 +4973,10 @@
                                         title: function (tooltipItems) {
                                             const raw = tooltipItems[0]?.label || '';
                                             return formatMonthHuman(raw) || raw;
+                                        },
+                                        label: function (context) {
+                                            const val = Number(context.parsed.y || 0);
+                                            return `${context.dataset.label}: ${formatSignedPct(val, 2)}`;
                                         },
                                         afterBody: function (tooltipItems) {
                                             const item = history[tooltipItems[0]?.dataIndex];
@@ -4997,10 +5030,10 @@
                     investmentIncomeChartInstance.destroy();
                 }
 
-                // Compute rolling 12-month (or 4-quarter) average yield & spending per period to smooth seasonal spikes.
+                // Compute rolling 3-month (or 4-quarter) average yield & spending per period to smooth seasonal spikes.
                 // When in monthly view, look back across full scopedMonths so the start of a filtered window (e.g. YTD/12M)
-                // still reflects a true trailing 12-month rolling average.
-                const windowLen = granularity === 'quarterly' ? 4 : (granularity === 'yearly' ? 2 : 12);
+                // still reflects a true trailing 3-month rolling average.
+                const windowLen = granularity === 'quarterly' ? 4 : (granularity === 'yearly' ? 2 : 3);
                 const fullMonthlySource = (granularity === 'monthly' && Array.isArray(currentFilteredView?.scopedMonths) && currentFilteredView.scopedMonths.length > 0)
                     ? currentFilteredView.scopedMonths
                     : null;
@@ -5039,10 +5072,11 @@
 
                 const rollingLabel = granularity === 'quarterly'
                     ? '4Q Rolling Avg Yield'
-                    : (granularity === 'yearly' ? 'Multi-Yr Avg Yield' : '12M Rolling Avg Yield');
+                    : (granularity === 'yearly' ? 'Multi-Yr Avg Yield' : '3M Rolling Avg Yield');
                 const rollingSpendLabel = granularity === 'quarterly'
                     ? '4Q Rolling Living Spending'
-                    : (granularity === 'yearly' ? 'Multi-Yr Avg Spending' : '12M Rolling Living Spending');
+                    : (granularity === 'yearly' ? 'Multi-Yr Avg Spending' : '3M Rolling Living Spending');
+                const livingSpendColor = ct.isLight ? '#DB2777' : '#F472B6';
 
                 investmentIncomeChartInstance = new Chart(incCtx, {
                     type: 'bar',
@@ -5053,11 +5087,14 @@
                                 type: 'line',
                                 label: 'Living Spending',
                                 data: history.map(h => Number((h.spending || 0).toFixed(2))),
-                                borderColor: 'rgba(239, 68, 68, 0.55)',
-                                backgroundColor: 'rgba(239, 68, 68, 0.10)',
-                                borderWidth: 1.5,
-                                borderDash: [4, 4],
-                                pointRadius: 2,
+                                borderColor: livingSpendColor,
+                                backgroundColor: ct.isLight ? 'rgba(219, 39, 119, 0.12)' : 'rgba(244, 114, 182, 0.16)',
+                                borderWidth: 2,
+                                borderDash: [5, 4],
+                                pointBackgroundColor: livingSpendColor,
+                                pointBorderColor: ct.pointBorder,
+                                pointRadius: 2.5,
+                                pointHoverRadius: 5,
                                 tension: 0.25,
                                 stack: 'spending_line',
                                 order: 0
