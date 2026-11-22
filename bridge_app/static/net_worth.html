@@ -1805,12 +1805,6 @@
                             <span id="menuRefreshIcon">🔄</span>
                             <span id="menuRefreshText">Refresh Data</span>
                         </button>
-                        <button class="menu-item" id="menuThemeToggleBtn" onclick="toggleColorSchemeFromMenu(event)">
-                            <span class="if-dark">☀️</span>
-                            <span class="if-dark">Light Mode</span>
-                            <span class="if-light">🌙</span>
-                            <span class="if-light">Dark Mode</span>
-                        </button>
                         <div class="menu-divider"></div>
                         <a href="/" class="menu-item">
                             <span>🏡</span>
@@ -6023,12 +6017,6 @@
             }
 
             onColorSchemeChanged();
-        }
-
-        function toggleColorSchemeFromMenu(event) {
-            if (event) event.stopPropagation();
-            document.getElementById('menuDropdown')?.classList.remove('show');
-            toggleColorScheme();
         }
 
         function setupColorSchemeListeners() {
