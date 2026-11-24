@@ -4812,7 +4812,7 @@
             }
             if (barSubEl) {
                 barSubEl.textContent = isAttrMode
-                    ? `Decomposition of ${periodUnit.toLowerCase()} net worth change into Market Price Δ, Passive Yield, and Living Withdrawals (${scopeDesc})`
+                    ? `Decomposition of ${periodUnit.toLowerCase()} net worth change into Market Price Δ, Passive Yield, Other Income, and Living Spending (${scopeDesc})`
                     : `Net Worth % change per ${periodUnit.toLowerCase()} with smoothed ${rollingWindowDesc} rolling average (${scopeDesc})`;
             }
 
@@ -4859,8 +4859,16 @@
                                     order: 1
                                 },
                                 {
-                                    label: 'Living Withdrawals / Net Flow ($)',
-                                    data: history.map(h => Number((h.net_external_flow ?? -h.spending ?? 0).toFixed(2))),
+                                    label: 'Other Income ($)',
+                                    data: history.map(h => Number((h.other_income || 0).toFixed(2))),
+                                    backgroundColor: ct.amberLine,
+                                    stack: 'attr',
+                                    borderRadius: 3,
+                                    order: 1
+                                },
+                                {
+                                    label: 'Living Spending ($)',
+                                    data: history.map(h => Number((-Math.abs(h.spending || 0)).toFixed(2))),
                                     backgroundColor: ct.red,
                                     stack: 'attr',
                                     borderRadius: 3,
@@ -4896,8 +4904,10 @@
                                         afterBody: function (tooltipItems) {
                                             const item = history[tooltipItems[0]?.dataIndex];
                                             if (!item) return [];
+                                            const netCashFlow = Number(item.net_external_flow ?? ((item.other_income || 0) - (item.spending || 0)));
                                             return [
                                                 `────────────────────────`,
+                                                `Net Cash Flow (Other Inc − Spend): ${formatSignedCurrency2(netCashFlow)}`,
                                                 `ΔNW %: ${formatSignedPct(item.gain_percent, 2)}`
                                             ];
                                         }
