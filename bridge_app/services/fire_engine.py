@@ -13,8 +13,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Dict, Optional
 
-# Historical return parameters by risk tolerance
-# Based on S&P 500 historical data + bond blending
+# Historical real (inflation-adjusted) return parameters by risk tolerance
+# Based on S&P 500 historical data (8% real) + bond blending (3% real)
 RISK_PROFILES = {
     "lean": {  # 60/40 stocks/bonds
         "mean_return": 0.06,
@@ -181,33 +181,43 @@ class SimulationResult:
     account_breakdown: List[Dict] = field(default_factory=list)
 
 
-def _calc_ss_incomes(
-    inp: SimulationInput, inflation_factors: np.ndarray, current_year: int
-) -> np.ndarray:
-    """Precompute inflation-adjusted Social Security income for each simulation year."""
-    n_years = inflation_factors.shape[0]
+def _generate_return_cols(profile: dict, n_iter: int, n_years: int) -> List[np.ndarray]:
+    """Generate clamped (1 + r) annual return columns of shape (n_iter,) per year."""
+    rng = _get_rng()
+    returns = rng.normal(
+        profile["mean_return"],
+        profile["std_return"],
+        size=(n_iter, n_years),
+    )
+    returns_plus_one = np.maximum(1.0 + returns, 0.0)
+    return [returns_plus_one[:, yr] for yr in range(n_years)]
+
+
+def _calc_ss_incomes(inp: SimulationInput, n_years: int) -> np.ndarray:
+    """Precompute real (today's-dollar) Social Security income for each simulation year."""
     ss_incomes = np.zeros(n_years)
     if inp.social_security_enabled and inp.social_security_mba > 0:
-        annual_ss = inp.social_security_mba * 12
-        months_collected = 13 - inp.social_security_withdrawal_month
-        partial_ss = (
-            inp.social_security_mba * months_collected
-            if 1 <= months_collected <= 12
-            else 0.0
-        )
-        withdrawal_yr = inp.social_security_withdrawal_year
-        for yr in range(n_years):
-            sim_year = current_year + yr
-            if sim_year > withdrawal_yr:
-                ss_incomes[yr] = annual_ss * inflation_factors[yr]
-            elif sim_year == withdrawal_yr and partial_ss > 0.0:
-                ss_incomes[yr] = partial_ss * inflation_factors[yr]
+        birth_months = inp.social_security_birth_year * 12 + inp.social_security_birth_month
+        withdraw_months = inp.social_security_withdrawal_year * 12 + inp.social_security_withdrawal_month
+        claim_age_months = withdraw_months - birth_months
+        if claim_age_months >= 62 * 12:
+            claim_age_year = claim_age_months // 12
+            rem_months = claim_age_months % 12
+            first_year_months = 12 - rem_months
+            annual_ss = inp.social_security_mba * 12.0
+            partial_ss = inp.social_security_mba * first_year_months
+            for yr in range(n_years):
+                sim_age = inp.current_age + yr
+                if sim_age > claim_age_year:
+                    ss_incomes[yr] = annual_ss
+                elif sim_age == claim_age_year:
+                    ss_incomes[yr] = partial_ss
     return ss_incomes
 
 
 def simulate(inp: SimulationInput) -> SimulationResult:
     """
-    Run Monte Carlo simulation.
+    Run Monte Carlo simulation in today's purchasing power (real dollars).
 
     Returns percentile bands of portfolio value for each year,
     plus key FIRE metrics.
@@ -220,41 +230,33 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     n_iter = inp.iterations
     years_to_retire = max(inp.retirement_age - inp.current_age, 0)
 
-    # Generate random annual returns once: shape (n_iter, n_years)
+    # Generate random real annual returns once: shape (n_iter, n_years)
     rng = _get_rng()
     returns = rng.normal(mean_r, std_r, size=(n_iter, n_years))
-    returns_plus_one = 1 + returns
+    returns_plus_one = np.maximum(1.0 + returns, 0.0)
     return_cols = [returns_plus_one[:, yr] for yr in range(n_years)]
 
-    # Precompute inflation factors and Social Security cashflows
-    inflation_factors = (1 + inp.inflation_rate) ** np.arange(n_years)
     current_year = datetime.now().year
-    ss_incomes = _calc_ss_incomes(inp, inflation_factors, current_year)
+    ss_incomes = _calc_ss_incomes(inp, n_years)
 
-    # Portfolio simulation — vectorized across all iterations
+    # Portfolio simulation — vectorized across all iterations (in Today's $)
     portfolios = np.zeros((n_iter, n_years + 1))
     portfolios[:, 0] = inp.current_portfolio
     port = np.full(n_iter, float(inp.current_portfolio))
+    alive = np.ones(n_iter, dtype=bool)
 
     for yr in range(n_years):
-        # Inflation-adjusted amounts (grow each year)
-        inflation_factor = inflation_factors[yr]
-        spending = inp.annual_retirement_spending * inflation_factor  # always
-
         if yr < years_to_retire:
-            # Pre-retirement: earning income, still spending
-            income = inp.annual_contribution * inflation_factor
+            # Pre-retirement: annual_contribution is net annual savings/contributions
+            net_cashflow = inp.annual_contribution + ss_incomes[yr]
+            port = np.maximum(port * return_cols[yr] + net_cashflow, 0.0)
         else:
-            # Post-retirement: no income
-            income = 0.0
+            # Post-retirement: once a portfolio is depleted, it stays ruined permanently
+            net_cashflow = ss_incomes[yr] - inp.annual_retirement_spending
+            raw_next = port * return_cols[yr] + net_cashflow
+            alive &= raw_next > 0
+            port = np.where(alive, raw_next, 0.0)
 
-        if ss_incomes[yr] > 0:
-            income += ss_incomes[yr]
-
-        net_cashflow = income - spending
-
-        # Apply market return, then net cash flow, and floor at zero
-        port = np.maximum(port * return_cols[yr] + net_cashflow, 0)
         portfolios[:, yr + 1] = port
 
     # Extract percentile bands in a single sort pass
@@ -264,13 +266,12 @@ def simulate(inp: SimulationInput) -> SimulationResult:
 
     ages = [inp.current_age + yr for yr in range(n_years + 1)]
 
-    # Calculate metrics (reusing precomputed returns and inflation when dimensions match)
+    # Calculate metrics (reusing precomputed returns when dimensions match)
     prob = _calc_retirement_probability(portfolios, inp)
     fire_age = _calc_fire_date(
         inp,
         profile,
         returns_plus_one=returns_plus_one,
-        inflation_factors=inflation_factors,
         sim_portfolios=portfolios,
         return_cols=return_cols,
     )
@@ -281,7 +282,6 @@ def simulate(inp: SimulationInput) -> SimulationResult:
         inp,
         profile,
         returns_plus_one=returns_plus_one,
-        inflation_factors=inflation_factors,
         portfolio_at_retire=portfolio_at_retire,
         return_cols=return_cols,
     )
@@ -289,9 +289,11 @@ def simulate(inp: SimulationInput) -> SimulationResult:
         inp,
         profile,
         returns_plus_one=returns_plus_one,
-        inflation_factors=inflation_factors,
+        portfolio_at_retire=portfolio_at_retire,
         return_cols=return_cols,
     )
+    years_post = max(inp.final_age - inp.retirement_age, 0)
+    actual_years_post = min(years_post, max(n_years - years_to_retire, 0)) if n_years > 0 else 0
 
     # Calendar year for FIRE date
     fire_year = None
@@ -309,7 +311,7 @@ def simulate(inp: SimulationInput) -> SimulationResult:
         fire_date_age=fire_age,
         fire_date_year=fire_year,
         swr=round(swr, 2),
-        required_spend_for_target=int(required_spend) if required_spend else None,
+        required_spend_for_target=int(round(required_spend)) if actual_years_post > 0 else None,
         current_portfolio=round(inp.current_portfolio, 2),
         risk_profile_label=profile["label"],
     )
@@ -317,11 +319,15 @@ def simulate(inp: SimulationInput) -> SimulationResult:
 
 def _calc_retirement_probability(portfolios: np.ndarray, inp: SimulationInput) -> float:
     """
-    % of simulations where portfolio is > 0 at final age
+    % of simulations where portfolio survives (> 0) to final age
     (or end of simulation if shorter).
     """
+    if inp.simulation_years == 0:
+        return 100.0 if inp.current_portfolio > 0 else 0.0
     years_to_final = max(inp.final_age - inp.current_age, 0)
     target_year = min(years_to_final, inp.simulation_years)
+    if target_year == 0:
+        return 100.0 if inp.current_portfolio > 0 else 0.0
     survived = np.sum(portfolios[:, target_year] > 0)
     return (survived / portfolios.shape[0]) * 100
 
@@ -335,51 +341,35 @@ def _calc_fire_date(
     return_cols: Optional[List[np.ndarray]] = None,
 ) -> Optional[int]:
     """
-    Find the earliest retirement age where ≥95% of simulations survive
-    to final age.
+    Find the earliest retirement age (< final_age) where ≥95% of simulations survive
+    to final age without depleting during retirement.
 
     Binary search over possible retirement ages.
     """
-    if inp.current_age > inp.final_age:
+    if inp.current_age >= inp.final_age:
         return None
 
     total_years = inp.final_age - inp.current_age
-    if total_years > inp.simulation_years:
+    if total_years <= 0 or total_years > inp.simulation_years:
         return None
 
-    if total_years == 0:
-        survived = 1.0 if inp.current_portfolio > 0 else 0.0
-        return inp.current_age if round(survived, 3) >= 0.950 else None
-
     if return_cols is None or len(return_cols) != total_years:
-        if returns_plus_one is None or returns_plus_one.shape != (
+        if returns_plus_one is not None and returns_plus_one.shape == (
             inp.iterations,
             total_years,
         ):
-            rng = _get_rng()
-            returns = rng.normal(
-                profile["mean_return"],
-                profile["std_return"],
-                size=(inp.iterations, total_years),
-            )
-            returns_plus_one = 1 + returns
-        return_cols = [returns_plus_one[:, yr] for yr in range(total_years)]
+            return_cols = [np.maximum(returns_plus_one[:, yr], 0.0) for yr in range(total_years)]
+        else:
+            return_cols = _generate_return_cols(profile, inp.iterations, total_years)
 
-    if inflation_factors is None or inflation_factors.shape[0] < total_years:
-        inflation_factors = (1 + inp.inflation_rate) ** np.arange(total_years)
-
-    current_year = datetime.now().year
-    ss_incomes = _calc_ss_incomes(inp, inflation_factors, current_year)
+    ss_incomes = _calc_ss_incomes(inp, total_years)
 
     pre_retire_cashflows = np.zeros(total_years)
     post_retire_cashflows = np.zeros(total_years)
     for yr in range(total_years):
-        inflation_factor = inflation_factors[yr]
-        spending = inp.annual_retirement_spending * inflation_factor
         post_income = ss_incomes[yr]
-        pre_income = inp.annual_contribution * inflation_factor + post_income
-        pre_retire_cashflows[yr] = pre_income - spending
-        post_retire_cashflows[yr] = post_income - spending
+        pre_retire_cashflows[yr] = inp.annual_contribution + post_income
+        post_retire_cashflows[yr] = post_income - inp.annual_retirement_spending
 
     # Lazily extended pre-retirement accumulation trajectory: accum_cols[yr] is
     # the 1D portfolio vector at age (current_age + yr) when working up to that age.
@@ -398,18 +388,19 @@ def _calc_fire_date(
         while len(accum_cols) <= retire_yr:
             yr = len(accum_cols) - 1
             next_port = np.maximum(
-                accum_cols[yr] * return_cols[yr] + pre_retire_cashflows[yr], 0
+                accum_cols[yr] * return_cols[yr] + pre_retire_cashflows[yr], 0.0
             )
             accum_cols.append(next_port)
         return accum_cols[retire_yr]
 
     def _survives(retire_yr: int) -> bool:
         port = _get_accum(retire_yr).copy()
+        alive = np.ones(inp.iterations, dtype=bool)
         for yr in range(retire_yr, total_years):
-            port = np.maximum(
-                port * return_cols[yr] + post_retire_cashflows[yr], 0
-            )
-        survived = np.sum(port > 0) / inp.iterations
+            raw_next = port * return_cols[yr] + post_retire_cashflows[yr]
+            alive &= raw_next > 0
+            port = np.where(alive, raw_next, 0.0)
+        survived = np.sum(alive) / inp.iterations
         # Round to align with the UI's probability display (which rounds to 1 decimal, i.e 94.95% -> 95.0%)
         return round(survived, 3) >= 0.950
 
@@ -419,14 +410,14 @@ def _calc_fire_date(
 
     best_age = None
     low = 1
-    high = total_years
+    high = total_years - 1
 
     # Narrow binary search bounds using the already-simulated target retirement age if monotonic
     if (
         sim_portfolios is not None
         and sim_portfolios.shape == (inp.iterations, total_years + 1)
         and inp.annual_contribution >= 0
-        and 0 < sim_retire_yr <= total_years
+        and 0 < sim_retire_yr < total_years
     ):
         target_survived = np.sum(sim_portfolios[:, total_years] > 0) / inp.iterations
         if round(target_survived, 3) >= 0.950:
@@ -455,65 +446,30 @@ def _calc_swr(
     return_cols: Optional[List[np.ndarray]] = None,
 ) -> float:
     """
-    Binary search for the maximum withdrawal rate (as % of portfolio at retirement)
-    that gives ≥95% survival to final age.
+    Binary search for the standalone maximum portfolio Safe Withdrawal Rate (% of
+    starting retirement balance, real $) giving ≥95% permanent survival to final age.
     """
     years_to_retire = max(inp.retirement_age - inp.current_age, 0)
     years_post = max(inp.final_age - inp.retirement_age, 0)
-    total_years = years_to_retire + years_post
+    total_years = min(years_to_retire + years_post, 80)
+    actual_years_post = max(0, min(years_post, total_years - years_to_retire))
 
-    if total_years > 80:
-        total_years = 80
+    if actual_years_post <= 0:
+        return 0.0
 
-    if return_cols is None or len(return_cols) != total_years:
-        if returns_plus_one is None or returns_plus_one.shape != (
+    needed_years = years_to_retire + actual_years_post
+    if return_cols is None or len(return_cols) < needed_years:
+        if returns_plus_one is not None and returns_plus_one.shape == (
             inp.iterations,
             total_years,
         ):
-            rng = _get_rng()
-            returns = rng.normal(
-                profile["mean_return"],
-                profile["std_return"],
-                size=(inp.iterations, total_years),
-            )
-            returns_plus_one = 1 + returns
-        return_cols = [returns_plus_one[:, yr] for yr in range(total_years)]
+            return_cols = [np.maximum(returns_plus_one[:, yr], 0.0) for yr in range(total_years)]
+        else:
+            return_cols = _generate_return_cols(profile, inp.iterations, total_years)
 
-    if inflation_factors is None or inflation_factors.shape[0] < total_years:
-        inflation_factors = (1 + inp.inflation_rate) ** np.arange(total_years)
+    post_return_cols = return_cols[years_to_retire : years_to_retire + actual_years_post]
 
-    current_year = datetime.now().year
-    all_ss_incomes = _calc_ss_incomes(inp, inflation_factors, current_year)
-
-    # First, simulate to get portfolio value at retirement if not already provided
-    if (
-        portfolio_at_retire is None
-        or portfolio_at_retire.shape != (inp.iterations,)
-        or years_to_retire > total_years
-    ):
-        port = np.full(inp.iterations, float(inp.current_portfolio))
-        for yr in range(years_to_retire):
-            inflation_factor = inflation_factors[yr]
-            income = inp.annual_contribution * inflation_factor + all_ss_incomes[yr]
-            spending = inp.annual_retirement_spending * inflation_factor
-            net_cashflow = income - spending
-            port = np.maximum(port * return_cols[yr] + net_cashflow, 0)
-        portfolio_at_retire = port
-
-    # Precompute post-retirement invariant values
-    actual_years_post = min(years_post, total_years - years_to_retire)
-    ss_incomes = np.zeros(actual_years_post)
-    post_return_cols: List[np.ndarray] = []
-    inflation_yr = np.zeros(actual_years_post)
-
-    if actual_years_post > 0:
-        for yr in range(actual_years_post):
-            post_yr = years_to_retire + yr
-            post_return_cols.append(return_cols[post_yr])
-            inflation_yr[yr] = inflation_factors[yr]
-            ss_incomes[yr] = all_ss_incomes[post_yr]
-
-    # Binary search for SWR
+    # Binary search for standalone portfolio SWR on a unit $1.0 portfolio
     low, high = 0.0, 15.0
     best_swr = 0.0
 
@@ -521,21 +477,17 @@ def _calc_swr(
         if high - low < 1e-6:
             break
         mid = (low + high) / 2
-        withdrawal_rate = mid / 100
+        withdrawal_rate = mid / 100.0
 
-        # Simulate withdrawals to final age using 1D vector
-        port = portfolio_at_retire.copy()
+        port = np.ones(inp.iterations, dtype=float)
+        alive = np.ones(inp.iterations, dtype=bool)
 
-        if actual_years_post > 0:
-            base_withdrawal = portfolio_at_retire * withdrawal_rate
+        for yr in range(actual_years_post):
+            raw_next = port * post_return_cols[yr] - withdrawal_rate
+            alive &= raw_next > 0
+            port = np.where(alive, raw_next, 0.0)
 
-            for yr in range(actual_years_post):
-                port = port * post_return_cols[yr] - (
-                    base_withdrawal * inflation_yr[yr] - ss_incomes[yr]
-                )
-                port = np.maximum(port, 0)
-
-        survival_rate = np.sum(port > 0) / inp.iterations
+        survival_rate = np.sum(alive) / inp.iterations
         if round(survival_rate, 3) >= 0.950:
             best_swr = mid
             low = mid
@@ -550,80 +502,65 @@ def _calc_required_spend(
     profile: dict,
     returns_plus_one: Optional[np.ndarray] = None,
     inflation_factors: Optional[np.ndarray] = None,
+    portfolio_at_retire: Optional[np.ndarray] = None,
     return_cols: Optional[List[np.ndarray]] = None,
 ) -> float:
     """
-    Binary search for the highest annual spending amount (starting from today)
-    that still gives ≥95% survival to final age at the configured Target Retirement Age.
+    Binary search for the highest real annual retirement spending amount
+    that still gives ≥95% permanent survival to final age at Target Retirement Age.
     """
     years_to_retire = max(inp.retirement_age - inp.current_age, 0)
     years_post = max(inp.final_age - inp.retirement_age, 0)
-    total_years = years_to_retire + years_post
+    total_years = min(years_to_retire + years_post, 80)
+    actual_years_post = max(0, min(years_post, total_years - years_to_retire))
 
-    if total_years > 80:
-        total_years = 80
-
-    # Ensure there is actually a period to model
-    if total_years <= 0:
+    if actual_years_post <= 0:
         return 0.0
 
-    if return_cols is None or len(return_cols) != total_years:
-        if returns_plus_one is None or returns_plus_one.shape != (
+    needed_years = years_to_retire + actual_years_post
+    if return_cols is None or len(return_cols) < needed_years:
+        if returns_plus_one is not None and returns_plus_one.shape == (
             inp.iterations,
             total_years,
         ):
-            rng = _get_rng()
-            returns = rng.normal(
-                profile["mean_return"],
-                profile["std_return"],
-                size=(inp.iterations, total_years),
-            )
-            returns_plus_one = 1 + returns
-        return_cols = [returns_plus_one[:, yr] for yr in range(total_years)]
+            return_cols = [np.maximum(returns_plus_one[:, yr], 0.0) for yr in range(total_years)]
+        else:
+            return_cols = _generate_return_cols(profile, inp.iterations, total_years)
 
-    # Binary search for optimal fixed spending
-    low, high = 0.0, 10_000_000.0  # Search up to $10M/yr spend
+    ss_incomes = _calc_ss_incomes(inp, needed_years)
+
+    if portfolio_at_retire is None or portfolio_at_retire.shape != (inp.iterations,):
+        port = np.full(inp.iterations, float(inp.current_portfolio))
+        for yr in range(years_to_retire):
+            net_cashflow = inp.annual_contribution + ss_incomes[yr]
+            port = np.maximum(port * return_cols[yr] + net_cashflow, 0.0)
+        portfolio_at_retire = port
+
+    post_return_cols = return_cols[years_to_retire : years_to_retire + actual_years_post]
+    post_ss_incomes = ss_incomes[years_to_retire : years_to_retire + actual_years_post]
+
+    low, high = 0.0, 10_000_000.0  # Search up to $10M/yr real spend
     best_spend = 0.0
-
-    # Precompute inflation factors
-    if inflation_factors is None or inflation_factors.shape[0] < total_years:
-        inflation_factors = (1 + inp.inflation_rate) ** np.arange(total_years)
-    elif inflation_factors.shape[0] > total_years:
-        inflation_factors = inflation_factors[:total_years]
-
-    # Precompute income values
-    current_year = datetime.now().year
-    ss_incomes = _calc_ss_incomes(inp, inflation_factors, current_year)
-    base_incomes = np.zeros(total_years)
-
-    for yr in range(total_years):
-        inflation_factor = inflation_factors[yr]
-        if yr < years_to_retire:
-            base_incomes[yr] = inp.annual_contribution * inflation_factor
-        if ss_incomes[yr] > 0:
-            base_incomes[yr] += ss_incomes[yr]
 
     for _ in range(50):  # precision iterations
         if high - low < 0.005:
             break
         test_spend = (low + high) / 2
 
-        # Simulate trajectory using 1D rolling vector
-        port = np.full(inp.iterations, float(inp.current_portfolio))
+        port = portfolio_at_retire.copy()
+        alive = np.ones(inp.iterations, dtype=bool)
 
-        test_spend_inflation = test_spend * inflation_factors
-        net_cashflows = base_incomes - test_spend_inflation
+        for yr in range(actual_years_post):
+            net_cf = post_ss_incomes[yr] - test_spend
+            raw_next = port * post_return_cols[yr] + net_cf
+            alive &= raw_next > 0
+            port = np.where(alive, raw_next, 0.0)
 
-        for yr in range(total_years):
-            port = np.maximum(port * return_cols[yr] + net_cashflows[yr], 0)
-
-        survival_rate = np.sum(port > 0) / inp.iterations
+        survival_rate = np.sum(alive) / inp.iterations
         if round(survival_rate, 3) >= 0.950:
-            # We survived! Try to spend MORE money to find the maximum possible.
             best_spend = test_spend
             low = test_spend
         else:
-            # We failed. We spent too much money. Lower the ceiling.
             high = test_spend
 
     return best_spend

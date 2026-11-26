@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 DEMO_DEFAULTS = {
     "current_age": 45,
     "retirement_age": 65,
-    "annual_contribution": 100000,
+    "annual_contribution": 30000,
     "annual_retirement_spending": 80000,
     "risk_tolerance": "moderate",
     "inflation_rate": 0.03,
@@ -50,9 +50,9 @@ DEMO_DEFAULTS = {
     "social_security_pia": 0,
     "social_security_fra": 67,
     "social_security_birth_month": 1,
-    "social_security_birth_year": 1980,
+    "social_security_birth_year": 1981,
     "social_security_withdrawal_month": 1,
-    "social_security_withdrawal_year": 2047,
+    "social_security_withdrawal_year": 2048,
 }
 
 @asynccontextmanager

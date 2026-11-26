@@ -1110,10 +1110,15 @@
 
             <!-- Cone Chart -->
             <div class="chart-section fade-up">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="chart-title">📈 Portfolio Projection
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div class="chart-title" id="coneChartTitle">📈 Portfolio Projection · Today's $
                     </div>
                     <div class="chart-controls">
+                        <label class="toggle-label" title="Switch Portfolio Projection between inflation-adjusted Today's Dollars and inflated Future Dollars">
+                            <input type="checkbox" id="coneNominalToggle" class="toggle-checkbox"
+                                onchange="handleConeNominalToggle()">
+                            Future $
+                        </label>
                         <label class="toggle-label">
                             <input type="checkbox" id="logScaleToggle" class="toggle-checkbox"
                                 onchange="handleLogToggle()">
@@ -1127,7 +1132,16 @@
 
             <!-- SWR Chart -->
             <div class="chart-section fade-up" style="animation-delay: 0.5s;">
-                <div class="chart-title">💵 Withdrawal Trends</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                    <div class="chart-title" id="swrChartTitle">💵 Retirement Withdrawal Trends · Today's $</div>
+                    <div class="chart-controls">
+                        <label class="toggle-label" title="Switch Retirement Withdrawal Trends between inflation-adjusted Today's Dollars and inflated Future Dollars">
+                            <input type="checkbox" id="swrNominalToggle" class="toggle-checkbox"
+                                onchange="handleSwrNominalToggle()">
+                            Future $
+                        </label>
+                    </div>
+                </div>
                 <div id="swrChart" style="width: 100%; height: 250px;"></div>
             </div>
 
@@ -1177,11 +1191,11 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Annual Income ($)</label>
+                    <label class="form-label">Annual Savings ($)</label>
                     <input type="number" class="form-input" id="settContrib" min="0" step="1000">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Annual Spending ($)</label>
+                    <label class="form-label">Retirement Spend ($/yr)</label>
                     <input type="number" class="form-input" id="settSpending" min="0" step="1000">
                 </div>
             </div>
@@ -1207,13 +1221,13 @@
                     </select>
                     <div
                         style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; margin-top: 6px; background: rgba(255, 255, 255, 0.02); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
-                        <strong>💡 Return Assumptions (Inflation-Adjusted Real Returns):</strong>
+                        <strong>💡 Real Return &amp; Volatility Assumptions (Today's $):</strong>
                         <ul style="margin: 4px 0 0 12px; padding: 0; list-style-type: disc;">
-                            <li><strong>Stocks (S&P 500)</strong>: 8.0% real annual return</li>
-                            <li><strong>Bonds</strong>: 3.0% real annual return</li>
-                            <li><strong>Combined Profiles</strong>: Lean (60/40) = 6.0%, Moderate (80/20) = 7.0%, Fat
-                                (100% Equity) = 8.0%</li>
+                            <li><strong>Lean (60/40)</strong>: 6.0% real mean (±10% std dev)</li>
+                            <li><strong>Moderate (80/20)</strong>: 7.0% real mean (±14% std dev)</li>
+                            <li><strong>Fat (100% Equity)</strong>: 8.0% real mean (±18% std dev)</li>
                         </ul>
+                        <div style="margin-top: 4px;">Simulation runs in Today's $ (inflation-adjusted). Inflation Rate (%) scales the <strong>Future $</strong> view.</div>
                     </div>
                 </div>
             </div>
@@ -1225,6 +1239,8 @@
                 </div>
             </div>
 
+            <div class="validation-error" id="settingsValidationError" style="margin-bottom: 0.8rem;"></div>
+
             <button class="save-btn" id="saveSettingsBtn" onclick="saveSettings()">
                 🔥 Save & Re-run Simulation
             </button>
@@ -1235,25 +1251,22 @@
     <div class="modal-overlay" id="swrInfoModal">
         <div class="modal-card">
             <div class="modal-close" id="swrModalClose">✕</div>
-            <div class="modal-title" style="color: var(--accent-blue); margin-bottom: 1rem;">ℹ️ Safe Withdrawal Rate
+            <div class="modal-title" style="color: var(--accent-blue); margin-bottom: 1rem;">ℹ️ Safe Withdrawal &amp; Budget
             </div>
 
             <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
                 <p style="margin-bottom: 1rem;">
-                    The <strong>Safe Withdrawal Rate (SWR)</strong> is the maximum percentage of your portfolio you can
-                    withdraw in your first year of retirement to cover living expenses, adjusting for inflation every
-                    year thereafter.
+                    <strong>Safe Annual Spend ($/yr)</strong> is the maximum inflation-adjusted annual retirement budget
+                    (including Social Security, if enabled) that maintains a <strong style="color: var(--accent-green);">≥95% survival rate</strong>
+                    through your Target Final Year when retiring at your Target Age.
                 </p>
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                    <strong>How we calculate it:</strong> We run a binary search through 10,000 Monte Carlo simulations
-                    at your target retirement age, hunting for the absolute highest withdrawal rate that still maintains
-                    a <strong style="color: var(--accent-green);">≥95% success rate</strong> (portfolio > $0) until your
-                    Target Final Year.
+                    <strong>Portfolio SWR (%):</strong> Underneath the dollar figure, we show your standalone portfolio
+                    Safe Withdrawal Rate—calculated via binary search across 10,000 Monte Carlo simulations over your
+                    post-retirement horizon independent of Social Security—alongside your median projected balance at retirement.
                 </p>
                 <p style="color: var(--text-secondary);">
-                    <strong>How to interpret it:</strong> A higher SWR (e.g. 4-5%) means you can pull more money out
-                    each year relative to your balance, usually implying high confidence. The chart below graphs these
-                    projected withdrawal amounts mapping to the "5th percentile" safety line.
+                    <strong>How to interpret it:</strong> If your Safe Annual Spend exceeds your Anticipated Spend, your plan has margin of safety. The Withdrawal Trends chart compares Safe Spend, Anticipated Spend, and your historical Monarch spending across retirement.
                 </p>
             </div>
         </div>
@@ -1319,11 +1332,12 @@
             </div>
             <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
                 <p style="margin-bottom: 1rem;">
-                    <strong>Anticipated Spend</strong> is exactly the value you input in your Simulation Settings
-                    representing how much you plan to withdraw each year for living expenses post-retirement.
+                    <strong>Anticipated Spend</strong> is the value you input in Simulation Settings as
+                    <strong>Retirement Spend ($/yr)</strong>—representing your desired annual living expenses in
+                    Today's Dollars after retiring (decoupled from your pre-retirement <strong>Annual Savings</strong>).
                 </p>
                 <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                    <strong>How we calculate it:</strong> This is a passthrough of your manual "Annual Spending ($)"
+                    <strong>How we calculate it:</strong> This is a passthrough of your manual "Retirement Spend ($/yr)"
                     configuration. Underneath it, your <strong>Historical Spend</strong> is automatically calculated by
                     summing your last 12 months of living expenses in Monarch.
                 </p>
@@ -1432,7 +1446,7 @@
                             </select>
                             <div
                                 style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.35; margin-top: 6px; padding: 6px 8px; background: rgba(255,255,255,0.01); border-radius: var(--radius-sm); border: 1px solid var(--border);">
-                                Assumes 8.0% real return on Stocks & 3.0% on Bonds <nav></nav>(Lean: 6.0%, Moderate:
+                                Assumes 8.0% real return on Stocks &amp; 3.0% on Bonds (Lean: 6.0%, Moderate:
                                 7.0%, Fat: 8.0%).
                             </div>
                         </div>
@@ -1479,10 +1493,12 @@
         let swrChartInstance = null;
         let simData = null;
         let useLogScale = false;
+        let useConeNominal = false;
+        let useSwrNominal = false;
 
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
-            loadLogPreference();
+            loadChartPreferences();
 
             // Enforce Demo Mode if unauthenticated
             if (window.IS_AUTHENTICATED === false) {
@@ -1649,24 +1665,15 @@
                 return {
                     risk: 'none',
                     label: 'Cash Mattress (No Gains)',
-                    nominal: 0,
-                    inflation: 0,
                     real: 0
                 };
             }
 
             // Check active inputs on page first, fallback to simData or defaults
             const riskSelect = document.getElementById('ssGainsStrategy');
-            const inflationInput = document.getElementById('settInflation');
-
             const risk = riskSelect ? riskSelect.value : (simData?.settings?.risk_tolerance || 'moderate');
 
-            let inflationVal = inflationInput ? parseFloat(inflationInput.value) : NaN;
-            if (isNaN(inflationVal)) {
-                inflationVal = (simData?.settings?.inflation_rate !== undefined) ? (simData?.settings?.inflation_rate * 100) : 3;
-            }
-            const inflation = inflationVal / 100;
-
+            // These profile assumptions are already real (inflation-adjusted) returns
             const RISK_RETURNS = {
                 lean: 0.06,
                 moderate: 0.07,
@@ -1678,35 +1685,37 @@
                 fat: 'Fat (100% Equity)'
             };
 
-            const nominal = RISK_RETURNS[risk] || 0.07;
+            const real = RISK_RETURNS[risk] || 0.07;
             const label = RISK_LABELS[risk] || 'Moderate (80/20)';
-            const real = nominal - inflation;
 
             return {
                 risk,
                 label,
-                nominal,
-                inflation,
-                real: Math.max(-0.1, real) // allow negative real return but clamp to sane minimum
+                real
             };
+        }
+
+        function calcCumulativeSsBenefit(mba, months, annualRealRate) {
+            if (months <= 0 || mba <= 0) return 0;
+            if (Math.abs(annualRealRate) < 1e-6) return mba * months;
+            const r_m = Math.pow(1 + annualRealRate, 1 / 12) - 1;
+            return mba * (Math.pow(1 + r_m, months) - 1) / r_m;
         }
 
         function findBreakevenAgeWithGains(A1, A2, mba_A1, mba_A2, R) {
             if (mba_A2 <= mba_A1) return null; // No break-even if later claim has lower or equal benefit
 
-            // Search for T from A2 up to 120 years
-            for (let T = A2; T <= 120; T += 0.1) {
-                let fv1, fv2;
-                if (Math.abs(R) < 0.0001) {
-                    fv1 = 12 * mba_A1 * (T - A1);
-                    fv2 = 12 * mba_A2 * (T - A2);
-                } else {
-                    fv1 = 12 * mba_A1 * (Math.pow(1 + R, T - A1) - 1) / R;
-                    fv2 = 12 * mba_A2 * (Math.pow(1 + R, T - A2) - 1) / R;
-                }
+            // Step month-by-month from A2 up to age 120 using monthly compounding
+            const startMonth = Math.round(A2 * 12) + 1;
+            const endMonth = 120 * 12;
+            const a1Months = Math.round(A1 * 12);
+            const a2Months = Math.round(A2 * 12);
 
+            for (let m = startMonth; m <= endMonth; m++) {
+                const fv1 = calcCumulativeSsBenefit(mba_A1, m - a1Months, R);
+                const fv2 = calcCumulativeSsBenefit(mba_A2, m - a2Months, R);
                 if (fv2 >= fv1) {
-                    return T; // Found break-even age
+                    return m / 12;
                 }
             }
             return null; // Never breaks even within realistic lifespan
@@ -1748,13 +1757,8 @@
                     if (x < C) {
                         lineData.push(0);
                     } else {
-                        const yearsCollected = x - C;
-                        if (Math.abs(R) < 0.0001) {
-                            lineData.push(Math.round(yearsCollected * mba_C * 12));
-                        } else {
-                            const val = 12 * mba_C * (Math.pow(1 + R, yearsCollected) - 1) / R;
-                            lineData.push(Math.round(val));
-                        }
+                        const monthsCollected = (x - C) * 12;
+                        lineData.push(Math.round(calcCumulativeSsBenefit(mba_C, monthsCollected, R)));
                     }
                 }
 
@@ -1906,21 +1910,55 @@
             el.innerHTML = html;
         }
 
-        function openSsModal() {
-            let s = simData?.settings;
+        function getActiveSettings() {
+            const base = simData?.settings ? { ...simData.settings } : {
+                current_age: 45,
+                retirement_age: 65,
+                annual_contribution: 30000,
+                annual_retirement_spending: 80000,
+                risk_tolerance: 'moderate',
+                inflation_rate: 0.03,
+                final_age: 85,
+                social_security_enabled: false,
+                social_security_pia: 0,
+                social_security_fra: 67,
+                social_security_birth_month: 1,
+                social_security_birth_year: 1981,
+                social_security_withdrawal_month: 1,
+                social_security_withdrawal_year: 2048,
+            };
             if (window.IS_DEMO) {
-                const stored = localStorage.getItem('fire_demo_settings');
-                if (stored) s = JSON.parse(stored);
+                try {
+                    const stored = localStorage.getItem('fire_demo_settings');
+                    if (stored) {
+                        return { ...base, ...JSON.parse(stored) };
+                    }
+                } catch (e) { /* ignore corrupt storage */ }
             }
+            return base;
+        }
+
+        function saveDemoSettingsPatch(patch) {
+            const merged = {
+                ...getActiveSettings(),
+                current_portfolio: simData?.current_portfolio ?? 500000,
+                ...patch,
+            };
+            localStorage.setItem('fire_demo_settings', JSON.stringify(merged));
+            return merged;
+        }
+
+        function openSsModal() {
+            const s = getActiveSettings();
 
             if (s) {
                 document.getElementById('ssEnabledToggle').checked = s.social_security_enabled || false;
                 document.getElementById('ssFra').value = s.social_security_fra || 67;
                 document.getElementById('ssPia').value = s.social_security_pia || "";
                 document.getElementById('ssBirthMonth').value = s.social_security_birth_month || 1;
-                document.getElementById('ssBirthYear').value = s.social_security_birth_year || 1980;
+                document.getElementById('ssBirthYear').value = s.social_security_birth_year || 1981;
                 document.getElementById('ssWithdrawMonth').value = s.social_security_withdrawal_month || 1;
-                document.getElementById('ssWithdrawYear').value = s.social_security_withdrawal_year || 2047;
+                document.getElementById('ssWithdrawYear').value = s.social_security_withdrawal_year || 2048;
 
                 if (!s.social_security_pia || s.social_security_pia === 0) {
                     const curYear = new Date().getFullYear();
@@ -1965,12 +2003,7 @@
 
             try {
                 if (window.IS_DEMO) {
-                    let demoSettings = {};
-                    const stored = localStorage.getItem('fire_demo_settings');
-                    if (stored) demoSettings = JSON.parse(stored);
-
-                    demoSettings = { ...demoSettings, ...payload };
-                    localStorage.setItem('fire_demo_settings', JSON.stringify(demoSettings));
+                    saveDemoSettingsPatch(payload);
                     runSimulation();
                 } else {
                     const res = await fetch('/api/fire/settings', {
@@ -1991,9 +2024,9 @@
             const pia = parseInt(document.getElementById('ssPia').value) || 0;
             const fra = parseInt(document.getElementById('ssFra').value) || 67;
             const birthMonth = parseInt(document.getElementById('ssBirthMonth').value) || 1;
-            const birthYear = parseInt(document.getElementById('ssBirthYear').value) || 1980;
+            const birthYear = parseInt(document.getElementById('ssBirthYear').value) || 1981;
             const withdrawMonth = parseInt(document.getElementById('ssWithdrawMonth').value) || 1;
-            const withdrawYear = parseInt(document.getElementById('ssWithdrawYear').value) || 2047;
+            const withdrawYear = parseInt(document.getElementById('ssWithdrawYear').value) || 2048;
 
             // Auto-enable projection when user updates settings from the modal
             const checkbox = document.getElementById('ssEnabledToggle');
@@ -2009,7 +2042,13 @@
                 return;
             }
 
+            // Sync current_age with Birth Year so chart markers & cashflows align
+            const curYear = new Date().getFullYear();
+            const deducedAge = Math.min(100, Math.max(18, curYear - birthYear));
+            const prevS = getActiveSettings();
+
             const payload = {
+                current_age: deducedAge,
                 social_security_enabled: enabled,
                 social_security_pia: pia,
                 social_security_fra: fra,
@@ -2018,6 +2057,13 @@
                 social_security_withdrawal_month: withdrawMonth,
                 social_security_withdrawal_year: withdrawYear
             };
+            if ((prevS.retirement_age ?? 65) < deducedAge) {
+                payload.retirement_age = deducedAge;
+            }
+            const effectiveRetireAge = payload.retirement_age ?? (prevS.retirement_age ?? 65);
+            if ((prevS.final_age ?? 85) <= effectiveRetireAge) {
+                payload.final_age = Math.min(120, Math.max(85, effectiveRetireAge + 10));
+            }
 
             // Save modal optimizer preferences
             localStorage.setItem('ss_gains_enabled', document.getElementById('ssGainsEnabled').checked);
@@ -2025,12 +2071,7 @@
 
             try {
                 if (window.IS_DEMO) {
-                    let demoSettings = {};
-                    const stored = localStorage.getItem('fire_demo_settings');
-                    if (stored) demoSettings = JSON.parse(stored);
-
-                    demoSettings = { ...demoSettings, ...payload };
-                    localStorage.setItem('fire_demo_settings', JSON.stringify(demoSettings));
+                    saveDemoSettingsPatch(payload);
                     closeSsModal();
                     runSimulation();
                 } else {
@@ -2067,9 +2108,10 @@
                     const stored = localStorage.getItem('fire_demo_settings');
                     if (stored) {
                         const parsed = JSON.parse(stored);
+                        const { current_portfolio, ...settingsOnly } = parsed;
                         reqBody = JSON.stringify({
-                            settings: parsed,
-                            current_portfolio: parsed.current_portfolio,
+                            settings: settingsOnly,
+                            current_portfolio: current_portfolio,
                             is_demo: true
                         });
                     }
@@ -2093,37 +2135,99 @@
         }
 
         async function saveSettings() {
+            const errEl = document.getElementById('settingsValidationError');
+            const showValErr = (msg) => {
+                if (errEl) {
+                    errEl.textContent = msg;
+                    errEl.style.display = 'block';
+                } else {
+                    alert(msg);
+                }
+            };
+            if (errEl) errEl.style.display = 'none';
+
+            const currentAge = parseInt(document.getElementById('settAge').value, 10);
+            const retireAge = parseInt(document.getElementById('settRetireAge').value, 10);
+            const annualContrib = parseInt(document.getElementById('settContrib').value, 10);
+            const annualSpending = parseInt(document.getElementById('settSpending').value, 10);
+            const finalAge = parseInt(document.getElementById('settFinalAge').value, 10);
+            const inflationPct = parseFloat(document.getElementById('settInflation').value);
+            const riskTolerance = document.getElementById('settRisk').value;
+
+            if (Number.isNaN(currentAge) || currentAge < 18 || currentAge > 100) {
+                showValErr('Current Age must be between 18 and 100.');
+                return;
+            }
+            if (Number.isNaN(retireAge) || retireAge < currentAge) {
+                showValErr('Target FIRE Age must be greater than or equal to Current Age.');
+                return;
+            }
+            if (Number.isNaN(finalAge) || finalAge <= retireAge || finalAge > 120) {
+                showValErr('Final Year (Age) must be greater than Target FIRE Age and at most 120.');
+                return;
+            }
+            if (Number.isNaN(annualContrib) || annualContrib < 0) {
+                showValErr('Annual Savings must be $0 or greater.');
+                return;
+            }
+            if (Number.isNaN(annualSpending) || annualSpending < 0) {
+                showValErr('Retirement Spend must be $0 or greater.');
+                return;
+            }
+            if (Number.isNaN(inflationPct) || inflationPct < 0 || inflationPct > 25) {
+                showValErr('Inflation Rate must be between 0% and 25%.');
+                return;
+            }
+
+            // Keep Social Security birth year & claiming year synced with Current Age
+            const curYear = new Date().getFullYear();
+            const prevS = getActiveSettings();
+            const prevBirthYear = prevS.social_security_birth_year || (curYear - currentAge);
+            const prevWithdrawYear = prevS.social_security_withdrawal_year || (prevBirthYear + 67);
+            const claimOffset = Math.min(70, Math.max(62, prevWithdrawYear - prevBirthYear));
+            const newBirthYear = curYear - currentAge;
+            const newWithdrawYear = newBirthYear + claimOffset;
+
+            const payload = {
+                current_age: currentAge,
+                retirement_age: retireAge,
+                annual_contribution: annualContrib,
+                annual_retirement_spending: annualSpending,
+                risk_tolerance: riskTolerance,
+                inflation_rate: inflationPct / 100,
+                final_age: finalAge,
+                social_security_birth_year: newBirthYear,
+                social_security_withdrawal_year: newWithdrawYear,
+            };
+
+            if (window.IS_DEMO) {
+                const portfolioStr = document.getElementById('settPortfolio').value;
+                if (portfolioStr !== '') {
+                    const portfolioVal = parseInt(portfolioStr, 10);
+                    if (Number.isNaN(portfolioVal) || portfolioVal < 0) {
+                        showValErr('Net Worth Total must be $0 or greater.');
+                        return;
+                    }
+                    payload.current_portfolio = portfolioVal;
+                }
+            }
+
             const btn = document.getElementById('saveSettingsBtn');
             btn.textContent = 'Saving...';
             btn.disabled = true;
 
-            const payload = {
-                current_age: parseInt(document.getElementById('settAge').value),
-                retirement_age: parseInt(document.getElementById('settRetireAge').value),
-                annual_contribution: parseInt(document.getElementById('settContrib').value),
-                annual_retirement_spending: parseInt(document.getElementById('settSpending').value),
-                risk_tolerance: document.getElementById('settRisk').value,
-                inflation_rate: parseFloat(document.getElementById('settInflation').value) / 100,
-                final_age: parseInt(document.getElementById('settFinalAge').value) || 85,
-            };
-
             try {
                 if (window.IS_DEMO) {
-                    const portfolioStr = document.getElementById('settPortfolio').value;
-                    if (portfolioStr) {
-                        payload.current_portfolio = parseInt(portfolioStr);
-                    }
-
-                    // Update in local storage instead of remote database
-                    localStorage.setItem('fire_demo_settings', JSON.stringify(payload));
+                    saveDemoSettingsPatch(payload);
                     closeSettings();
                     runSimulation();
                 } else {
-                    await fetch('/api/fire/settings', {
+                    const res = await fetch('/api/fire/settings', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),
                     });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     closeSettings();
                     runSimulation();
                 }
@@ -2170,10 +2274,14 @@
                 document.getElementById('fireSub').textContent = 'Survival rate < 95%';
             }
 
-            const retireIdx = data.years.indexOf(data.settings.retirement_age);
-            const portfolioAtRetire = retireIdx >= 0 ? data.percentile_5[retireIdx] : data.current_portfolio;
-            document.getElementById('swrValue').textContent = '$' + formatNum(portfolioAtRetire * data.swr / 100) + '/yr';
-            document.getElementById('swrSub').textContent = data.swr + '% of $' + formatCompact(portfolioAtRetire) + ' (5th pctl)';
+            const rawRetireIdx = data.years.indexOf(s.retirement_age);
+            const retireIdx = rawRetireIdx >= 0 ? rawRetireIdx : 0;
+            const safeSpendAmt = data.required_spend_for_target ?? 0;
+            const medianAtRetire = data.percentile_50[retireIdx] ?? data.current_portfolio;
+            document.getElementById('swrValue').textContent = '$' + formatNum(safeSpendAmt) + '/yr';
+            document.getElementById('swrSub').textContent = data.swr.toFixed(2) + '% SWR · $' + formatCompact(medianAtRetire) + ' med';
+
+            updateChartTitles();
 
             // Anticipated spend target logic
             const plannedSpend = data.settings.annual_retirement_spending;
@@ -2187,9 +2295,13 @@
             let recMessage = '';
             let recColor = 'var(--text-primary)';
 
-            if (requiredSpend !== null && requiredSpend < plannedSpend && requiredSpend > 0) {
+            if (requiredSpend !== null && requiredSpend < plannedSpend) {
                 spendCard.style.color = "var(--accent-red)";
-                recMessage = '• Reduce spend to $' + formatNum(requiredSpend) + ' to reach FIRE at target age (' + s.retirement_age + ').';
+                if (requiredSpend > 0) {
+                    recMessage = `• Reduce retirement spend to $${formatNum(requiredSpend)}/yr (today's $) to reach FIRE at target age (${s.retirement_age}).`;
+                } else {
+                    recMessage = `• Current portfolio and savings cannot support retirement at target age (${s.retirement_age}) with ≥95% confidence.`;
+                }
                 recColor = "var(--accent-amber)";
             } else {
                 spendCard.style.color = "var(--accent-amber)";
@@ -2303,23 +2415,25 @@
 
             const s = data.settings || {};
             const years = data.years;
-            // Clone the percentiles to prevent in-place mutation affecting other charts
-            let p5 = [...data.percentile_5];
-            let p25 = [...data.percentile_25];
-            let p50 = [...data.percentile_50];
-            let p75 = [...data.percentile_75];
-            let p95 = [...data.percentile_95];
+            const inflation = s.inflation_rate || 0;
+            const scaleArr = arr => useConeNominal
+                ? arr.map((v, i) => Math.round(v * Math.pow(1 + inflation, i)))
+                : [...arr];
 
-            // Log scale breaks if data contains zeroes or negative values
-            // The yAxis minimum is clamped to 10000 below, so clamp data to 10000 for log scale to prevent broken lines
-            if (useLogScale) {
-                const clamp = val => Math.max(10000, val);
-                p5 = p5.map(clamp);
-                p25 = p25.map(clamp);
-                p50 = p50.map(clamp);
-                p75 = p75.map(clamp);
-                p95 = p95.map(clamp);
-            }
+            const rawP5 = scaleArr(data.percentile_5);
+            const rawP25 = scaleArr(data.percentile_25);
+            const rawP50 = scaleArr(data.percentile_50);
+            const rawP75 = scaleArr(data.percentile_75);
+            const rawP95 = scaleArr(data.percentile_95);
+
+            // Log scale requires positive values; clamp display series while preserving exact raw values for tooltips
+            const logFloor = 1000;
+            const clampLog = val => Math.max(logFloor, val);
+            const p5 = useLogScale ? rawP5.map(clampLog) : rawP5;
+            const p25 = useLogScale ? rawP25.map(clampLog) : rawP25;
+            const p50 = useLogScale ? rawP50.map(clampLog) : rawP50;
+            const p75 = useLogScale ? rawP75.map(clampLog) : rawP75;
+            const p95 = useLogScale ? rawP95.map(clampLog) : rawP95;
 
             const targetRetireAge = s.retirement_age;
             const targetRetireIdx = years.indexOf(targetRetireAge);
@@ -2382,18 +2496,19 @@
                     textStyle: { color: '#f0f0f5', fontSize: 12 },
                     formatter: function (params) {
                         const age = params[0].axisValue;
-                        let html = `<strong>Age ${age}</strong><br/>`;
+                        const dollarMode = useConeNominal ? "Future $" : "Today's $";
+                        let html = `<strong>Age ${age} (${dollarMode})</strong><br/>`;
 
-                        // Map to absolute values since the chart uses stacked deltas
-                        const absoluteParams = params.map(p => {
-                            let val = p.value;
-                            if (p.seriesName === '95th Pctl') val = data.percentile_95[p.dataIndex];
-                            else if (p.seriesName === '75th Pctl') val = data.percentile_75[p.dataIndex];
-                            else if (p.seriesName === 'Median') val = data.percentile_50[p.dataIndex];
-                            else if (p.seriesName === '25th Pctl') val = data.percentile_25[p.dataIndex];
-                            else if (p.seriesName === '5th Pctl') val = data.percentile_5[p.dataIndex];
-                            return { ...p, absoluteValue: val };
-                        });
+                        const rawMap = {
+                            '95th Pctl': rawP95,
+                            '75th Pctl': rawP75,
+                            'Median': rawP50,
+                            '25th Pctl': rawP25,
+                            '5th Pctl': rawP5,
+                        };
+                        const absoluteParams = params
+                            .filter(p => rawMap[p.seriesName] !== undefined)
+                            .map(p => ({ ...p, absoluteValue: rawMap[p.seriesName][p.dataIndex] }));
 
                         // Sort by absolute value descending
                         absoluteParams.sort((a, b) => {
@@ -2444,67 +2559,103 @@
                     },
                     splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
                     axisLine: { show: false },
-                    min: useLogScale ? function (value) { return Math.max(10000, value.min); } : null,
+                    min: useLogScale ? function (value) { return Math.max(1000, Math.floor(value.min * 0.8)); } : null,
                     max: useLogScale ? function (value) { return value.max * 1.5; } : null,
                 },
                 series: [
-                    // 5th-95th band (bottom fill)
+                    // Unstacked confidence band polygons (works cleanly on both linear and log axes)
+                    {
+                        name: 'Confidence Bands',
+                        type: 'custom',
+                        silent: true,
+                        clip: true,
+                        tooltip: { show: false },
+                        z: 1,
+                        renderItem: function (params, api) {
+                            const buildBandPoints = (upper, lower) => {
+                                const pts = [];
+                                for (let i = 0; i < years.length; i++) {
+                                    pts.push(api.coord([i, upper[i]]));
+                                }
+                                for (let i = years.length - 1; i >= 0; i--) {
+                                    pts.push(api.coord([i, lower[i]]));
+                                }
+                                return pts;
+                            };
+                            return {
+                                type: 'group',
+                                children: [
+                                    {
+                                        type: 'polygon',
+                                        shape: { points: buildBandPoints(p95, p5) },
+                                        style: {
+                                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                                { offset: 0, color: 'rgba(255, 107, 53, 0.14)' },
+                                                { offset: 1, color: 'rgba(255, 107, 53, 0.02)' }
+                                            ])
+                                        }
+                                    },
+                                    {
+                                        type: 'polygon',
+                                        shape: { points: buildBandPoints(p75, p25) },
+                                        style: {
+                                            fill: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                                { offset: 0, color: 'rgba(96, 165, 250, 0.20)' },
+                                                { offset: 1, color: 'rgba(96, 165, 250, 0.04)' }
+                                            ])
+                                        }
+                                    }
+                                ]
+                            };
+                        },
+                        data: [[0, p50[0]]]
+                    },
                     {
                         name: '5th Pctl',
                         type: 'line',
                         data: p5,
-                        lineStyle: { opacity: 0 },
-                        stack: 'band-outer',
+                        itemStyle: { color: 'rgba(255, 107, 53, 0.45)' },
+                        lineStyle: { color: 'rgba(255, 107, 53, 0.2)', width: 1 },
                         symbol: 'none',
-                        areaStyle: { opacity: 0 },
+                        z: 2,
                     },
-                    {
-                        name: '95th Pctl',
-                        type: 'line',
-                        data: p95.map((v, i) => v - p5[i]),
-                        lineStyle: { opacity: 0 },
-                        stack: 'band-outer',
-                        symbol: 'none',
-                        areaStyle: {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: 'rgba(255, 107, 53, 0.12)' },
-                                { offset: 1, color: 'rgba(255, 107, 53, 0.02)' }
-                            ])
-                        },
-                    },
-                    // 25th-75th band
                     {
                         name: '25th Pctl',
                         type: 'line',
                         data: p25,
-                        lineStyle: { opacity: 0 },
-                        stack: 'band-inner',
+                        itemStyle: { color: 'rgba(96, 165, 250, 0.6)' },
+                        lineStyle: { color: 'rgba(96, 165, 250, 0.25)', width: 1 },
                         symbol: 'none',
-                        areaStyle: { opacity: 0 },
-                    },
-                    {
-                        name: '75th Pctl',
-                        type: 'line',
-                        data: p75.map((v, i) => v - p25[i]),
-                        lineStyle: { opacity: 0 },
-                        stack: 'band-inner',
-                        symbol: 'none',
-                        areaStyle: {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: 'rgba(96, 165, 250, 0.18)' },
-                                { offset: 1, color: 'rgba(96, 165, 250, 0.04)' }
-                            ])
-                        },
+                        z: 3,
                     },
                     // Median line
                     {
                         name: 'Median',
                         type: 'line',
                         data: p50,
+                        itemStyle: { color: '#ff6b35' },
                         lineStyle: { color: '#ff6b35', width: 2 },
                         symbol: 'none',
                         smooth: 0.2,
                         z: 10,
+                    },
+                    {
+                        name: '75th Pctl',
+                        type: 'line',
+                        data: p75,
+                        itemStyle: { color: 'rgba(96, 165, 250, 0.6)' },
+                        lineStyle: { color: 'rgba(96, 165, 250, 0.25)', width: 1 },
+                        symbol: 'none',
+                        z: 3,
+                    },
+                    {
+                        name: '95th Pctl',
+                        type: 'line',
+                        data: p95,
+                        itemStyle: { color: 'rgba(255, 107, 53, 0.45)' },
+                        lineStyle: { color: 'rgba(255, 107, 53, 0.2)', width: 1 },
+                        symbol: 'none',
+                        z: 2,
                     },
                     // Target retirement age marker (user setting)
                     ...(targetRetireIdx >= 0 ? [{
@@ -2586,7 +2737,7 @@
                             symbol: 'none',
                             lineStyle: { color: 'rgba(34, 197, 94, 0.7)', type: 'dashed', width: 1.5 },
                             label: {
-                                formatter: '🔑 Social Secutiy',
+                                formatter: '🔑 Social Security',
                                 color: '#22c55e',
                                 fontSize: 10,
                                 position: 'end',
@@ -2607,63 +2758,54 @@
             if (swrChartInstance) swrChartInstance.dispose();
             swrChartInstance = echarts.init(container, null, { renderer: 'canvas' });
 
-            const years = data.years;
+            const s = data.settings || {};
+            const rawRetireIdx = data.years.indexOf(s.retirement_age);
+            const retireIdx = rawRetireIdx >= 0 ? rawRetireIdx : 0;
+            const retireYears = data.years.slice(retireIdx);
 
-            const swrRate = data.swr / 100;
-            const retireIdx = data.years.indexOf(data.settings.retirement_age);
-            const portfolioAtRetire = retireIdx >= 0 ? data.percentile_5[retireIdx] : data.current_portfolio;
-            const initialSwrAmount = portfolioAtRetire * swrRate;
-            const inflation = data.settings.inflation_rate;
-            const baseSpending = data.settings.annual_retirement_spending;
-
-            const safeSpending = years.map((y, i) => {
-                const yearsFromRetire = y - data.settings.retirement_age;
-                if (yearsFromRetire < 0) {
-                    return baseSpending * Math.pow(1 + inflation, i);
-                } else {
-                    return initialSwrAmount * Math.pow(1 + inflation, yearsFromRetire);
-                }
-            });
-
+            const inflation = s.inflation_rate || 0;
+            const baseSpending = s.annual_retirement_spending;
+            const safeBaseSpend = data.required_spend_for_target ?? 0;
             const historicalAnnualSpend = data.monthly_spend_avg * 12;
-            const projectedHistorical = years.map((_, i) => historicalAnnualSpend * Math.pow(1 + inflation, i));
+
+            const factor = k => useSwrNominal ? Math.pow(1 + inflation, retireIdx + k) : 1;
+
+            const safeSpending = retireYears.map((_, k) => Math.round(safeBaseSpend * factor(k)));
+            const anticipatedSpending = retireYears.map((_, k) => Math.round(baseSpending * factor(k)));
+            const projectedHistorical = retireYears.map((_, k) => Math.round(historicalAnnualSpend * factor(k)));
 
             let seriesArr = [
                 {
-                    name: 'Safe Spend',
+                    name: 'Safe Spend (95%)',
                     type: 'line',
                     data: safeSpending,
                     symbol: 'circle',
-                    symbolSize: 6,
+                    symbolSize: 5,
+                    itemStyle: { color: '#4ade80' },
+                    lineStyle: { color: '#4ade80', width: 2, type: 'solid' },
+                    z: 11
+                },
+                {
+                    name: 'Anticipated Spend',
+                    type: 'line',
+                    data: anticipatedSpending,
+                    symbol: 'circle',
+                    symbolSize: 5,
                     itemStyle: { color: '#ff6b35' },
                     lineStyle: { color: '#ff6b35', width: 2, type: 'solid' },
                     z: 10
                 },
                 {
-                    name: 'Historical Spend',
+                    name: 'Historical Spend (MM)',
                     type: 'line',
                     data: projectedHistorical,
                     symbol: 'circle',
-                    symbolSize: 6,
+                    symbolSize: 5,
                     itemStyle: { color: '#a78bfa' },
                     lineStyle: { color: '#a78bfa', width: 2, type: 'dotted' },
-                    z: 10
+                    z: 9
                 }
             ];
-
-            const requiredSpend = data.required_spend_for_target;
-            if (requiredSpend !== null && requiredSpend < baseSpending && requiredSpend > 0) {
-                const recommendedSpending = years.map((_, i) => requiredSpend * Math.pow(1 + inflation, i));
-                seriesArr.push({
-                    name: 'Recommended Spend',
-                    type: 'line',
-                    data: recommendedSpending,
-                    symbol: 'none',
-                    itemStyle: { color: '#60a5fa' },
-                    lineStyle: { color: '#60a5fa', width: 2, type: 'dashed' },
-                    z: 11
-                });
-            }
 
             const option = {
                 backgroundColor: 'transparent',
@@ -2719,7 +2861,8 @@
                     },
                     formatter: function (params) {
                         const age = params[0].axisValue;
-                        let tooltipText = `<strong>Age ${age}</strong><br/>`;
+                        const dollarMode = useSwrNominal ? "Future $" : "Today's $";
+                        let tooltipText = `<strong>Age ${age} (${dollarMode})</strong><br/>`;
                         params.forEach(param => {
                             tooltipText += `${param.marker} ${param.seriesName}: <strong>$${formatNum(param.value)}/yr</strong><br/>`;
                         });
@@ -2735,8 +2878,8 @@
                 },
                 xAxis: {
                     type: 'category',
-                    data: years,
-                    name: 'Age',
+                    data: retireYears,
+                    name: 'Retirement Age',
                     nameLocation: 'middle',
                     nameGap: 28,
                     nameTextStyle: { color: 'rgba(255,255,255,0.4)', fontSize: 11 },
@@ -2744,7 +2887,7 @@
                         color: 'rgba(255,255,255,0.35)',
                         fontSize: 10,
                         interval: function (index) {
-                            return years[index] % 5 === 0;
+                            return retireYears[index] % 5 === 0;
                         }
                     },
                     axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
@@ -2768,11 +2911,13 @@
 
         // ===== Settings Modal =====
         function openSettings() {
+            const errEl = document.getElementById('settingsValidationError');
+            if (errEl) errEl.style.display = 'none';
             document.getElementById('settDemoMode').checked = window.IS_DEMO;
             document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
-            // Populate from current sim data
-            if (simData?.settings) {
-                const s = simData.settings;
+            // Populate from active settings (preserving demo overrides)
+            const s = getActiveSettings();
+            if (s) {
                 document.getElementById('settAge').value = s.current_age;
                 document.getElementById('settRetireAge').value = s.retirement_age;
                 document.getElementById('settContrib').value = s.annual_contribution;
@@ -2781,8 +2926,8 @@
                 document.getElementById('settInflation').value = (s.inflation_rate * 100).toFixed(1);
                 document.getElementById('settFinalAge').value = s.final_age || 85;
             }
-            if (window.IS_DEMO && simData) {
-                document.getElementById('settPortfolio').value = simData.current_portfolio || 500000;
+            if (window.IS_DEMO) {
+                document.getElementById('settPortfolio').value = s.current_portfolio ?? simData?.current_portfolio ?? 500000;
             }
             document.getElementById('settingsModal').style.display = 'flex';
         }
@@ -2836,12 +2981,38 @@
         }
 
         // ===== Preferences =====
-        function loadLogPreference() {
-            const saved = localStorage.getItem('fire_useLogScale');
-            if (saved !== null) {
-                useLogScale = saved === 'true';
+        function loadChartPreferences() {
+            const savedLog = localStorage.getItem('fire_useLogScale');
+            if (savedLog !== null) {
+                useLogScale = savedLog === 'true';
                 document.getElementById('logScaleToggle').checked = useLogScale;
             }
+
+            const legacyNominal = localStorage.getItem('fire_useNominalDollars');
+            const savedConeNominal = localStorage.getItem('fire_useConeNominal');
+            if (savedConeNominal !== null) {
+                useConeNominal = savedConeNominal === 'true';
+            } else if (legacyNominal !== null) {
+                useConeNominal = legacyNominal === 'true';
+            }
+            document.getElementById('coneNominalToggle').checked = useConeNominal;
+
+            const savedSwrNominal = localStorage.getItem('fire_useSwrNominal');
+            if (savedSwrNominal !== null) {
+                useSwrNominal = savedSwrNominal === 'true';
+            } else if (legacyNominal !== null) {
+                useSwrNominal = legacyNominal === 'true';
+            }
+            document.getElementById('swrNominalToggle').checked = useSwrNominal;
+
+            updateChartTitles();
+        }
+
+        function updateChartTitles() {
+            const coneTag = useConeNominal ? "Future $" : "Today's $";
+            const swrTag = useSwrNominal ? "Future $" : "Today's $";
+            document.getElementById('coneChartTitle').textContent = `📈 Portfolio Projection · ${coneTag}`;
+            document.getElementById('swrChartTitle').textContent = `💵 Retirement Withdrawal Trends · ${swrTag}`;
         }
 
         function loadDemoPreference() {
@@ -2854,6 +3025,24 @@
             localStorage.setItem('fire_useLogScale', useLogScale);
             if (simData) {
                 renderConeChart(simData);
+            }
+        }
+
+        function handleConeNominalToggle() {
+            useConeNominal = document.getElementById('coneNominalToggle').checked;
+            localStorage.setItem('fire_useConeNominal', useConeNominal);
+            updateChartTitles();
+            if (simData) {
+                renderConeChart(simData);
+            }
+        }
+
+        function handleSwrNominalToggle() {
+            useSwrNominal = document.getElementById('swrNominalToggle').checked;
+            localStorage.setItem('fire_useSwrNominal', useSwrNominal);
+            updateChartTitles();
+            if (simData) {
+                renderSwrChart(simData);
             }
         }
     </script>

@@ -110,6 +110,41 @@ class TestFireEngine(unittest.TestCase):
 
         self.assertEqual(result.years[0], 35)
 
+    def test_pre_retirement_accumulation_decoupled_from_retirement_spend(self):
+        """Pre-retirement savings depend on annual_contribution, not annual_retirement_spending."""
+        low_spend = simulate(
+            self._default_input(
+                current_portfolio=200_000,
+                current_age=30,
+                retirement_age=50,
+                annual_contribution=30_000,
+                annual_retirement_spending=40_000,
+            )
+        )
+        high_spend = simulate(
+            self._default_input(
+                current_portfolio=200_000,
+                current_age=30,
+                retirement_age=50,
+                annual_contribution=30_000,
+                annual_retirement_spending=120_000,
+            )
+        )
+        self.assertEqual(low_spend.percentile_50[20], high_spend.percentile_50[20])
+
+    def test_unreachable_fire_date_returns_none(self):
+        """Unreachable retirement plans must return None instead of final_age."""
+        inp = self._default_input(
+            current_portfolio=1_000,
+            current_age=40,
+            retirement_age=50,
+            final_age=85,
+            annual_contribution=1_000,
+            annual_retirement_spending=250_000,
+        )
+        res = simulate(inp)
+        self.assertIsNone(res.fire_date_age)
+
 
 class TestFilterAccounts(unittest.TestCase):
     """Tests for the account filtering logic."""
@@ -290,6 +325,93 @@ class TestSocialSecurity(unittest.TestCase):
         # Enabling Social Security should increase probability of survival/median portfolio at the end
         self.assertGreaterEqual(res_enabled.retirement_probability, res_disabled.retirement_probability)
         self.assertGreater(res_enabled.percentile_50[-1], res_disabled.percentile_50[-1])
+
+    def test_zombie_portfolio_not_resurrected_by_ss(self):
+        """A portfolio depleted during retirement must stay ruined even if SS starts later."""
+        inp = SimulationInput(
+            current_portfolio=50_000,
+            current_age=50,
+            retirement_age=50,
+            annual_contribution=0,
+            annual_retirement_spending=40_000,
+            final_age=85,
+            social_security_enabled=True,
+            social_security_pia=5_000,  # $60k/yr > $40k/yr spend starting at 67
+            social_security_fra=67,
+            social_security_birth_year=1976,
+            social_security_birth_month=1,
+            social_security_withdrawal_year=1976 + 67,
+            social_security_withdrawal_month=1,
+            iterations=200,
+        )
+        res = simulate(inp)
+        self.assertEqual(res.retirement_probability, 0.0)
+        self.assertEqual(res.percentile_50[-1], 0)
+        self.assertEqual(res.percentile_95[-1], 0)
+
+    def test_swr_not_distorted_by_social_security(self):
+        """Standalone portfolio SWR must not be inflated to 15% by Social Security."""
+        base_kwargs = dict(
+            current_portfolio=50_000,
+            current_age=50,
+            retirement_age=50,
+            annual_contribution=0,
+            annual_retirement_spending=40_000,
+            final_age=85,
+            iterations=200,
+        )
+        res_no_ss = simulate(SimulationInput(**base_kwargs, social_security_enabled=False))
+        res_with_ss = simulate(
+            SimulationInput(
+                **base_kwargs,
+                social_security_enabled=True,
+                social_security_pia=5_000,
+                social_security_fra=67,
+                social_security_birth_year=1976,
+                social_security_birth_month=1,
+                social_security_withdrawal_year=1976 + 67,
+                social_security_withdrawal_month=1,
+            )
+        )
+        self.assertLess(res_with_ss.swr, 8.0)
+        self.assertEqual(res_with_ss.swr, res_no_ss.swr)
+
+    def test_ss_aligned_by_claiming_age(self):
+        """SS cashflows start at the claiming age regardless of birth calendar year."""
+        res = simulate(
+            SimulationInput(
+                current_portfolio=1_000_000,
+                current_age=60,
+                retirement_age=60,
+                final_age=75,
+                annual_contribution=0,
+                annual_retirement_spending=50_000,
+                social_security_enabled=True,
+                social_security_pia=3_000,
+                social_security_fra=67,
+                social_security_birth_year=1950,
+                social_security_birth_month=1,
+                social_security_withdrawal_year=1950 + 65,
+                social_security_withdrawal_month=1,
+                iterations=100,
+            )
+        )
+        res_no_ss = simulate(
+            SimulationInput(
+                current_portfolio=1_000_000,
+                current_age=60,
+                retirement_age=60,
+                final_age=75,
+                annual_contribution=0,
+                annual_retirement_spending=50_000,
+                social_security_enabled=False,
+                iterations=100,
+            )
+        )
+        # Before Age 65 (indices 0..5 correspond to Ages 60..65 start), trajectories match
+        self.assertEqual(res.percentile_50[5], res_no_ss.percentile_50[5])
+        # After Age 65 claiming year (index 6 = end of Age 65), SS has increased the portfolio
+        self.assertGreater(res.percentile_50[6], res_no_ss.percentile_50[6])
 
     def test_simulation_input_coercion_handles_nones(self):
         # Verify that SimulationInput coerces all potential NoneType values to default values without raising exceptions
