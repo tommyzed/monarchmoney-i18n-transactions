@@ -11,19 +11,36 @@ from ..models import Credentials
 
 _MONARCH_CLIENT_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
 _ACCOUNTS_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
+_CASHFLOW_SUMMARY_CACHE: TTLCache = TTLCache(maxsize=64, ttl=300)
 _CATEGORIES_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
 _TAGS_CACHE: TTLCache = TTLCache(maxsize=32, ttl=300)
 
 
-async def _get_accounts_cached(mm: MonarchMoney):
+async def _get_accounts_cached(mm: MonarchMoney, force_refresh: bool = False):
     if isinstance(mm, MonarchMoney):
         key = id(mm)
-        if key in _ACCOUNTS_CACHE:
+        if not force_refresh and key in _ACCOUNTS_CACHE:
             return _ACCOUNTS_CACHE[key]
         res = await mm.get_accounts()
         _ACCOUNTS_CACHE[key] = res
         return res
     return await mm.get_accounts()
+
+
+async def get_cashflow_summary_cached(
+    mm: MonarchMoney,
+    start_date: str,
+    end_date: str,
+    force_refresh: bool = False,
+):
+    if isinstance(mm, MonarchMoney):
+        key = (id(mm), start_date, end_date)
+        if not force_refresh and key in _CASHFLOW_SUMMARY_CACHE:
+            return _CASHFLOW_SUMMARY_CACHE[key]
+        res = await mm.get_cashflow_summary(start_date=start_date, end_date=end_date)
+        _CASHFLOW_SUMMARY_CACHE[key] = res
+        return res
+    return await mm.get_cashflow_summary(start_date=start_date, end_date=end_date)
 
 
 async def _get_categories_cached(mm: MonarchMoney):

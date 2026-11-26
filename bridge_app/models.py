@@ -47,6 +47,11 @@ class FireSettings(Base):
     social_security_birth_year = Column(Integer, default=1980)
     social_security_withdrawal_month = Column(Integer, default=1)
     social_security_withdrawal_year = Column(Integer, default=2047)
+    effective_tax_rate = Column(Float, default=0.0)
+    pre_medicare_healthcare = Column(Integer, default=0)
+    post_75_spend_change = Column(Float, default=0.0)
+    ss_stop_work_adjust = Column(Boolean, default=False)
+    tax_regime = Column(String, default="us_federal")
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class Log(Base):

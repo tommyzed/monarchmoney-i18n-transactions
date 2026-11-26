@@ -14,8 +14,11 @@ from bridge_app.services.fire_engine import (
     SimulationResult,
     simulate,
     filter_accounts,
+    summarize_tax_buckets,
     calc_monthly_spend,
+    extract_cashflow_metrics,
     calculate_social_security_mba,
+    adjust_pia_for_early_retirement,
 )
 
 
@@ -437,6 +440,343 @@ class TestSocialSecurity(unittest.TestCase):
         self.assertEqual(inp.social_security_withdrawal_year, 2047)
         self.assertEqual(inp.social_security_withdrawal_month, 1)
         self.assertEqual(inp.social_security_mba, 0.0)
+
+
+class TestPhase2FireFeatures(unittest.TestCase):
+    """Tests for Phase 2 FIRE engine features and API What-If overrides."""
+
+    def test_tax_bucket_classification_and_summary(self):
+        """Accounts from Monarch fixture are bucketed and summarized accurately."""
+        import json
+        filepath = os.path.join(os.path.dirname(__file__), "get_accounts.json")
+        with open(filepath) as f:
+            data = json.load(f)
+
+        _, breakdown = filter_accounts(data)
+        by_name = {a["name"]: a for a in breakdown}
+        self.assertEqual(by_name["401.k"]["taxBucket"], "pre_tax")
+        self.assertEqual(by_name["Roth IRA"]["taxBucket"], "tax_free")
+        self.assertEqual(by_name["Brokerage"]["taxBucket"], "taxable")
+        self.assertEqual(by_name["Checking"]["taxBucket"], "taxable")
+
+        summary = summarize_tax_buckets(breakdown)
+        self.assertAlmostEqual(summary["pre_tax"], 100000.35, places=2)
+        self.assertAlmostEqual(summary["tax_free"], 10000.43, places=2)
+        self.assertGreater(summary["taxable"], 100000.0)
+        self.assertGreater(summary["suggested_effective_tax_rate"], 0.0)
+        self.assertLess(summary["suggested_effective_tax_rate"], 0.18)
+
+    def test_effective_tax_rate_reduces_safe_spend(self):
+        """Higher withdrawal tax drag reduces sustainable after-tax retirement spending."""
+        base = SimulationInput(
+            current_portfolio=1_000_000,
+            current_age=55,
+            retirement_age=55,
+            final_age=85,
+            annual_contribution=0,
+            annual_retirement_spending=40_000,
+            effective_tax_rate=0.0,
+            iterations=200,
+        )
+        taxed = SimulationInput(
+            current_portfolio=1_000_000,
+            current_age=55,
+            retirement_age=55,
+            final_age=85,
+            annual_contribution=0,
+            annual_retirement_spending=40_000,
+            effective_tax_rate=0.20,
+            iterations=200,
+        )
+        res_base = simulate(base)
+        res_taxed = simulate(taxed)
+        self.assertLess(res_taxed.required_spend_for_target, res_base.required_spend_for_target)
+        self.assertLess(res_taxed.percentile_50[-1], res_base.percentile_50[-1])
+
+    def test_pre_medicare_healthcare_bridge_before_and_after_65(self):
+        """Pre-65 healthcare increases withdrawals only prior to Age 65."""
+        no_hc = simulate(
+            SimulationInput(
+                current_portfolio=1_000_000,
+                current_age=60,
+                retirement_age=60,
+                final_age=70,
+                annual_contribution=0,
+                annual_retirement_spending=40_000,
+                pre_medicare_healthcare=0,
+                iterations=200,
+            )
+        )
+        with_hc = simulate(
+            SimulationInput(
+                current_portfolio=1_000_000,
+                current_age=60,
+                retirement_age=60,
+                final_age=70,
+                annual_contribution=0,
+                annual_retirement_spending=40_000,
+                pre_medicare_healthcare=15_000,
+                iterations=200,
+            )
+        )
+        # Age 60..64 are affected, lowering Age 65 portfolio
+        self.assertLess(with_hc.percentile_50[5], no_hc.percentile_50[5])
+
+        # Retiring at 65+ should not incur pre-65 healthcare cost
+        at_65_no_hc = simulate(
+            SimulationInput(
+                current_portfolio=1_000_000,
+                current_age=65,
+                retirement_age=65,
+                final_age=75,
+                annual_contribution=0,
+                annual_retirement_spending=40_000,
+                pre_medicare_healthcare=0,
+                iterations=200,
+            )
+        )
+        at_65_with_hc = simulate(
+            SimulationInput(
+                current_portfolio=1_000_000,
+                current_age=65,
+                retirement_age=65,
+                final_age=75,
+                annual_contribution=0,
+                annual_retirement_spending=40_000,
+                pre_medicare_healthcare=15_000,
+                iterations=200,
+            )
+        )
+        self.assertEqual(at_65_no_hc.percentile_50[-1], at_65_with_hc.percentile_50[-1])
+
+    def test_post_75_spend_shift(self):
+        """Negative Age 75+ spend shift preserves more portfolio by final age."""
+        flat = simulate(
+            SimulationInput(
+                current_portfolio=1_000_000,
+                current_age=70,
+                retirement_age=70,
+                final_age=85,
+                annual_contribution=0,
+                annual_retirement_spending=50_000,
+                post_75_spend_change=0.0,
+                iterations=200,
+            )
+        )
+        slow_go = simulate(
+            SimulationInput(
+                current_portfolio=1_000_000,
+                current_age=70,
+                retirement_age=70,
+                final_age=85,
+                annual_contribution=0,
+                annual_retirement_spending=50_000,
+                post_75_spend_change=-0.20,
+                iterations=200,
+            )
+        )
+        # Ages 70..74 identical (index 5 = start of Age 75)
+        self.assertEqual(flat.percentile_50[5], slow_go.percentile_50[5])
+        # By Age 85, Slow-Go spending reduction yields a higher portfolio
+        self.assertGreater(slow_go.percentile_50[-1], flat.percentile_50[-1])
+
+    def test_adjust_pia_for_early_retirement_bend_points(self):
+        """SSA bend-point adjuster reduces PIA progressively (but less than linearly) for early FIRE."""
+        # Full 35+ working years (Age 57+) keeps PIA unchanged
+        self.assertEqual(adjust_pia_for_early_retirement(3000, 57), 3000.0)
+        # Retiring at Age 42 (20/35 years) reduces PIA, but progressive bend points cushion the cut
+        adj_42 = adjust_pia_for_early_retirement(3000, 42)
+        self.assertGreater(adj_42, 3000 * (20 / 35))
+        self.assertLess(adj_42, 3000)
+        # Retiring at Age 22 (0 years) yields $0
+        self.assertEqual(adjust_pia_for_early_retirement(3000, 22), 0.0)
+
+    def test_extract_cashflow_metrics_trims_outliers(self):
+        """IQR upper-fence trims one-off spike months from typical monthly spend."""
+        cashflow_data = {
+            "summary": [
+                {
+                    "summary": {
+                        "sumIncome": 120000,
+                        "sumExpense": -72000,
+                        "savings": 48000,
+                        "savingsRate": 0.4,
+                    }
+                }
+            ]
+        }
+        # 11 normal months around $5,000 + 1 spike month of $17,000
+        monthly = [4900, 5100, 5000, 5200, 4800, 5050, 4950, 5150, 5000, 4850, 5000, 17000]
+        metrics = extract_cashflow_metrics(cashflow_data, monthly_expenses=monthly)
+        self.assertEqual(metrics["raw_monthly_spend_avg"], 6000.0)
+        self.assertEqual(metrics["outlier_months_trimmed"], 1)
+        self.assertAlmostEqual(metrics["monthly_spend_avg"], 5000.0, places=2)
+        self.assertEqual(metrics["annual_savings_avg"], 48000)
+
+    def test_simulate_endpoint_applies_whatif_overrides_without_mutating_db(self):
+        """POST /api/fire/simulate applies request settings transiently without saving to DB."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from fastapi.testclient import TestClient
+        from bridge_app import main
+
+        fake_mm = MagicMock()
+        fake_mm.get_accounts = AsyncMock(
+            return_value={
+                "accounts": [
+                    {
+                        "displayName": "Roth IRA",
+                        "displayBalance": 600_000,
+                        "includeInNetWorth": True,
+                        "isHidden": False,
+                        "syncDisabled": False,
+                        "isAsset": True,
+                        "type": {"display": "Investments"},
+                        "subtype": {"name": "roth", "display": "Roth IRA"},
+                    }
+                ]
+            }
+        )
+        fake_mm.get_cashflow_summary = AsyncMock(
+            return_value={
+                "summary": [
+                    {"summary": {"sumIncome": 100_000, "sumExpense": -60_000, "savings": 40_000, "savingsRate": 0.4}}
+                ]
+            }
+        )
+        fake_creds = MagicMock(id=1)
+
+        with (
+            patch.object(main, "UNLOCK_SECRET", "test_secret"),
+            patch.object(main, "COOKIE_VALUE", "test_cookie_val"),
+            patch.object(main, "get_latest_credentials", AsyncMock(return_value=fake_creds)),
+            patch.object(main, "get_monarch_client", AsyncMock(return_value=fake_mm)),
+        ):
+            client = TestClient(main.app)
+            client.cookies.set(main.DEVICE_TOKEN_COOKIE, "test_cookie_val")
+
+            # Persist baseline spending = 45000
+            put_res = client.put(
+                "/api/fire/settings",
+                json={"annual_retirement_spending": 45000, "effective_tax_rate": 0.05},
+            )
+            self.assertEqual(put_res.status_code, 200)
+
+            # Simulate transient What-If override = 70000 / 0.15 tax
+            sim_res = client.post(
+                "/api/fire/simulate",
+                json={
+                    "settings": {"annual_retirement_spending": 70000, "effective_tax_rate": 0.15},
+                    "is_demo": False,
+                },
+            )
+            self.assertEqual(sim_res.status_code, 200)
+            body = sim_res.json()
+            self.assertEqual(body["settings"]["annual_retirement_spending"], 70000)
+            self.assertAlmostEqual(body["settings"]["effective_tax_rate"], 0.15)
+            self.assertEqual(body["saved_settings"]["annual_retirement_spending"], 45000)
+            self.assertIn("tax_bucket_summary", body)
+            self.assertIn("cashflow_metrics", body)
+
+            # Confirm DB baseline remained 45000
+            get_res = client.get("/api/fire/settings")
+            self.assertEqual(get_res.status_code, 200)
+            self.assertEqual(get_res.json()["annual_retirement_spending"], 45000)
+            self.assertAlmostEqual(get_res.json()["effective_tax_rate"], 0.05)
+
+    def test_dynamic_tax_scales_with_withdrawal_size(self):
+        """Higher withdrawal / Safe Spend pushes effective tax rate up via brackets & NIIT."""
+        breakdown = [
+            {"name": "401k", "balance": 1_500_000, "isAsset": True, "taxBucket": "pre_tax"},
+            {"name": "Brokerage", "balance": 3_500_000, "isAsset": True, "taxBucket": "taxable"},
+        ]
+        modest_inp = SimulationInput(
+            current_portfolio=5_000_000,
+            current_age=45,
+            retirement_age=55,
+            annual_contribution=20_000,
+            annual_retirement_spending=60_000,
+            tax_regime="us_federal",
+            iterations=100,
+        )
+        fat_inp = SimulationInput(
+            current_portfolio=5_000_000,
+            current_age=45,
+            retirement_age=55,
+            annual_contribution=20_000,
+            annual_retirement_spending=300_000,
+            tax_regime="us_federal",
+            iterations=100,
+        )
+        modest_sum = summarize_tax_buckets(breakdown, inp=modest_inp, safe_spend=60_000)
+        fat_sum = summarize_tax_buckets(breakdown, inp=fat_inp, safe_spend=300_000)
+        self.assertGreater(fat_sum["suggested_effective_tax_rate"], modest_sum["suggested_effective_tax_rate"])
+        self.assertLess(modest_sum["suggested_effective_tax_rate"], 0.03)
+        self.assertGreater(fat_sum["suggested_effective_tax_rate"], 0.12)
+
+    def test_tax_regimes_ordering(self):
+        """State & German regimes order sensibly and DE Abgeltung reflects 26.375% on gains."""
+        breakdown = [
+            {"name": "401k", "balance": 600_000, "isAsset": True, "taxBucket": "pre_tax"},
+            {"name": "Brokerage", "balance": 2_400_000, "isAsset": True, "taxBucket": "taxable"},
+        ]
+
+        def _rate_for(regime):
+            inp = SimulationInput(
+                current_portfolio=3_000_000,
+                current_age=40,
+                retirement_age=55,
+                annual_contribution=30_000,
+                annual_retirement_spending=180_000,
+                tax_regime=regime,
+                iterations=100,
+            )
+            return summarize_tax_buckets(breakdown, inp=inp, safe_spend=180_000)["suggested_effective_tax_rate"]
+
+        r_us_fed = _rate_for("us_federal")
+        r_us_mod = _rate_for("us_mod_state")
+        r_us_high = _rate_for("us_high_state")
+        r_de_etf = _rate_for("de_etf")
+        r_de_abg = _rate_for("de_abgeltung")
+
+        self.assertLess(r_us_fed, r_us_mod)
+        self.assertLess(r_us_mod, r_us_high)
+        self.assertLess(r_de_etf, r_de_abg)
+        self.assertGreater(r_de_abg, 0.18)
+
+    def test_auto_tax_rate_is_idempotent(self):
+        """Re-running simulation with the suggested auto tax rate yields the same suggested rate."""
+        breakdown = [
+            {"name": "401k", "balance": 500_000, "isAsset": True, "taxBucket": "pre_tax"},
+            {"name": "Roth IRA", "balance": 300_000, "isAsset": True, "taxBucket": "tax_free"},
+            {"name": "Brokerage", "balance": 2_200_000, "isAsset": True, "taxBucket": "taxable"},
+        ]
+        inp1 = SimulationInput(
+            current_portfolio=3_000_000,
+            current_age=42,
+            retirement_age=55,
+            annual_contribution=40_000,
+            annual_retirement_spending=120_000,
+            effective_tax_rate=0.0,
+            tax_regime="us_high_state",
+            iterations=200,
+        )
+        res1 = simulate(inp1)
+        sum1 = summarize_tax_buckets(breakdown, inp=inp1, safe_spend=res1.required_spend_for_target)
+        tau = sum1["suggested_effective_tax_rate"]
+
+        inp2 = SimulationInput(
+            current_portfolio=3_000_000,
+            current_age=42,
+            retirement_age=55,
+            annual_contribution=40_000,
+            annual_retirement_spending=120_000,
+            effective_tax_rate=tau,
+            tax_regime="us_high_state",
+            iterations=200,
+        )
+        res2 = simulate(inp2)
+        sum2 = summarize_tax_buckets(breakdown, inp=inp2, safe_spend=res2.required_spend_for_target)
+        self.assertAlmostEqual(sum2["suggested_effective_tax_rate"], tau, places=2)
 
 
 if __name__ == "__main__":

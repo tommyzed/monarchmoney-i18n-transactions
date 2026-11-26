@@ -637,6 +637,257 @@
             box-shadow: 0 6px 20px var(--accent-fire-glow);
         }
 
+        #settingsModal .modal-card {
+            max-width: 460px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* What-If Explorer Card */
+        .whatif-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .whatif-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .whatif-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .sim-updating-badge {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--accent-amber);
+            background: rgba(251, 191, 36, 0.12);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            padding: 4px 10px;
+            border-radius: 999px;
+        }
+
+        .whatif-actions {
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+
+        .btn-primary-sm {
+            background: linear-gradient(135deg, var(--accent-fire), #ff8f65);
+            border: none;
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .btn-primary-sm:hover {
+            transform: translateY(-1px);
+        }
+
+        .whatif-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px 18px;
+        }
+
+        @media (max-width: 560px) {
+            .whatif-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .whatif-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .whatif-item-wide {
+            grid-column: 1 / -1;
+        }
+
+        .whatif-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+        }
+
+        .whatif-label {
+            color: var(--text-secondary);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .whatif-value {
+            color: var(--accent-fire);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .whatif-slider {
+            width: 100%;
+            accent-color: var(--accent-fire);
+            cursor: pointer;
+            height: 5px;
+        }
+
+        /* Tax Bucket Breakdown */
+        .tax-bucket-summary {
+            margin-bottom: 1rem;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+
+        .tax-bar-track {
+            display: flex;
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+            margin-bottom: 10px;
+        }
+
+        .tax-bar-seg-pre { background: var(--accent-amber); }
+        .tax-bar-seg-free { background: var(--accent-green); }
+        .tax-bar-seg-taxable { background: var(--accent-blue); }
+
+        .tax-pills-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        .tax-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tax-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .tax-badge {
+            display: inline-block;
+            font-size: 0.62rem;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 999px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .tax-badge-pre_tax {
+            background: rgba(251, 191, 36, 0.14);
+            color: var(--accent-amber);
+        }
+
+        .tax-badge-tax_free {
+            background: rgba(74, 222, 128, 0.14);
+            color: var(--accent-green);
+        }
+
+        .tax-badge-taxable {
+            background: rgba(96, 165, 250, 0.14);
+            color: var(--accent-blue);
+        }
+
+        /* Cashflow Import & Inline Action Buttons */
+        .cashflow-import-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            background: rgba(74, 222, 128, 0.08);
+            border: 1px solid rgba(74, 222, 128, 0.22);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-bottom: 1rem;
+            font-size: 0.74rem;
+        }
+
+        .btn-inline-accent {
+            background: rgba(96, 165, 250, 0.15);
+            border: 1px solid rgba(96, 165, 250, 0.35);
+            color: var(--accent-blue);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-inline-accent:hover {
+            background: rgba(96, 165, 250, 0.25);
+        }
+
+        .tax-regime-select {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-size: 0.68rem;
+            font-family: inherit;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .tax-regime-select option {
+            background: #1a1a2e;
+            color: var(--text-primary);
+        }
+
         /* Responsive */
         @media (max-width: 480px) {
             .metrics-grid {
@@ -1098,13 +1349,80 @@
 
             <!-- Recommendations Card -->
             <div id="recommendationsCard" class="metric-card fade-up"
-                style="margin-bottom: 2rem; align-items: flex-start; text-align: left;">
+                style="margin-bottom: 1.5rem; align-items: flex-start; text-align: left;">
                 <div class="metric-label" style="display: flex; align-items: center; gap: 6px;">
                     💡 Recommendations
                 </div>
                 <div id="recommendationText"
                     style="margin-top: 10px; font-size: 0.95rem; line-height: 1.5; font-weight: 500;">
                     --
+                </div>
+            </div>
+
+            <!-- Interactive What-If Explorer -->
+            <div class="whatif-card fade-up" id="whatIfCard">
+                <div class="whatif-header">
+                    <div class="chart-title">🎛️ What-If Explorer</div>
+                    <div class="whatif-header-right">
+                        <span class="sim-updating-badge" id="simUpdatingBadge">⚡ Updating...</span>
+                        <div class="whatif-actions" id="whatIfActions">
+                            <button type="button" class="btn-ghost" onclick="resetWhatIf()">↺ Reset</button>
+                            <button type="button" class="btn-primary-sm" onclick="saveWhatIf()">💾 Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="whatif-grid">
+                    <div class="whatif-item">
+                        <div class="whatif-label-row">
+                            <span class="whatif-label">Target 🔥 Age</span>
+                            <span class="whatif-value" id="wiRetireAgeVal">--</span>
+                        </div>
+                        <input type="range" class="whatif-slider" id="wiRetireAge" min="25" max="84" step="1"
+                            oninput="onWhatIfInput()">
+                    </div>
+                    <div class="whatif-item">
+                        <div class="whatif-label-row">
+                            <span class="whatif-label">Annual Savings</span>
+                            <span class="whatif-value" id="wiContribVal">--</span>
+                        </div>
+                        <input type="range" class="whatif-slider" id="wiContrib" min="0" max="250000" step="1000"
+                            oninput="onWhatIfInput()">
+                    </div>
+                    <div class="whatif-item">
+                        <div class="whatif-label-row">
+                            <span class="whatif-label">Retirement Spend</span>
+                            <span class="whatif-value" id="wiSpendingVal">--</span>
+                        </div>
+                        <input type="range" class="whatif-slider" id="wiSpending" min="0" max="250000" step="1000"
+                            oninput="onWhatIfInput()">
+                    </div>
+                    <div class="whatif-item">
+                        <div class="whatif-label-row">
+                            <span class="whatif-label">Pre-65 Healthcare</span>
+                            <span class="whatif-value" id="wiHealthcareVal">--</span>
+                        </div>
+                        <input type="range" class="whatif-slider" id="wiHealthcare" min="0" max="40000" step="500"
+                            oninput="onWhatIfInput()">
+                    </div>
+                    <div class="whatif-item whatif-item-wide">
+                        <div class="whatif-label-row">
+                            <span class="whatif-label" style="flex-wrap: wrap;">
+                                Withdrawal Tax Rate
+                                <select id="wiTaxRegime" class="tax-regime-select" onchange="onTaxRegimeChange('whatif')">
+                                    <option value="us_federal">🇺🇸 US Fed Only</option>
+                                    <option value="us_mod_state">🇺🇸 US + ~5% State</option>
+                                    <option value="us_high_state">🇺🇸 US + CA/NY</option>
+                                    <option value="de_abgeltung">🇩🇪 DE Stocks (26.4%)</option>
+                                    <option value="de_etf">🇩🇪 DE ETFs (18.5%)</option>
+                                </select>
+                                <button type="button" class="btn-inline-accent" id="wiAutoTaxBtn"
+                                    onclick="applySuggestedTaxRate('whatif')">✨ Auto</button>
+                            </span>
+                            <span class="whatif-value" id="wiTaxRateVal">--</span>
+                        </div>
+                        <input type="range" class="whatif-slider" id="wiTaxRate" min="0" max="45" step="0.5"
+                            oninput="onWhatIfInput()">
+                    </div>
                 </div>
             </div>
 
@@ -1151,6 +1469,10 @@
                     <div class="portfolio-title">💼 Net Worth</div>
                     <div class="portfolio-total" id="portfolioTotal">--</div>
                 </div>
+                <div id="taxBucketSummary" class="tax-bucket-summary" style="display: none;">
+                    <div class="tax-bar-track" id="taxBarTrack"></div>
+                    <div class="tax-pills-row" id="taxPillsRow"></div>
+                </div>
                 <div id="accountList"></div>
             </div>
 
@@ -1189,6 +1511,17 @@
                 </div>
             </div>
 
+            <div class="cashflow-import-banner" id="cashflowImportBanner">
+                <div>
+                    <div style="font-weight: 600; color: var(--accent-green);">📥 Monarch Trailing 12-Mo Cashflow</div>
+                    <div id="cashflowBannerText" style="color: var(--text-secondary); margin-top: 2px;">Loading cashflow metrics...</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                    <button type="button" class="btn-inline-accent" onclick="applyMonarchCashflow()">Apply</button>
+                    <button type="button" class="btn-ghost" title="Refresh live Monarch data" onclick="refreshLiveMonarch()" style="padding: 3px 7px;">🔄</button>
+                </div>
+            </div>
+
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Annual Savings ($)</label>
@@ -1202,6 +1535,17 @@
 
             <div class="form-row">
                 <div class="form-group">
+                    <label class="form-label">Pre-65 Healthcare ($/yr)</label>
+                    <input type="number" class="form-input" id="settHealthcare" min="0" step="500" placeholder="e.g. 12000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Age 75+ Spend Shift (%)</label>
+                    <input type="number" class="form-input" id="settPost75Change" min="-50" max="100" step="5" placeholder="e.g. -15">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
                     <label class="form-label">Final Year (☠️)</label>
                     <input type="number" class="form-input" id="settFinalAge" min="40" max="150" value="85">
                 </div>
@@ -1210,6 +1554,28 @@
                     <input type="number" class="form-input" id="settInflation" min="0" max="15" step="0.5">
                 </div>
             </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Tax Regime</label>
+                    <select class="form-select" id="settTaxRegime" onchange="onTaxRegimeChange('settings')">
+                        <option value="us_federal">🇺🇸 US Federal Only</option>
+                        <option value="us_mod_state">🇺🇸 US + Moderate State (~5%)</option>
+                        <option value="us_high_state">🇺🇸 US + High-Tax State (CA/NY)</option>
+                        <option value="de_abgeltung">🇩🇪 Germany (26.375% Abgeltung)</option>
+                        <option value="de_etf">🇩🇪 Germany Equity ETFs (18.5%)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label class="form-label" style="margin-bottom: 0;">Withdrawal Tax (%)</label>
+                        <button type="button" class="btn-inline-accent" id="settAutoTaxBtn"
+                            onclick="applySuggestedTaxRate('settings')">✨ Auto</button>
+                    </div>
+                    <input type="number" class="form-input" id="settTaxRate" min="0" max="50" step="0.5" placeholder="e.g. 15.0">
+                </div>
+            </div>
+            <div id="settTaxBasisNote" style="font-size: 0.7rem; color: var(--text-muted); margin-top: -0.6rem; margin-bottom: 1rem;"></div>
 
             <div class="form-row">
                 <div class="form-group" style="grid-column: 1 / -1;">
@@ -1375,6 +1741,15 @@
                     <div class="form-group">
                         <label class="form-label">Monthly Benefit at FRA ($)</label>
                         <input type="number" class="form-input" id="ssPia" placeholder="e.g. 3000" min="0" step="50">
+                        <div style="margin-top: 8px; padding: 8px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-sm);">
+                            <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; font-size: 0.76rem; font-weight: 600; color: var(--text-primary);">
+                                <span>✂️ Adjust PIA for Early Retirement</span>
+                                <input type="checkbox" id="ssStopWorkAdjust" style="width: 15px; height: 15px; cursor: pointer;">
+                            </label>
+                            <div id="ssEarlyRetireNote" style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.35; margin-top: 5px;">
+                                ssa.gov assumes working to age 62+. Enable to adjust for zero-earning years before Target FIRE Age.
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -1495,6 +1870,9 @@
         let useLogScale = false;
         let useConeNominal = false;
         let useSwrNominal = false;
+        let simAbortController = null;
+        let whatIfOverrides = {};
+        let whatIfDebounceTimer = null;
 
         // ===== Init =====
         document.addEventListener('DOMContentLoaded', () => {
@@ -1555,7 +1933,7 @@
             };
 
             // Listeners for Social Security calculation updates
-            const ssInputs = ['ssPia', 'ssFra', 'ssBirthMonth', 'ssBirthYear', 'ssWithdrawMonth', 'ssWithdrawYear', 'ssEnabledToggle', 'ssGainsEnabled', 'ssGainsStrategy'];
+            const ssInputs = ['ssPia', 'ssFra', 'ssBirthMonth', 'ssBirthYear', 'ssWithdrawMonth', 'ssWithdrawYear', 'ssEnabledToggle', 'ssGainsEnabled', 'ssGainsStrategy', 'ssStopWorkAdjust'];
             ssInputs.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -1613,6 +1991,39 @@
             }
         }
 
+        function adjustPiaForEarlyRetirementJS(pia, retirementAge) {
+            if (!pia || pia <= 0) return 0;
+            const retAge = retirementAge ?? 65;
+            const workedYears = Math.max(0, Math.min(35, Math.round(retAge) - 22));
+            if (workedYears >= 35) return Math.round(pia);
+            if (workedYears === 0) return 0;
+
+            const b1 = 1226.0;
+            const b2 = 7391.0;
+            const p1 = 0.90 * b1;
+            const p2 = p1 + 0.32 * (b2 - b1);
+
+            let impliedAime;
+            if (pia <= p1) {
+                impliedAime = pia / 0.90;
+            } else if (pia <= p2) {
+                impliedAime = b1 + (pia - p1) / 0.32;
+            } else {
+                impliedAime = b2 + (pia - p2) / 0.15;
+            }
+
+            const adjAime = impliedAime * (workedYears / 35.0);
+            let adjPia;
+            if (adjAime <= b1) {
+                adjPia = 0.90 * adjAime;
+            } else if (adjAime <= b2) {
+                adjPia = p1 + 0.32 * (adjAime - b1);
+            } else {
+                adjPia = p2 + 0.15 * (adjAime - b2);
+            }
+            return Math.round(adjPia);
+        }
+
         function updateSsCalculation() {
             // Sync strategy enabled/disabled UI state
             const gainsEnabledEl = document.getElementById('ssGainsEnabled');
@@ -1623,12 +2034,30 @@
                 document.getElementById('ssGainsStrategy').disabled = !gainsEnabled;
             }
 
-            const pia = parseInt(document.getElementById('ssPia').value) || 0;
+            const rawPia = parseInt(document.getElementById('ssPia').value) || 0;
+            const stopWorkAdjustEl = document.getElementById('ssStopWorkAdjust');
+            const stopWorkAdjust = stopWorkAdjustEl ? stopWorkAdjustEl.checked : false;
+            const targetRetireAge = getActiveSettings().retirement_age ?? 65;
+            const workedYears = Math.max(0, Math.min(35, Math.round(targetRetireAge) - 22));
+            const effPia = stopWorkAdjust ? adjustPiaForEarlyRetirementJS(rawPia, targetRetireAge) : rawPia;
+
+            const noteEl = document.getElementById('ssEarlyRetireNote');
+            if (noteEl) {
+                if (stopWorkAdjust && rawPia > 0 && workedYears < 35) {
+                    noteEl.innerHTML = `Target FIRE Age <strong>${targetRetireAge}</strong> (~${workedYears}/35 SSA yrs): Statement PIA <strong>$${formatNum(rawPia)}</strong> → Adjusted PIA <strong style="color: var(--accent-amber);">$${formatNum(effPia)}/mo</strong>.`;
+                } else if (stopWorkAdjust && workedYears >= 35) {
+                    noteEl.textContent = `Target FIRE Age ${targetRetireAge} reaches 35/35 SSA earning years — no early-retirement haircut applied.`;
+                } else {
+                    noteEl.textContent = `Target FIRE Age: ${targetRetireAge} (~${workedYears}/35 SSA yrs). Enable to adjust ssa.gov PIA for zero-earning years.`;
+                }
+            }
+
+            const pia = effPia;
             const fra = parseInt(document.getElementById('ssFra').value) || 67;
             const birthMonth = parseInt(document.getElementById('ssBirthMonth').value) || 1;
-            const birthYear = parseInt(document.getElementById('ssBirthYear').value) || 1980;
+            const birthYear = parseInt(document.getElementById('ssBirthYear').value) || 1981;
             const withdrawMonth = parseInt(document.getElementById('ssWithdrawMonth').value) || 1;
-            const withdrawYear = parseInt(document.getElementById('ssWithdrawYear').value) || 2047;
+            const withdrawYear = parseInt(document.getElementById('ssWithdrawYear').value) || 2048;
 
             const birthMonths = birthYear * 12 + birthMonth;
             const withdrawMonths = withdrawYear * 12 + withdrawMonth;
@@ -1910,8 +2339,8 @@
             el.innerHTML = html;
         }
 
-        function getActiveSettings() {
-            const base = simData?.settings ? { ...simData.settings } : {
+        function getSavedSettings() {
+            const defaults = {
                 current_age: 45,
                 retirement_age: 65,
                 annual_contribution: 30000,
@@ -1926,7 +2355,15 @@
                 social_security_birth_year: 1981,
                 social_security_withdrawal_month: 1,
                 social_security_withdrawal_year: 2048,
+                effective_tax_rate: 0.0,
+                pre_medicare_healthcare: 0,
+                post_75_spend_change: 0.0,
+                ss_stop_work_adjust: false,
+                tax_regime: 'us_federal',
             };
+            const base = (simData?.saved_settings || simData?.settings)
+                ? { ...defaults, ...(simData.saved_settings || simData.settings) }
+                : defaults;
             if (window.IS_DEMO) {
                 try {
                     const stored = localStorage.getItem('fire_demo_settings');
@@ -1938,9 +2375,13 @@
             return base;
         }
 
+        function getActiveSettings() {
+            return { ...getSavedSettings(), ...whatIfOverrides };
+        }
+
         function saveDemoSettingsPatch(patch) {
             const merged = {
-                ...getActiveSettings(),
+                ...getSavedSettings(),
                 current_portfolio: simData?.current_portfolio ?? 500000,
                 ...patch,
             };
@@ -1955,6 +2396,7 @@
                 document.getElementById('ssEnabledToggle').checked = s.social_security_enabled || false;
                 document.getElementById('ssFra').value = s.social_security_fra || 67;
                 document.getElementById('ssPia').value = s.social_security_pia || "";
+                document.getElementById('ssStopWorkAdjust').checked = !!s.ss_stop_work_adjust;
                 document.getElementById('ssBirthMonth').value = s.social_security_birth_month || 1;
                 document.getElementById('ssBirthYear').value = s.social_security_birth_year || 1981;
                 document.getElementById('ssWithdrawMonth').value = s.social_security_withdrawal_month || 1;
@@ -2023,6 +2465,7 @@
         async function saveSsSettings() {
             const pia = parseInt(document.getElementById('ssPia').value) || 0;
             const fra = parseInt(document.getElementById('ssFra').value) || 67;
+            const stopWorkAdjust = document.getElementById('ssStopWorkAdjust').checked;
             const birthMonth = parseInt(document.getElementById('ssBirthMonth').value) || 1;
             const birthYear = parseInt(document.getElementById('ssBirthYear').value) || 1981;
             const withdrawMonth = parseInt(document.getElementById('ssWithdrawMonth').value) || 1;
@@ -2045,13 +2488,14 @@
             // Sync current_age with Birth Year so chart markers & cashflows align
             const curYear = new Date().getFullYear();
             const deducedAge = Math.min(100, Math.max(18, curYear - birthYear));
-            const prevS = getActiveSettings();
+            const prevS = getSavedSettings();
 
             const payload = {
                 current_age: deducedAge,
                 social_security_enabled: enabled,
                 social_security_pia: pia,
                 social_security_fra: fra,
+                ss_stop_work_adjust: stopWorkAdjust,
                 social_security_birth_month: birthMonth,
                 social_security_birth_year: birthYear,
                 social_security_withdrawal_month: withdrawMonth,
@@ -2098,29 +2542,57 @@
         }
 
         // ===== API =====
-        async function runSimulation() {
-            showLoading();
+        function setSimUpdating(isUpdating) {
+            const badge = document.getElementById('simUpdatingBadge');
+            if (badge) {
+                badge.style.display = isUpdating ? 'inline-flex' : 'none';
+            }
+        }
+
+        async function runSimulation({ overrides = null, forceRefresh = false } = {}) {
+            if (simAbortController) {
+                simAbortController.abort();
+            }
+            simAbortController = new AbortController();
+
+            const isInitialLoad = !simData;
+            if (isInitialLoad) {
+                showLoading();
+            } else {
+                setSimUpdating(true);
+            }
+
+            const activeOverrides = overrides !== null ? overrides : whatIfOverrides;
+
             try {
-                let reqBody = JSON.stringify({ is_demo: window.IS_DEMO });
-                let headers = { 'Content-Type': 'application/json' };
+                let reqPayload = {
+                    is_demo: window.IS_DEMO,
+                    force_refresh: forceRefresh,
+                };
 
                 if (window.IS_DEMO) {
+                    let storedParsed = {};
                     const stored = localStorage.getItem('fire_demo_settings');
                     if (stored) {
-                        const parsed = JSON.parse(stored);
-                        const { current_portfolio, ...settingsOnly } = parsed;
-                        reqBody = JSON.stringify({
-                            settings: settingsOnly,
-                            current_portfolio: current_portfolio,
-                            is_demo: true
-                        });
+                        storedParsed = JSON.parse(stored);
                     }
+                    const merged = { ...storedParsed, ...(activeOverrides || {}) };
+                    const { current_portfolio, ...settingsOnly } = merged;
+                    if (Object.keys(settingsOnly).length > 0) {
+                        reqPayload.settings = settingsOnly;
+                    }
+                    if (current_portfolio !== undefined) {
+                        reqPayload.current_portfolio = current_portfolio;
+                    }
+                } else if (activeOverrides && Object.keys(activeOverrides).length > 0) {
+                    reqPayload.settings = activeOverrides;
                 }
 
                 const res = await fetch('/api/fire/simulate', {
                     method: 'POST',
-                    headers: headers,
-                    body: reqBody
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reqPayload),
+                    signal: simAbortController.signal,
                 });
 
                 if (!res.ok) {
@@ -2129,8 +2601,16 @@
                 }
                 simData = await res.json();
                 renderDashboard(simData);
+                updateCashflowBanner();
             } catch (e) {
-                showError(e.message);
+                if (e.name === 'AbortError') return;
+                if (isInitialLoad) {
+                    showError(e.message);
+                } else {
+                    alert('Simulation update failed: ' + e.message);
+                }
+            } finally {
+                setSimUpdating(false);
             }
         }
 
@@ -2150,6 +2630,9 @@
             const retireAge = parseInt(document.getElementById('settRetireAge').value, 10);
             const annualContrib = parseInt(document.getElementById('settContrib').value, 10);
             const annualSpending = parseInt(document.getElementById('settSpending').value, 10);
+            const healthcare = parseInt(document.getElementById('settHealthcare').value || '0', 10);
+            const post75Pct = parseFloat(document.getElementById('settPost75Change').value || '0');
+            const taxRatePct = parseFloat(document.getElementById('settTaxRate').value || '0');
             const finalAge = parseInt(document.getElementById('settFinalAge').value, 10);
             const inflationPct = parseFloat(document.getElementById('settInflation').value);
             const riskTolerance = document.getElementById('settRisk').value;
@@ -2174,6 +2657,18 @@
                 showValErr('Retirement Spend must be $0 or greater.');
                 return;
             }
+            if (Number.isNaN(healthcare) || healthcare < 0) {
+                showValErr('Pre-65 Healthcare must be $0 or greater.');
+                return;
+            }
+            if (Number.isNaN(post75Pct) || post75Pct < -50 || post75Pct > 100) {
+                showValErr('Age 75+ Spend Shift must be between -50% and +100%.');
+                return;
+            }
+            if (Number.isNaN(taxRatePct) || taxRatePct < 0 || taxRatePct > 50) {
+                showValErr('Withdrawal Tax Rate must be between 0% and 50%.');
+                return;
+            }
             if (Number.isNaN(inflationPct) || inflationPct < 0 || inflationPct > 25) {
                 showValErr('Inflation Rate must be between 0% and 25%.');
                 return;
@@ -2181,7 +2676,7 @@
 
             // Keep Social Security birth year & claiming year synced with Current Age
             const curYear = new Date().getFullYear();
-            const prevS = getActiveSettings();
+            const prevS = getSavedSettings();
             const prevBirthYear = prevS.social_security_birth_year || (curYear - currentAge);
             const prevWithdrawYear = prevS.social_security_withdrawal_year || (prevBirthYear + 67);
             const claimOffset = Math.min(70, Math.max(62, prevWithdrawYear - prevBirthYear));
@@ -2193,6 +2688,10 @@
                 retirement_age: retireAge,
                 annual_contribution: annualContrib,
                 annual_retirement_spending: annualSpending,
+                pre_medicare_healthcare: healthcare,
+                post_75_spend_change: post75Pct / 100,
+                effective_tax_rate: taxRatePct / 100,
+                tax_regime: document.getElementById('settTaxRegime').value || 'us_federal',
                 risk_tolerance: riskTolerance,
                 inflation_rate: inflationPct / 100,
                 final_age: finalAge,
@@ -2217,6 +2716,7 @@
             btn.disabled = true;
 
             try {
+                whatIfOverrides = {};
                 if (window.IS_DEMO) {
                     saveDemoSettingsPatch(payload);
                     closeSettings();
@@ -2290,7 +2790,15 @@
             const recText = document.getElementById('recommendationText');
 
             spendCard.textContent = '$' + formatNum(plannedSpend);
-            document.getElementById('historicalSpendSub').textContent = 'vs $' + formatCompact(data.monthly_spend_avg * 12) + ' historical (MM)';
+            const typicalAnnual = (data.monthly_spend_avg || 0) * 12;
+            const subParts = ['vs $' + formatCompact(typicalAnnual) + ' typical (MM)'];
+            if ((s.pre_medicare_healthcare || 0) > 0) {
+                subParts.push('+$' + formatCompact(s.pre_medicare_healthcare) + ' pre-65 HC');
+            }
+            if ((s.effective_tax_rate || 0) > 0) {
+                subParts.push((s.effective_tax_rate * 100).toFixed(0) + '% tax');
+            }
+            document.getElementById('historicalSpendSub').textContent = subParts.join(' · ');
 
             let recMessage = '';
             let recColor = 'var(--text-primary)';
@@ -2323,8 +2831,12 @@
             recText.innerHTML = recMessage;
             recText.style.color = recColor;
 
-            // Portfolio
+            // What-If Explorer controls
+            syncWhatIfControls(data);
+
+            // Portfolio & Tax Buckets
             document.getElementById('portfolioTotal').textContent = '$' + formatNum(data.current_portfolio);
+            renderTaxBuckets(data.tax_bucket_summary, s.effective_tax_rate || 0);
             renderAccounts(data.account_breakdown);
 
             // Update Social Security Header Bar status
@@ -2335,22 +2847,29 @@
                 ssToggleEl.checked = s.social_security_enabled || false;
             }
             if (s.social_security_enabled && s.social_security_pia > 0) {
-                const mba = calculateSocialSecurityMbaJS(
-                    s.social_security_pia,
-                    s.social_security_fra,
-                    s.social_security_birth_year,
-                    s.social_security_birth_month,
-                    s.social_security_withdrawal_year,
-                    s.social_security_withdrawal_month
-                );
+                const mba = (data.effective_ss_mba !== undefined && data.effective_ss_mba > 0)
+                    ? data.effective_ss_mba
+                    : calculateSocialSecurityMbaJS(
+                        s.ss_stop_work_adjust
+                            ? adjustPiaForEarlyRetirementJS(s.social_security_pia, s.retirement_age)
+                            : s.social_security_pia,
+                        s.social_security_fra,
+                        s.social_security_birth_year,
+                        s.social_security_birth_month,
+                        s.social_security_withdrawal_year,
+                        s.social_security_withdrawal_month
+                    );
 
                 const claimAgeMonths = (s.social_security_withdrawal_year * 12 + s.social_security_withdrawal_month) -
                     (s.social_security_birth_year * 12 + s.social_security_birth_month);
                 const claimAgeY = Math.floor(claimAgeMonths / 12);
                 const claimAgeM = claimAgeMonths % 12;
                 const claimAgeStr = claimAgeY + "y" + (claimAgeM > 0 ? " " + claimAgeM + "m" : "");
+                const adjNote = (s.ss_stop_work_adjust && (data.effective_ss_pia ?? s.social_security_pia) < s.social_security_pia)
+                    ? ` <span style="color: var(--accent-amber); font-size: 0.72rem;">(early-FIRE adj.)</span>`
+                    : '';
 
-                ssValEl.innerHTML = `<span style="color: var(--accent-green); font-weight: 600;">Active:</span> $${formatNum(mba)}/mo starting ${getMonthName(s.social_security_withdrawal_month)} ${s.social_security_withdrawal_year} (Age ${claimAgeStr})`;
+                ssValEl.innerHTML = `<span style="color: var(--accent-green); font-weight: 600;">Active:</span> $${formatNum(mba)}/mo starting ${getMonthName(s.social_security_withdrawal_month)} ${s.social_security_withdrawal_year} (Age ${claimAgeStr})${adjNote}`;
                 ssBtnEl.textContent = '⚙️ Edit Benefits';
                 ssBtnEl.classList.add('is-active');
             } else {
@@ -2378,6 +2897,308 @@
             }
         }
 
+        function syncWhatIfControls(data) {
+            const s = data.settings || {};
+            const saved = getSavedSettings();
+            const currentAge = s.current_age ?? 45;
+            const finalAge = s.final_age ?? 85;
+
+            const wiRetireAge = document.getElementById('wiRetireAge');
+            wiRetireAge.min = currentAge;
+            wiRetireAge.max = Math.max(currentAge, finalAge - 1);
+            if (document.activeElement !== wiRetireAge) {
+                wiRetireAge.value = s.retirement_age ?? 65;
+            }
+            document.getElementById('wiRetireAgeVal').textContent = 'Age ' + wiRetireAge.value;
+
+            const wiContrib = document.getElementById('wiContrib');
+            const contribMax = Math.max(250000, Math.ceil(((saved.annual_contribution || 30000) * 2.5) / 10000) * 10000);
+            wiContrib.max = contribMax;
+            if (document.activeElement !== wiContrib) {
+                wiContrib.value = s.annual_contribution ?? 30000;
+            }
+            document.getElementById('wiContribVal').textContent = '$' + formatNum(wiContrib.value) + '/yr';
+
+            const wiSpending = document.getElementById('wiSpending');
+            const spendMax = Math.max(250000, Math.ceil(((saved.annual_retirement_spending || 80000) * 2.5) / 10000) * 10000);
+            wiSpending.max = spendMax;
+            if (document.activeElement !== wiSpending) {
+                wiSpending.value = s.annual_retirement_spending ?? 80000;
+            }
+            document.getElementById('wiSpendingVal').textContent = '$' + formatNum(wiSpending.value) + '/yr';
+
+            const wiHealthcare = document.getElementById('wiHealthcare');
+            if (document.activeElement !== wiHealthcare) {
+                wiHealthcare.value = s.pre_medicare_healthcare ?? 0;
+            }
+            document.getElementById('wiHealthcareVal').textContent = '$' + formatNum(wiHealthcare.value) + '/yr';
+
+            const wiTaxRate = document.getElementById('wiTaxRate');
+            if (document.activeElement !== wiTaxRate) {
+                wiTaxRate.value = ((s.effective_tax_rate || 0) * 100).toFixed(1);
+            }
+            document.getElementById('wiTaxRateVal').textContent = parseFloat(wiTaxRate.value).toFixed(1) + '%';
+
+            const wiTaxRegime = document.getElementById('wiTaxRegime');
+            if (wiTaxRegime && document.activeElement !== wiTaxRegime) {
+                wiTaxRegime.value = s.tax_regime || 'us_federal';
+            }
+
+            const suggestedPct = ((data.tax_bucket_summary?.suggested_effective_tax_rate || 0) * 100).toFixed(1);
+            const autoBtn = document.getElementById('wiAutoTaxBtn');
+            if (autoBtn) {
+                autoBtn.textContent = `✨ Auto (${suggestedPct}%)`;
+            }
+
+            const actionsEl = document.getElementById('whatIfActions');
+            if (actionsEl) {
+                actionsEl.style.display = Object.keys(whatIfOverrides).length > 0 ? 'flex' : 'none';
+            }
+        }
+
+        function onWhatIfInput() {
+            const saved = getSavedSettings();
+            const retireAge = parseInt(document.getElementById('wiRetireAge').value, 10);
+            const contrib = parseInt(document.getElementById('wiContrib').value, 10);
+            const spending = parseInt(document.getElementById('wiSpending').value, 10);
+            const healthcare = parseInt(document.getElementById('wiHealthcare').value, 10);
+            const taxRate = Math.round(parseFloat(document.getElementById('wiTaxRate').value) * 10) / 1000;
+            const taxRegime = document.getElementById('wiTaxRegime')?.value || 'us_federal';
+
+            document.getElementById('wiRetireAgeVal').textContent = 'Age ' + retireAge;
+            document.getElementById('wiContribVal').textContent = '$' + formatNum(contrib) + '/yr';
+            document.getElementById('wiSpendingVal').textContent = '$' + formatNum(spending) + '/yr';
+            document.getElementById('wiHealthcareVal').textContent = '$' + formatNum(healthcare) + '/yr';
+            document.getElementById('wiTaxRateVal').textContent = (taxRate * 100).toFixed(1) + '%';
+
+            const nextOverrides = {};
+            if (retireAge !== saved.retirement_age) nextOverrides.retirement_age = retireAge;
+            if (contrib !== saved.annual_contribution) nextOverrides.annual_contribution = contrib;
+            if (spending !== saved.annual_retirement_spending) nextOverrides.annual_retirement_spending = spending;
+            if (healthcare !== (saved.pre_medicare_healthcare ?? 0)) nextOverrides.pre_medicare_healthcare = healthcare;
+            if (Math.abs(taxRate - (saved.effective_tax_rate ?? 0)) > 0.0005) nextOverrides.effective_tax_rate = taxRate;
+            if (taxRegime !== (saved.tax_regime || 'us_federal')) nextOverrides.tax_regime = taxRegime;
+
+            whatIfOverrides = nextOverrides;
+            const actionsEl = document.getElementById('whatIfActions');
+            if (actionsEl) {
+                actionsEl.style.display = Object.keys(whatIfOverrides).length > 0 ? 'flex' : 'none';
+            }
+
+            if (whatIfDebounceTimer) clearTimeout(whatIfDebounceTimer);
+            whatIfDebounceTimer = setTimeout(() => {
+                runSimulation({ overrides: whatIfOverrides });
+            }, 120);
+        }
+
+        function progressiveTaxJS(amount, brackets) {
+            if (amount <= 0) return 0;
+            let tax = 0;
+            let prev = 0;
+            for (const [upper, rate] of brackets) {
+                if (amount <= prev) break;
+                const slice = Math.min(amount, upper) - prev;
+                if (slice > 0) tax += slice * rate;
+                prev = upper;
+            }
+            return tax;
+        }
+
+        function estimateSuggestedTaxRateJS(summary, regime) {
+            if (!summary) return 0;
+            const pre = summary.pre_tax || 0;
+            const free = summary.tax_free || 0;
+            const taxable = summary.taxable || 0;
+            const total = pre + free + taxable;
+            const refGross = summary.reference_gross_withdrawal || 0;
+            if (total <= 0 || refGross <= 0) return 0;
+
+            const preShare = pre / total;
+            const taxShare = taxable / total;
+            const gainFraction = summary.estimated_gain_fraction ?? 0.65;
+            const s = getActiveSettings();
+            const annualSs = s.social_security_enabled ? ((simData?.effective_ss_mba || 0) * 12) : 0;
+
+            const preW = refGross * preShare;
+            const realizedGains = refGross * taxShare * gainFraction;
+
+            let estTax = 0;
+            if (regime === 'de_abgeltung' || regime === 'de_etf') {
+                const deOrd = [[12800, 0], [19000, 0.19], [38000, 0.28], [73000, 0.36], [305000, 0.443], [Infinity, 0.475]];
+                const ssOrd = 0.85 * annualSs;
+                const deOrdTax = progressiveTaxJS(ssOrd + preW, deOrd) - progressiveTaxJS(ssOrd, deOrd);
+                const tfs = regime === 'de_etf' ? 0.70 : 1.0;
+                const deCapTax = 0.26375 * Math.max(0, realizedGains * tfs - 1100);
+                estTax = deOrdTax + deCapTax;
+            } else {
+                const stdDed = 15000;
+                const ssTax = 0.85 * annualSs;
+                const ordSsOnly = Math.max(0, ssTax - stdDed);
+                const ordTotal = Math.max(0, preW + ssTax - stdDed);
+                const fedOrd = [[11925, 0.10], [48475, 0.12], [103350, 0.22], [197300, 0.24], [250525, 0.32], [626350, 0.35], [Infinity, 0.37]];
+                const fedOrdTax = progressiveTaxJS(ordTotal, fedOrd) - progressiveTaxJS(ordSsOnly, fedOrd);
+                const remDed = Math.max(0, stdDed - (preW + ssTax));
+                const taxableGains = Math.max(0, realizedGains - remDed);
+                const fedLtcg = [[48350, 0], [533400, 0.15], [Infinity, 0.20]];
+                const fedLtcgTax = progressiveTaxJS(ordTotal + taxableGains, fedLtcg) - progressiveTaxJS(ordTotal, fedLtcg);
+                const magi = preW + ssTax + realizedGains;
+                const niit = 0.038 * Math.min(realizedGains, Math.max(0, magi - 200000));
+                let stateTax = 0;
+                if (regime === 'us_mod_state') {
+                    stateTax = 0.05 * Math.max(0, preW + realizedGains - 10000);
+                } else if (regime === 'us_high_state') {
+                    const caBrackets = [[10756, 0.01], [25499, 0.02], [40245, 0.04], [55866, 0.06], [70606, 0.08], [360659, 0.093], [432787, 0.103], [721314, 0.113], [1000000, 0.123], [Infinity, 0.133]];
+                    stateTax = progressiveTaxJS(Math.max(0, preW + realizedGains - 5540), caBrackets);
+                }
+                estTax = fedOrdTax + fedLtcgTax + niit + stateTax;
+            }
+            return Math.round(Math.min(0.50, Math.max(0, estTax / refGross)) * 1000) / 1000;
+        }
+
+        function updateSettingsTaxHint(regime) {
+            const summary = simData?.tax_bucket_summary;
+            const rate = (summary && regime === summary.tax_regime)
+                ? (summary.suggested_effective_tax_rate || 0)
+                : estimateSuggestedTaxRateJS(summary, regime);
+            const pct = (rate * 100).toFixed(1);
+            const autoBtn = document.getElementById('settAutoTaxBtn');
+            if (autoBtn) autoBtn.textContent = `✨ Auto (${pct}%)`;
+            const noteEl = document.getElementById('settTaxBasisNote');
+            if (noteEl && summary && (summary.reference_gross_withdrawal || 0) > 0) {
+                const refK = formatCompact(summary.reference_gross_withdrawal);
+                const gainPct = Math.round((summary.estimated_gain_fraction ?? 0.65) * 100);
+                noteEl.textContent = `Auto estimate: ${pct}% on ~$${refK}/yr gross withdrawal (~${gainPct}% compounded gain share).`;
+            } else if (noteEl) {
+                noteEl.textContent = '';
+            }
+        }
+
+        function onTaxRegimeChange(source) {
+            if (source === 'settings') {
+                const regime = document.getElementById('settTaxRegime').value;
+                updateSettingsTaxHint(regime);
+            } else {
+                onWhatIfInput();
+            }
+        }
+
+        function applySuggestedTaxRate(target) {
+            if (target === 'settings') {
+                const regime = document.getElementById('settTaxRegime').value;
+                const summary = simData?.tax_bucket_summary;
+                const rate = (summary && regime === summary.tax_regime)
+                    ? (summary.suggested_effective_tax_rate || 0)
+                    : estimateSuggestedTaxRateJS(summary, regime);
+                document.getElementById('settTaxRate').value = (rate * 100).toFixed(1);
+            } else {
+                const suggestedPct = ((simData?.tax_bucket_summary?.suggested_effective_tax_rate || 0) * 100).toFixed(1);
+                document.getElementById('wiTaxRate').value = suggestedPct;
+                onWhatIfInput();
+            }
+        }
+
+        function resetWhatIf() {
+            if (whatIfDebounceTimer) clearTimeout(whatIfDebounceTimer);
+            whatIfOverrides = {};
+            runSimulation({ overrides: {} });
+        }
+
+        async function saveWhatIf() {
+            if (Object.keys(whatIfOverrides).length === 0) return;
+            const patch = { ...whatIfOverrides };
+            try {
+                whatIfOverrides = {};
+                if (window.IS_DEMO) {
+                    saveDemoSettingsPatch(patch);
+                    runSimulation();
+                } else {
+                    const res = await fetch('/api/fire/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(patch),
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    runSimulation();
+                }
+            } catch (e) {
+                whatIfOverrides = patch;
+                alert('Failed to save What-If changes: ' + e.message);
+            }
+        }
+
+        function updateCashflowBanner() {
+            const textEl = document.getElementById('cashflowBannerText');
+            if (!textEl || !simData) return;
+            const cf = simData.cashflow_metrics || {};
+            const typicalAnnual = Math.round((cf.monthly_spend_avg ?? simData.monthly_spend_avg ?? 0) * 12);
+            const savingsAnnual = Math.round(cf.annual_savings_avg ?? 0);
+            const trimmed = cf.outlier_months_trimmed || 0;
+            const trimNote = trimmed > 0 ? ` (${trimmed} spike mo. trimmed)` : '';
+            textEl.textContent = `Typical Spend: $${formatNum(typicalAnnual)}/yr${trimNote} · Net Savings: $${formatNum(savingsAnnual)}/yr`;
+        }
+
+        function applyMonarchCashflow() {
+            if (!simData) return;
+            const cf = simData.cashflow_metrics || {};
+            const typicalAnnual = Math.round((cf.monthly_spend_avg ?? simData.monthly_spend_avg ?? 0) * 12);
+            const savingsAnnual = Math.round(cf.annual_savings_avg ?? 0);
+            if (typicalAnnual > 0) {
+                document.getElementById('settSpending').value = typicalAnnual;
+            }
+            if (savingsAnnual >= 0 && cf.annual_savings_avg !== undefined) {
+                document.getElementById('settContrib').value = savingsAnnual;
+            }
+        }
+
+        async function refreshLiveMonarch() {
+            await runSimulation({ forceRefresh: true });
+        }
+
+        function renderTaxBuckets(summary, activeTaxRate) {
+            const container = document.getElementById('taxBucketSummary');
+            const track = document.getElementById('taxBarTrack');
+            const pills = document.getElementById('taxPillsRow');
+            if (!container || !track || !pills) return;
+
+            if (!summary) {
+                container.style.display = 'none';
+                return;
+            }
+            const pre = summary.pre_tax || 0;
+            const free = summary.tax_free || 0;
+            const taxable = summary.taxable || 0;
+            const total = pre + free + taxable;
+            if (total <= 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            const pctPre = (pre / total) * 100;
+            const pctFree = (free / total) * 100;
+            const pctTaxable = (taxable / total) * 100;
+
+            track.innerHTML = `
+                <div class="tax-bar-seg-pre" style="width: ${pctPre.toFixed(1)}%;" title="Pre-Tax: ${pctPre.toFixed(0)}%"></div>
+                <div class="tax-bar-seg-free" style="width: ${pctFree.toFixed(1)}%;" title="Tax-Free: ${pctFree.toFixed(0)}%"></div>
+                <div class="tax-bar-seg-taxable" style="width: ${pctTaxable.toFixed(1)}%;" title="Taxable: ${pctTaxable.toFixed(0)}%"></div>
+            `;
+
+            const sugPct = ((summary.suggested_effective_tax_rate || 0) * 100).toFixed(1);
+            const curPct = ((activeTaxRate || 0) * 100).toFixed(1);
+            const refGross = summary.reference_gross_withdrawal || 0;
+            const gainPct = Math.round((summary.estimated_gain_fraction ?? 0.65) * 100);
+            const estDetail = refGross > 0
+                ? `est. ${sugPct}% on $${formatCompact(refGross)}/yr · ${gainPct}% gain`
+                : `est. ${sugPct}%`;
+            pills.innerHTML = `
+                <span class="tax-pill"><span class="tax-dot" style="background: var(--accent-amber);"></span> Pre-Tax: <strong>$${formatCompact(pre)}</strong> (${pctPre.toFixed(0)}%)</span>
+                <span class="tax-pill"><span class="tax-dot" style="background: var(--accent-green);"></span> Tax-Free: <strong>$${formatCompact(free)}</strong> (${pctFree.toFixed(0)}%)</span>
+                <span class="tax-pill"><span class="tax-dot" style="background: var(--accent-blue);"></span> Taxable: <strong>$${formatCompact(taxable)}</strong> (${pctTaxable.toFixed(0)}%)</span>
+                <span style="color: var(--text-muted);">Tax Drag: <strong>${curPct}%</strong> (${estDetail})</span>
+            `;
+            container.style.display = 'block';
+        }
+
         function probabilityLabel(prob) {
             if (prob >= 95) return '🟢 Excellent';
             if (prob >= 80) return '🟢 Strong';
@@ -2389,15 +3210,24 @@
         function renderAccounts(accounts) {
             const container = document.getElementById('accountList');
             container.innerHTML = '';
+            const bucketLabels = {
+                pre_tax: 'Pre-Tax',
+                tax_free: 'Tax-Free',
+                taxable: 'Taxable',
+            };
             accounts.forEach(acc => {
                 const isPositive = acc.balance >= 0;
                 const balClass = isPositive ? 'balance-positive' : 'balance-negative';
                 const sign = isPositive ? '' : '-';
                 const absVal = Math.abs(acc.balance);
+                const bucket = acc.taxBucket || 'taxable';
+                const badgeHtml = acc.isAsset
+                    ? `<span class="tax-badge tax-badge-${bucket}">${bucketLabels[bucket] || 'Taxable'}</span>`
+                    : '';
                 container.innerHTML += `
                     <div class="account-row">
                         <div>
-                            <div class="account-name">${acc.name}</div>
+                            <div class="account-name">${acc.name}${badgeHtml}</div>
                             <div class="account-type">${acc.subtype || acc.type}</div>
                         </div>
                         <div class="account-balance ${balClass}">
@@ -2410,8 +3240,9 @@
         // ===== ECharts Cone =====
         function renderConeChart(data) {
             const container = document.getElementById('coneChart');
-            if (chartInstance) chartInstance.dispose();
-            chartInstance = echarts.init(container, null, { renderer: 'canvas' });
+            if (!chartInstance) {
+                chartInstance = echarts.init(container, null, { renderer: 'canvas' });
+            }
 
             const s = data.settings || {};
             const years = data.years;
@@ -2750,13 +3581,14 @@
                 ]
             };
 
-            chartInstance.setOption(option);
+            chartInstance.setOption(option, true);
         }
 
         function renderSwrChart(data) {
             const container = document.getElementById('swrChart');
-            if (swrChartInstance) swrChartInstance.dispose();
-            swrChartInstance = echarts.init(container, null, { renderer: 'canvas' });
+            if (!swrChartInstance) {
+                swrChartInstance = echarts.init(container, null, { renderer: 'canvas' });
+            }
 
             const s = data.settings || {};
             const rawRetireIdx = data.years.indexOf(s.retirement_age);
@@ -2767,11 +3599,13 @@
             const baseSpending = s.annual_retirement_spending;
             const safeBaseSpend = data.required_spend_for_target ?? 0;
             const historicalAnnualSpend = data.monthly_spend_avg * 12;
+            const post75Change = s.post_75_spend_change || 0;
 
             const factor = k => useSwrNominal ? Math.pow(1 + inflation, retireIdx + k) : 1;
+            const phaseFactor = age => (age >= 75 ? (1 + post75Change) : 1);
 
-            const safeSpending = retireYears.map((_, k) => Math.round(safeBaseSpend * factor(k)));
-            const anticipatedSpending = retireYears.map((_, k) => Math.round(baseSpending * factor(k)));
+            const safeSpending = retireYears.map((age, k) => Math.round(safeBaseSpend * phaseFactor(age) * factor(k)));
+            const anticipatedSpending = retireYears.map((age, k) => Math.round(baseSpending * phaseFactor(age) * factor(k)));
             const projectedHistorical = retireYears.map((_, k) => Math.round(historicalAnnualSpend * factor(k)));
 
             let seriesArr = [
@@ -2906,7 +3740,7 @@
                 series: seriesArr
             };
 
-            swrChartInstance.setOption(option);
+            swrChartInstance.setOption(option, true);
         }
 
         // ===== Settings Modal =====
@@ -2922,10 +3756,16 @@
                 document.getElementById('settRetireAge').value = s.retirement_age;
                 document.getElementById('settContrib').value = s.annual_contribution;
                 document.getElementById('settSpending').value = s.annual_retirement_spending;
+                document.getElementById('settHealthcare').value = s.pre_medicare_healthcare ?? 0;
+                document.getElementById('settPost75Change').value = Math.round((s.post_75_spend_change ?? 0) * 100);
+                document.getElementById('settTaxRate').value = ((s.effective_tax_rate ?? 0) * 100).toFixed(1);
+                document.getElementById('settTaxRegime').value = s.tax_regime || 'us_federal';
                 document.getElementById('settRisk').value = s.risk_tolerance;
                 document.getElementById('settInflation').value = (s.inflation_rate * 100).toFixed(1);
                 document.getElementById('settFinalAge').value = s.final_age || 85;
             }
+            updateSettingsTaxHint(document.getElementById('settTaxRegime').value || 'us_federal');
+            updateCashflowBanner();
             if (window.IS_DEMO) {
                 document.getElementById('settPortfolio').value = s.current_portfolio ?? simData?.current_portfolio ?? 500000;
             }

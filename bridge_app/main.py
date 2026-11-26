@@ -28,7 +28,12 @@ from .services.orchestrator import (
     invalidate_merchant_star_cache,
 )
 from .services.gemini import get_gemini_model
-from .services.monarch import get_monarch_client, get_latest_credentials
+from .services.monarch import (
+    get_monarch_client,
+    get_latest_credentials,
+    _get_accounts_cached,
+    get_cashflow_summary_cached,
+)
 from .models import MerchantMapping, Category, FireSettings, Transaction, Log, FailedTransaction, Merchant, SpendingReport, NetWorthReport
 from sqlalchemy.future import select
 from sqlalchemy import delete, func, or_
@@ -53,7 +58,32 @@ DEMO_DEFAULTS = {
     "social_security_birth_year": 1981,
     "social_security_withdrawal_month": 1,
     "social_security_withdrawal_year": 2048,
+    "effective_tax_rate": 0.0,
+    "pre_medicare_healthcare": 0,
+    "post_75_spend_change": 0.0,
+    "ss_stop_work_adjust": False,
+    "tax_regime": "us_federal",
 }
+
+
+def _ensure_fire_settings_columns(sync_conn):
+    from sqlalchemy import inspect, text as sql_text
+
+    inspector = inspect(sync_conn)
+    if "fire_settings" not in inspector.get_table_names():
+        return
+    existing = {col["name"] for col in inspector.get_columns("fire_settings")}
+    migrations = [
+        ("effective_tax_rate", "FLOAT DEFAULT 0.0"),
+        ("pre_medicare_healthcare", "INTEGER DEFAULT 0"),
+        ("post_75_spend_change", "FLOAT DEFAULT 0.0"),
+        ("ss_stop_work_adjust", "BOOLEAN DEFAULT FALSE"),
+        ("tax_regime", "VARCHAR DEFAULT 'us_federal'"),
+    ]
+    for col_name, ddl in migrations:
+        if col_name not in existing:
+            sync_conn.execute(sql_text(f"ALTER TABLE fire_settings ADD COLUMN {col_name} {ddl}"))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -72,6 +102,7 @@ async def lifespan(app: FastAPI):
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
             await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(_ensure_fire_settings_columns)
         print("✅ LIFESPAN: Database connected.")
     except Exception as e:
         print(f"❌ LIFESPAN: Database connection failed: {e}")
@@ -4529,6 +4560,39 @@ class FireSettingsUpdate(BaseModel):
     social_security_birth_year: Optional[int] = None
     social_security_withdrawal_month: Optional[int] = None
     social_security_withdrawal_year: Optional[int] = None
+    effective_tax_rate: Optional[float] = None
+    pre_medicare_healthcare: Optional[int] = None
+    post_75_spend_change: Optional[float] = None
+    ss_stop_work_adjust: Optional[bool] = None
+    tax_regime: Optional[str] = None
+
+
+def _fire_settings_to_dict(settings_obj: Any) -> dict:
+    def _val(attr: str, default: Any) -> Any:
+        v = getattr(settings_obj, attr, None)
+        return v if v is not None else default
+
+    return {
+        "current_age": _val("current_age", 30),
+        "retirement_age": _val("retirement_age", 55),
+        "annual_contribution": _val("annual_contribution", 50000),
+        "annual_retirement_spending": _val("annual_retirement_spending", 40000),
+        "risk_tolerance": _val("risk_tolerance", "moderate"),
+        "inflation_rate": _val("inflation_rate", 0.03),
+        "final_age": _val("final_age", 85),
+        "social_security_enabled": bool(_val("social_security_enabled", False)),
+        "social_security_pia": _val("social_security_pia", 0),
+        "social_security_fra": _val("social_security_fra", 67),
+        "social_security_birth_month": _val("social_security_birth_month", 1),
+        "social_security_birth_year": _val("social_security_birth_year", 1980),
+        "social_security_withdrawal_month": _val("social_security_withdrawal_month", 1),
+        "social_security_withdrawal_year": _val("social_security_withdrawal_year", 2047),
+        "effective_tax_rate": float(_val("effective_tax_rate", 0.0)),
+        "pre_medicare_healthcare": int(_val("pre_medicare_healthcare", 0)),
+        "post_75_spend_change": float(_val("post_75_spend_change", 0.0)),
+        "ss_stop_work_adjust": bool(_val("ss_stop_work_adjust", False)),
+        "tax_regime": _val("tax_regime", "us_federal"),
+    }
 
 
 @app.get("/api/fire/settings")
@@ -4548,22 +4612,7 @@ async def get_fire_settings(request: Request, db: AsyncSession = Depends(get_db)
         await db.commit()
         await db.refresh(settings)
 
-    return {
-        "current_age": settings.current_age,
-        "retirement_age": settings.retirement_age,
-        "annual_contribution": settings.annual_contribution,
-        "annual_retirement_spending": settings.annual_retirement_spending,
-        "risk_tolerance": settings.risk_tolerance,
-        "inflation_rate": settings.inflation_rate,
-        "final_age": settings.final_age,
-        "social_security_enabled": settings.social_security_enabled,
-        "social_security_pia": settings.social_security_pia,
-        "social_security_fra": settings.social_security_fra,
-        "social_security_birth_month": settings.social_security_birth_month,
-        "social_security_birth_year": settings.social_security_birth_year,
-        "social_security_withdrawal_month": settings.social_security_withdrawal_month,
-        "social_security_withdrawal_year": settings.social_security_withdrawal_year,
-    }
+    return _fire_settings_to_dict(settings)
 
 
 @app.put("/api/fire/settings")
@@ -4597,20 +4646,7 @@ async def update_fire_settings(
 
     return {
         "status": "success",
-        "current_age": settings.current_age,
-        "retirement_age": settings.retirement_age,
-        "annual_contribution": settings.annual_contribution,
-        "annual_retirement_spending": settings.annual_retirement_spending,
-        "risk_tolerance": settings.risk_tolerance,
-        "inflation_rate": settings.inflation_rate,
-        "final_age": settings.final_age,
-        "social_security_enabled": settings.social_security_enabled,
-        "social_security_pia": settings.social_security_pia,
-        "social_security_fra": settings.social_security_fra,
-        "social_security_birth_month": settings.social_security_birth_month,
-        "social_security_birth_year": settings.social_security_birth_year,
-        "social_security_withdrawal_month": settings.social_security_withdrawal_month,
-        "social_security_withdrawal_year": settings.social_security_withdrawal_year,
+        **_fire_settings_to_dict(settings),
     }
 
 
@@ -4618,9 +4654,19 @@ class SimulateRequest(BaseModel):
     settings: Optional[FireSettingsUpdate] = None
     current_portfolio: Optional[float] = None
     is_demo: bool = False
+    force_refresh: bool = False
 
 
-def _build_simulation_response(result, current_portfolio: float, account_breakdown: list, monthly_spend_avg: float, settings_obj) -> dict:
+def _build_simulation_response(
+    result,
+    current_portfolio: float,
+    account_breakdown: list,
+    monthly_spend_avg: float,
+    settings_dict: dict,
+    saved_settings_dict: dict,
+    tax_bucket_summary: dict,
+    cashflow_metrics: dict,
+) -> dict:
     return {
         "years": result.years,
         "percentile_5": result.percentile_5,
@@ -4633,79 +4679,109 @@ def _build_simulation_response(result, current_portfolio: float, account_breakdo
         "fire_date_year": result.fire_date_year,
         "swr": result.swr,
         "required_spend_for_target": result.required_spend_for_target,
+        "effective_ss_pia": result.effective_ss_pia,
+        "effective_ss_mba": result.effective_ss_mba,
         "current_portfolio": current_portfolio,
         "risk_profile_label": result.risk_profile_label,
         "account_breakdown": account_breakdown,
+        "tax_bucket_summary": tax_bucket_summary,
+        "cashflow_metrics": cashflow_metrics,
         "monthly_spend_avg": monthly_spend_avg,
-        "settings": {
-            "current_age": settings_obj.current_age,
-            "retirement_age": settings_obj.retirement_age,
-            "annual_contribution": settings_obj.annual_contribution,
-            "annual_retirement_spending": settings_obj.annual_retirement_spending,
-            "risk_tolerance": settings_obj.risk_tolerance,
-            "inflation_rate": settings_obj.inflation_rate,
-            "final_age": settings_obj.final_age,
-            "social_security_enabled": settings_obj.social_security_enabled,
-            "social_security_pia": settings_obj.social_security_pia,
-            "social_security_fra": settings_obj.social_security_fra,
-            "social_security_birth_month": settings_obj.social_security_birth_month,
-            "social_security_birth_year": settings_obj.social_security_birth_year,
-            "social_security_withdrawal_month": settings_obj.social_security_withdrawal_month,
-            "social_security_withdrawal_year": settings_obj.social_security_withdrawal_year,
-        }
+        "settings": settings_dict,
+        "saved_settings": saved_settings_dict,
     }
 
 
-def _get_demo_settings(req: Optional[SimulateRequest]) -> Any:
-    if req and req.settings:
-        return req.settings
-    return FireSettings(**DEMO_DEFAULTS)
-
-
-def _build_demo_sim_input(settings_obj: Any, demo_portfolio: float) -> "SimulationInput":
+def _build_sim_input_from_dict(settings_dict: dict, portfolio: float) -> "SimulationInput":
     from .services.fire_engine import SimulationInput
 
-    def get_val(attr):
-        v = getattr(settings_obj, attr, None)
-        return v if v is not None else DEMO_DEFAULTS[attr]
-
     return SimulationInput(
-        current_portfolio=demo_portfolio,
-        current_age=get_val("current_age"),
-        retirement_age=get_val("retirement_age"),
-        annual_contribution=get_val("annual_contribution"),
-        annual_retirement_spending=get_val("annual_retirement_spending"),
-        risk_tolerance=get_val("risk_tolerance"),
-        inflation_rate=get_val("inflation_rate"),
-        final_age=get_val("final_age"),
-        social_security_enabled=get_val("social_security_enabled"),
-        social_security_pia=get_val("social_security_pia"),
-        social_security_fra=get_val("social_security_fra"),
-        social_security_birth_month=get_val("social_security_birth_month"),
-        social_security_birth_year=get_val("social_security_birth_year"),
-        social_security_withdrawal_month=get_val("social_security_withdrawal_month"),
-        social_security_withdrawal_year=get_val("social_security_withdrawal_year"),
+        current_portfolio=portfolio,
+        current_age=settings_dict["current_age"],
+        retirement_age=settings_dict["retirement_age"],
+        annual_contribution=settings_dict["annual_contribution"],
+        annual_retirement_spending=settings_dict["annual_retirement_spending"],
+        risk_tolerance=settings_dict["risk_tolerance"],
+        inflation_rate=settings_dict["inflation_rate"],
+        final_age=settings_dict["final_age"],
+        social_security_enabled=settings_dict["social_security_enabled"],
+        social_security_pia=settings_dict["social_security_pia"],
+        social_security_fra=settings_dict["social_security_fra"],
+        social_security_birth_month=settings_dict["social_security_birth_month"],
+        social_security_birth_year=settings_dict["social_security_birth_year"],
+        social_security_withdrawal_month=settings_dict["social_security_withdrawal_month"],
+        social_security_withdrawal_year=settings_dict["social_security_withdrawal_year"],
+        effective_tax_rate=settings_dict.get("effective_tax_rate", 0.0),
+        pre_medicare_healthcare=settings_dict.get("pre_medicare_healthcare", 0),
+        post_75_spend_change=settings_dict.get("post_75_spend_change", 0.0),
+        ss_stop_work_adjust=settings_dict.get("ss_stop_work_adjust", False),
+        tax_regime=settings_dict.get("tax_regime", "us_federal"),
     )
 
 
 def _handle_demo_simulation(req: Optional[SimulateRequest]) -> dict:
-    from .services.fire_engine import simulate
+    from .services.fire_engine import simulate, summarize_tax_buckets
 
-    settings_obj = _get_demo_settings(req)
+    saved_settings = DEMO_DEFAULTS.copy()
+    overrides = req.settings.model_dump(exclude_none=True) if (req and req.settings) else {}
+    active_settings = {**saved_settings, **overrides}
 
-    demo_portfolio = 500_000
+    demo_portfolio = 500_000.0
     if req and req.current_portfolio is not None:
-        demo_portfolio = req.current_portfolio
+        demo_portfolio = float(req.current_portfolio)
 
-    sim_input = _build_demo_sim_input(settings_obj, demo_portfolio)
+    demo_breakdown = [
+        {
+            "name": "401(k) Plan",
+            "balance": round(demo_portfolio * 0.55, 2),
+            "type": "Investments",
+            "subtype": "401k",
+            "isAsset": True,
+            "taxBucket": "pre_tax",
+        },
+        {
+            "name": "Roth IRA",
+            "balance": round(demo_portfolio * 0.25, 2),
+            "type": "Investments",
+            "subtype": "Roth IRA",
+            "isAsset": True,
+            "taxBucket": "tax_free",
+        },
+        {
+            "name": "Taxable Brokerage",
+            "balance": round(demo_portfolio * 0.20, 2),
+            "type": "Investments",
+            "subtype": "Brokerage",
+            "isAsset": True,
+            "taxBucket": "taxable",
+        },
+    ]
+    demo_cashflow_metrics = {
+        "monthly_spend_avg": 6015.0,
+        "raw_monthly_spend_avg": 6650.0,
+        "annual_savings_avg": 30000,
+        "annual_income_avg": 110000,
+        "savings_rate": 0.273,
+        "outlier_months_trimmed": 1,
+    }
+
+    sim_input = _build_sim_input_from_dict(active_settings, demo_portfolio)
     result = simulate(sim_input)
+    tax_bucket_summary = summarize_tax_buckets(
+        demo_breakdown,
+        inp=sim_input,
+        safe_spend=result.required_spend_for_target,
+    )
 
     return _build_simulation_response(
         result=result,
         current_portfolio=demo_portfolio,
-        account_breakdown=[],
-        monthly_spend_avg=6015,
-        settings_obj=sim_input,
+        account_breakdown=demo_breakdown,
+        monthly_spend_avg=demo_cashflow_metrics["monthly_spend_avg"],
+        settings_dict=active_settings,
+        saved_settings_dict=saved_settings,
+        tax_bucket_summary=tax_bucket_summary,
+        cashflow_metrics=demo_cashflow_metrics,
     )
 
 
@@ -4716,7 +4792,10 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     Set DEMO_MODE=1 in env to return static fictional data for recording/testing.
     """
     from .services.fire_engine import (
-        SimulationInput, simulate, filter_accounts, calc_monthly_spend
+        simulate,
+        filter_accounts,
+        summarize_tax_buckets,
+        extract_cashflow_metrics,
     )
 
     # ── Demo Mode Enforcement ──────────────────────────────────────────────
@@ -4736,13 +4815,18 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Monarch connection failed: {e}")
 
-    # 2 & 3. Fetch accounts and cashflow (last 12 months) concurrently
+    # 2 & 3. Fetch accounts and trailing 12 complete calendar months of cashflow concurrently
     now = datetime.now()
-    end_date = now.strftime("%Y-%m-%d")
-    start_date = (now - timedelta(days=365)).strftime("%Y-%m-%d")
+    end_dt = now.replace(day=1) - timedelta(days=1)
+    start_year = end_dt.year if end_dt.month == 12 else end_dt.year - 1
+    start_month = 1 if end_dt.month == 12 else end_dt.month + 1
+    start_date = f"{start_year:04d}-{start_month:02d}-01"
+    end_date = end_dt.strftime("%Y-%m-%d")
+    force_refresh = bool(req and req.force_refresh)
+
     accounts_res, cashflow_res = await asyncio.gather(
-        mm.get_accounts(),
-        mm.get_cashflow_summary(start_date=start_date, end_date=end_date),
+        _get_accounts_cached(mm, force_refresh=force_refresh),
+        get_cashflow_summary_cached(mm, start_date=start_date, end_date=end_date, force_refresh=force_refresh),
         return_exceptions=True,
     )
 
@@ -4753,39 +4837,42 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Failed to fetch accounts: {e}")
 
-    monthly_spend = 0
+    # Gather stored monthly expenses from SpendingReport for outlier trimming if available
+    monthly_expenses: List[float] = []
+    try:
+        sr_stmt = select(SpendingReport).where(SpendingReport.year.in_([start_year, end_dt.year]))
+        sr_res = await db.execute(sr_stmt)
+        start_ym = start_date[:7]
+        end_ym = end_date[:7]
+        for sr in sr_res.scalars().all():
+            for ym, val in (sr.monthly_spending or {}).items():
+                if start_ym <= ym <= end_ym and val is not None:
+                    monthly_expenses.append(float(val))
+    except Exception as e:
+        print(f"⚠️ Could not query SpendingReport monthly expenses: {e}")
+
     if isinstance(cashflow_res, Exception):
         print(f"⚠️ Could not fetch cashflow: {cashflow_res}")
+        cashflow_metrics = extract_cashflow_metrics({}, monthly_expenses)
     else:
         try:
-            monthly_spend = calc_monthly_spend(cashflow_res)
+            cashflow_metrics = extract_cashflow_metrics(cashflow_res, monthly_expenses)
         except Exception as e:
-            print(f"⚠️ Could not fetch cashflow: {e}")
+            print(f"⚠️ Could not parse cashflow: {e}")
+            cashflow_metrics = extract_cashflow_metrics({}, monthly_expenses)
 
-    # 4. Load settings
+    # 4. Load settings and merge transient What-If overrides (without mutating DB)
     settings_result = await db.execute(select(FireSettings).where(FireSettings.id == 1))
     settings = settings_result.scalar_one_or_none()
     if not settings:
         settings = FireSettings(id=1)
 
+    saved_settings_dict = _fire_settings_to_dict(settings)
+    overrides = req.settings.model_dump(exclude_none=True) if (req and req.settings) else {}
+    active_settings_dict = {**saved_settings_dict, **overrides}
+
     # 5. Build simulation input
-    sim_input = SimulationInput(
-        current_portfolio=total_portfolio,
-        current_age=settings.current_age,
-        retirement_age=settings.retirement_age,
-        annual_contribution=settings.annual_contribution,
-        annual_retirement_spending=settings.annual_retirement_spending,
-        risk_tolerance=settings.risk_tolerance,
-        inflation_rate=settings.inflation_rate,
-        final_age=settings.final_age,
-        social_security_enabled=settings.social_security_enabled,
-        social_security_pia=settings.social_security_pia,
-        social_security_fra=settings.social_security_fra,
-        social_security_birth_month=settings.social_security_birth_month,
-        social_security_birth_year=settings.social_security_birth_year,
-        social_security_withdrawal_month=settings.social_security_withdrawal_month,
-        social_security_withdrawal_year=settings.social_security_withdrawal_year,
-    )
+    sim_input = _build_sim_input_from_dict(active_settings_dict, total_portfolio)
 
     # 6. Run simulation
     try:
@@ -4793,13 +4880,22 @@ async def run_fire_simulation(request: Request, req: Optional[SimulateRequest] =
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Simulation failed: {e}")
 
+    tax_bucket_summary = summarize_tax_buckets(
+        account_breakdown,
+        inp=sim_input,
+        safe_spend=result.required_spend_for_target,
+    )
+
     # 7. Return results
     return _build_simulation_response(
         result=result,
         current_portfolio=result.current_portfolio,
         account_breakdown=account_breakdown,
-        monthly_spend_avg=monthly_spend,
-        settings_obj=settings,
+        monthly_spend_avg=cashflow_metrics["monthly_spend_avg"],
+        settings_dict=active_settings_dict,
+        saved_settings_dict=saved_settings_dict,
+        tax_bucket_summary=tax_bucket_summary,
+        cashflow_metrics=cashflow_metrics,
     )
 
 
