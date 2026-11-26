@@ -1597,7 +1597,13 @@
                     </div>
                     <div class="whatif-item">
                         <div class="whatif-label-row">
-                            <span class="whatif-label">Annual Savings</span>
+                            <span class="whatif-label">Annual Savings
+                                <button type="button" class="setting-info-btn" onclick="openSettingHelp('annualSavings', event)" aria-label="Learn about Annual Savings">
+                                    <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </span>
                             <span class="whatif-value" id="wiContribVal">--</span>
                         </div>
                         <input type="range" class="whatif-slider" id="wiContrib" min="0" max="250000" step="1000"
@@ -1753,7 +1759,14 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Annual Savings ($)</label>
+                    <div class="form-label-row">
+                        <label class="form-label">Annual Savings ($)</label>
+                        <button type="button" class="setting-info-btn" onclick="openSettingHelp('annualSavings', event)" aria-label="Learn about Annual Savings">
+                            <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                     <input type="number" class="form-input" id="settContrib" min="0" step="1000">
                 </div>
                 <div class="form-group">
@@ -4564,6 +4577,20 @@
         }
 
         const SETTING_HELP_TOPICS = {
+            annualSavings: {
+                title: 'ℹ️ Annual Savings (Pre-Retirement Only)',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        <strong>While you are still working:</strong> Net new money you invest each year (401(k), IRA, brokerage, employer match). Every year you hit or pass your <strong>Target Retirement Age</strong>, these contributions stop automatically and withdrawals begin.
+                    </p>
+                    <p style="margin-bottom: 0.9rem; color: var(--text-secondary);">
+                        <strong>Retiring today?</strong> If your Target Age equals your Current Age, you have 0 working years left—so Annual Savings has <strong>no effect</strong> on your Retirement Score or Safe Spend (it only helps find a future <strong>FIRE Date</strong> if you choose to work extra years).
+                    </p>
+                    <p style="color: var(--text-secondary);">
+                        <strong>Earning money <em>after</em> retiring?</strong> Use <strong>Barista / Side Income</strong> in Settings instead to offset retirement withdrawals with part-time or consulting income.
+                    </p>
+                `
+            },
             withdrawalStrategy: {
                 title: 'ℹ️ Withdrawal Strategy',
                 body: `
