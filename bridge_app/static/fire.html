@@ -985,6 +985,9 @@
         }
 
         .milestone-chip-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
             font-size: 0.66rem;
             text-transform: uppercase;
             letter-spacing: 0.6px;
@@ -1552,11 +1555,23 @@
                         <div class="milestone-chip-val" id="fiNumberVal">--</div>
                     </div>
                     <div class="milestone-chip">
-                        <div class="milestone-chip-label">⛵ Coast FI</div>
+                        <div class="milestone-chip-label">⛵ Coast FI
+                            <button type="button" class="setting-info-btn" onclick="openSettingHelp('coastFi', event)" aria-label="Learn about Coast FI">
+                                <svg style="width: 13px; height: 13px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
                         <div class="milestone-chip-val" id="coastFiVal">--</div>
                     </div>
                     <div class="milestone-chip">
-                        <div class="milestone-chip-label">🧭 Active Plan</div>
+                        <div class="milestone-chip-label">🧭 Active Plan
+                            <button type="button" class="setting-info-btn" onclick="openSettingHelp('activePlan', event)" aria-label="Learn about Active Plan">
+                                <svg style="width: 13px; height: 13px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
                         <div class="milestone-chip-val" id="activeStrategySummary">Fixed</div>
                     </div>
                 </div>
@@ -4577,6 +4592,35 @@
         }
 
         const SETTING_HELP_TOPICS = {
+            coastFi: {
+                title: 'ℹ️ Coast FI (Coast Financial Independence)',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        <strong>Coast FI</strong> is the milestone where you already have enough invested that you could <strong>stop contributing any new savings today</strong> and still let compounding grow your portfolio to support a ≥95% safe retirement at your Target Age.
+                    </p>
+                    <ul style="margin: 0 0 0.9rem 1.2rem; color: var(--text-secondary);">
+                        <li style="margin-bottom: 0.45rem;"><strong>Dollar amount shown:</strong> The portfolio size needed <em>today</em> to coast from now until retirement with $0 future contributions.</li>
+                        <li style="margin-bottom: 0.45rem;"><strong>Age / 🎉 Achieved!:</strong> If your current portfolio already meets that threshold, you've hit Coast FI today. Otherwise, it estimates the age you'll reach Coast FI assuming you keep saving at your current rate.</li>
+                    </ul>
+                    <p style="color: var(--text-secondary);">
+                        <strong>Retiring today?</strong> If your Target Age equals your Current Age, there are 0 coasting years left—so your Coast FI number equals your full <strong>Target FI Number</strong>.
+                    </p>
+                `
+            },
+            activePlan: {
+                title: 'ℹ️ Active Plan',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        A live summary of your currently active simulation strategy and risk modifiers. Change them anytime using the <strong>What-If Explorer</strong> toggles or in <strong>⚙️ Settings</strong>:
+                    </p>
+                    <ul style="margin: 0 0 0.4rem 1.2rem; color: var(--text-secondary);">
+                        <li style="margin-bottom: 0.45rem;"><strong>Withdrawal rule:</strong> Starts as <strong>📏 Fixed</strong> (Constant-Dollar), or switches to <strong>🛡️ Guardrails (-X%)</strong> when Dynamic Guardrails is enabled.</li>
+                        <li style="margin-bottom: 0.45rem;"><strong>📉 Fat Tails:</strong> Shown when the Fat-Tailed Stress (Student-t) return model is active.</li>
+                        <li style="margin-bottom: 0.45rem;"><strong>⛺ Bond Tent:</strong> Shown when the retirement Bond-Tent Glidepath is enabled.</li>
+                        <li><strong>☕ Barista income:</strong> Shown when post-retirement Barista / Side Income ($/yr) is above $0 in Settings.</li>
+                    </ul>
+                `
+            },
             annualSavings: {
                 title: 'ℹ️ Annual Savings (Pre-Retirement Only)',
                 body: `
