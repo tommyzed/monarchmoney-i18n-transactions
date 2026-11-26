@@ -4721,6 +4721,9 @@ async def update_fire_settings(
 class SimulateRequest(BaseModel):
     settings: Optional[FireSettingsUpdate] = None
     current_portfolio: Optional[float] = None
+    demo_pre_tax: Optional[float] = None
+    demo_tax_free: Optional[float] = None
+    demo_taxable: Optional[float] = None
     is_demo: bool = False
     force_refresh: bool = False
 
@@ -4817,14 +4820,34 @@ def _handle_demo_simulation(req: Optional[SimulateRequest]) -> dict:
     overrides = req.settings.model_dump(exclude_none=True) if (req and req.settings) else {}
     active_settings = {**saved_settings, **overrides}
 
-    demo_portfolio = 500_000.0
-    if req and req.current_portfolio is not None:
-        demo_portfolio = float(req.current_portfolio)
+    default_pre_tax = 300_000.0
+    default_tax_free = 100_000.0
+    default_taxable = 100_000.0
+
+    has_bucket_override = req is not None and any(
+        val is not None
+        for val in (req.demo_pre_tax, req.demo_tax_free, req.demo_taxable)
+    )
+    if has_bucket_override:
+        pre_tax_bal = round(max(0.0, float(req.demo_pre_tax if req.demo_pre_tax is not None else default_pre_tax)), 2)
+        tax_free_bal = round(max(0.0, float(req.demo_tax_free if req.demo_tax_free is not None else default_tax_free)), 2)
+        taxable_bal = round(max(0.0, float(req.demo_taxable if req.demo_taxable is not None else default_taxable)), 2)
+        demo_portfolio = round(pre_tax_bal + tax_free_bal + taxable_bal, 2)
+    elif req and req.current_portfolio is not None:
+        demo_portfolio = round(max(0.0, float(req.current_portfolio)), 2)
+        pre_tax_bal = round(demo_portfolio * 0.60, 2)
+        tax_free_bal = round(demo_portfolio * 0.20, 2)
+        taxable_bal = round(max(0.0, demo_portfolio - pre_tax_bal - tax_free_bal), 2)
+    else:
+        pre_tax_bal = default_pre_tax
+        tax_free_bal = default_tax_free
+        taxable_bal = default_taxable
+        demo_portfolio = 500_000.0
 
     demo_breakdown = [
         {
             "name": "401(k) Plan",
-            "balance": round(demo_portfolio * 0.55, 2),
+            "balance": pre_tax_bal,
             "type": "Investments",
             "subtype": "401k",
             "isAsset": True,
@@ -4832,7 +4855,7 @@ def _handle_demo_simulation(req: Optional[SimulateRequest]) -> dict:
         },
         {
             "name": "Roth IRA",
-            "balance": round(demo_portfolio * 0.25, 2),
+            "balance": tax_free_bal,
             "type": "Investments",
             "subtype": "Roth IRA",
             "isAsset": True,
@@ -4840,7 +4863,7 @@ def _handle_demo_simulation(req: Optional[SimulateRequest]) -> dict:
         },
         {
             "name": "Taxable Brokerage",
-            "balance": round(demo_portfolio * 0.20, 2),
+            "balance": taxable_bal,
             "type": "Investments",
             "subtype": "Brokerage",
             "isAsset": True,

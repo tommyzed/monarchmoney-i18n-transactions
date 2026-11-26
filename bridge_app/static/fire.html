@@ -1951,10 +1951,52 @@
                 </div>
             </div>
 
-            <div class="form-row" id="demoPortfolioRow" style="display: none;">
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label class="form-label">Net Worth Total ($) [Demo Only]</label>
-                    <input type="number" class="form-input" id="settPortfolio" min="0" step="1000">
+            <div id="demoPortfolioRow" style="display: none; background: rgba(96, 165, 250, 0.05); border: 1px solid rgba(96, 165, 250, 0.2); border-radius: var(--radius-sm); padding: 12px 14px 4px; margin-bottom: 1.2rem;">
+                <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.9px; color: var(--accent-blue); font-weight: 700; margin-bottom: 10px;">
+                    💼 Demo Portfolio Breakdown [Demo Only]
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <div class="form-label-row">
+                            <label class="form-label" for="settDemoPreTax">401(k) / Pre-Tax ($)</label>
+                            <button type="button" class="setting-info-btn" onclick="openSettingHelp('bucketPreTax', event)" aria-label="Learn about Pre-Tax accounts">
+                                <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                        <input type="number" class="form-input" id="settDemoPreTax" min="0" step="1000" oninput="updateDemoPortfolioTotalPreview()">
+                    </div>
+                    <div class="form-group">
+                        <div class="form-label-row">
+                            <label class="form-label" for="settDemoTaxFree">Roth IRA / Tax-Free ($)</label>
+                            <button type="button" class="setting-info-btn" onclick="openSettingHelp('bucketTaxFree', event)" aria-label="Learn about Tax-Free accounts">
+                                <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                        <input type="number" class="form-input" id="settDemoTaxFree" min="0" step="1000" oninput="updateDemoPortfolioTotalPreview()">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <div class="form-label-row">
+                            <label class="form-label" for="settDemoTaxable">Taxable Brokerage ($)</label>
+                            <button type="button" class="setting-info-btn" onclick="openSettingHelp('bucketTaxable', event)" aria-label="Learn about Taxable Brokerage accounts">
+                                <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                        <input type="number" class="form-input" id="settDemoTaxable" min="0" step="1000" oninput="updateDemoPortfolioTotalPreview()">
+                    </div>
+                    <div class="form-group">
+                        <div class="form-label-row">
+                            <label class="form-label">Total Net Worth ($)</label>
+                        </div>
+                        <div id="demoPortfolioTotalPreview" class="form-input" style="background: rgba(255, 255, 255, 0.02); color: var(--accent-green); font-weight: 700; display: flex; align-items: center;">$500,000</div>
+                    </div>
                 </div>
             </div>
 
@@ -2907,12 +2949,61 @@
             return { ...getSavedSettings(), ...whatIfOverrides };
         }
 
+        function getDemoBuckets(s) {
+            const defaults = { demo_pre_tax: 300000, demo_tax_free: 100000, demo_taxable: 100000 };
+            const src = s || {};
+            const hasExplicitBucket = ['demo_pre_tax', 'demo_tax_free', 'demo_taxable']
+                .some(k => typeof src[k] === 'number' && !Number.isNaN(src[k]));
+            if (hasExplicitBucket) {
+                return {
+                    demo_pre_tax: Math.max(0, Math.round(typeof src.demo_pre_tax === 'number' && !Number.isNaN(src.demo_pre_tax) ? src.demo_pre_tax : defaults.demo_pre_tax)),
+                    demo_tax_free: Math.max(0, Math.round(typeof src.demo_tax_free === 'number' && !Number.isNaN(src.demo_tax_free) ? src.demo_tax_free : defaults.demo_tax_free)),
+                    demo_taxable: Math.max(0, Math.round(typeof src.demo_taxable === 'number' && !Number.isNaN(src.demo_taxable) ? src.demo_taxable : defaults.demo_taxable)),
+                };
+            }
+            if (typeof src.current_portfolio === 'number' && !Number.isNaN(src.current_portfolio)) {
+                const total = Math.max(0, Math.round(src.current_portfolio));
+                const preTax = Math.round(total * 0.60);
+                const taxFree = Math.round(total * 0.20);
+                return {
+                    demo_pre_tax: preTax,
+                    demo_tax_free: taxFree,
+                    demo_taxable: Math.max(0, total - preTax - taxFree),
+                };
+            }
+            const tbs = simData?.tax_bucket_summary;
+            if (tbs && ['pre_tax', 'tax_free', 'taxable'].every(k => typeof tbs[k] === 'number' && !Number.isNaN(tbs[k]))) {
+                return {
+                    demo_pre_tax: Math.max(0, Math.round(tbs.pre_tax)),
+                    demo_tax_free: Math.max(0, Math.round(tbs.tax_free)),
+                    demo_taxable: Math.max(0, Math.round(tbs.taxable)),
+                };
+            }
+            return defaults;
+        }
+
+        function updateDemoPortfolioTotalPreview() {
+            const el = document.getElementById('demoPortfolioTotalPreview');
+            if (!el) return;
+            const preTax = Math.max(0, parseFloat(document.getElementById('settDemoPreTax')?.value || '0') || 0);
+            const taxFree = Math.max(0, parseFloat(document.getElementById('settDemoTaxFree')?.value || '0') || 0);
+            const taxable = Math.max(0, parseFloat(document.getElementById('settDemoTaxable')?.value || '0') || 0);
+            el.textContent = '$' + formatNum(Math.round(preTax + taxFree + taxable));
+        }
+
         function saveDemoSettingsPatch(patch) {
+            const existing = getSavedSettings();
+            const currentBuckets = getDemoBuckets(existing);
             const merged = {
-                ...getSavedSettings(),
-                current_portfolio: simData?.current_portfolio ?? 500000,
+                ...existing,
+                ...currentBuckets,
+                current_portfolio: currentBuckets.demo_pre_tax + currentBuckets.demo_tax_free + currentBuckets.demo_taxable,
                 ...patch,
             };
+            if (patch && (patch.demo_pre_tax !== undefined || patch.demo_tax_free !== undefined || patch.demo_taxable !== undefined)) {
+                merged.current_portfolio =
+                    (merged.demo_pre_tax || 0) + (merged.demo_tax_free || 0) + (merged.demo_taxable || 0);
+            }
             localStorage.setItem('fire_demo_settings', JSON.stringify(merged));
             return merged;
         }
@@ -3139,10 +3230,13 @@
                         storedParsed = JSON.parse(stored);
                     }
                     const merged = { ...storedParsed, ...(activeOverrides || {}) };
-                    const { current_portfolio, ...settingsOnly } = merged;
+                    const { current_portfolio, demo_pre_tax, demo_tax_free, demo_taxable, ...settingsOnly } = merged;
                     if (Object.keys(settingsOnly).length > 0) {
                         reqPayload.settings = settingsOnly;
                     }
+                    if (demo_pre_tax !== undefined) reqPayload.demo_pre_tax = demo_pre_tax;
+                    if (demo_tax_free !== undefined) reqPayload.demo_tax_free = demo_tax_free;
+                    if (demo_taxable !== undefined) reqPayload.demo_taxable = demo_taxable;
                     if (current_portfolio !== undefined) {
                         reqPayload.current_portfolio = current_portfolio;
                     }
@@ -3294,15 +3388,21 @@
             };
 
             if (window.IS_DEMO) {
-                const portfolioStr = document.getElementById('settPortfolio').value;
-                if (portfolioStr !== '') {
-                    const portfolioVal = parseInt(portfolioStr, 10);
-                    if (Number.isNaN(portfolioVal) || portfolioVal < 0) {
-                        showValErr('Net Worth Total must be $0 or greater.');
-                        return;
-                    }
-                    payload.current_portfolio = portfolioVal;
+                const preTaxVal = parseFloat(document.getElementById('settDemoPreTax').value || '0');
+                const taxFreeVal = parseFloat(document.getElementById('settDemoTaxFree').value || '0');
+                const taxableVal = parseFloat(document.getElementById('settDemoTaxable').value || '0');
+                if (
+                    Number.isNaN(preTaxVal) || preTaxVal < 0 ||
+                    Number.isNaN(taxFreeVal) || taxFreeVal < 0 ||
+                    Number.isNaN(taxableVal) || taxableVal < 0
+                ) {
+                    showValErr('All Demo account balances must be $0 or greater.');
+                    return;
                 }
+                payload.demo_pre_tax = Math.round(preTaxVal);
+                payload.demo_tax_free = Math.round(taxFreeVal);
+                payload.demo_taxable = Math.round(taxableVal);
+                payload.current_portfolio = payload.demo_pre_tax + payload.demo_tax_free + payload.demo_taxable;
             }
 
             const btn = document.getElementById('saveSettingsBtn');
@@ -4407,7 +4507,7 @@
             const errEl = document.getElementById('settingsValidationError');
             if (errEl) errEl.style.display = 'none';
             document.getElementById('settDemoMode').checked = window.IS_DEMO;
-            document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
+            document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'block' : 'none';
             syncCashflowBannerVisibility();
             // Populate from active settings (preserving demo overrides)
             const s = getActiveSettings();
@@ -4436,7 +4536,11 @@
             updateSettingsTaxHint(document.getElementById('settTaxRegime').value || 'us_federal');
             updateCashflowBanner();
             if (window.IS_DEMO) {
-                document.getElementById('settPortfolio').value = s.current_portfolio ?? simData?.current_portfolio ?? 500000;
+                const buckets = getDemoBuckets(s);
+                document.getElementById('settDemoPreTax').value = buckets.demo_pre_tax;
+                document.getElementById('settDemoTaxFree').value = buckets.demo_tax_free;
+                document.getElementById('settDemoTaxable').value = buckets.demo_taxable;
+                updateDemoPortfolioTotalPreview();
             }
             document.getElementById('settingsModal').style.display = 'flex';
         }
@@ -4558,7 +4662,14 @@
         function toggleDemoMode() {
             window.IS_DEMO = document.getElementById('settDemoMode').checked;
             localStorage.setItem('fire_is_demo', window.IS_DEMO);
-            document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
+            document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'block' : 'none';
+            if (window.IS_DEMO) {
+                const buckets = getDemoBuckets(getActiveSettings());
+                document.getElementById('settDemoPreTax').value = buckets.demo_pre_tax;
+                document.getElementById('settDemoTaxFree').value = buckets.demo_tax_free;
+                document.getElementById('settDemoTaxable').value = buckets.demo_taxable;
+                updateDemoPortfolioTotalPreview();
+            }
             syncCashflowBannerVisibility();
         }
 
@@ -4592,6 +4703,39 @@
         }
 
         const SETTING_HELP_TOPICS = {
+            bucketPreTax: {
+                title: 'ℹ️ Pre-Tax Accounts (401k / Traditional IRA)',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        Retirement accounts funded with <strong>before-tax dollars</strong> (such as a traditional 401(k), 403(b), or Traditional IRA).
+                    </p>
+                    <p style="color: var(--text-secondary);">
+                        Investments grow tax-deferred, and withdrawals in retirement are taxed as <strong>ordinary income</strong>—meaning a larger pre-tax balance generally raises your estimated Withdrawal Tax rate.
+                    </p>
+                `
+            },
+            bucketTaxFree: {
+                title: 'ℹ️ Tax-Free Accounts (Roth IRA / HSA)',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        Accounts funded with <strong>after-tax dollars</strong> (such as a Roth IRA, Roth 401(k), or HSA for qualified expenses).
+                    </p>
+                    <p style="color: var(--text-secondary);">
+                        Your money grows completely tax-free, and qualified withdrawals in retirement owe <strong>$0 in taxes</strong>—helping keep your blended Withdrawal Tax rate low.
+                    </p>
+                `
+            },
+            bucketTaxable: {
+                title: 'ℹ️ Taxable Brokerage Accounts',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        Standard individual or joint investment accounts with no special retirement tax wrapper, plus cash/savings accounts.
+                    </p>
+                    <p style="color: var(--text-secondary);">
+                        When you sell investments in retirement, your original contributions come back tax-free and <strong>only the investment gains</strong> are taxed—usually at lower long-term capital gains rates.
+                    </p>
+                `
+            },
             coastFi: {
                 title: 'ℹ️ Coast FI (Coast Financial Independence)',
                 body: `

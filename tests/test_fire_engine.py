@@ -1011,6 +1011,40 @@ class TestPhase3FireFeatures(unittest.TestCase):
         tax_summary = summarize_tax_buckets(breakdown, inp=household, safe_spend=res_house.required_spend_for_target)
         self.assertGreaterEqual(tax_summary["suggested_effective_tax_rate"], 0.0)
 
+    def test_demo_simulation_bucket_defaults_and_overrides(self):
+        from bridge_app.main import SimulateRequest, _handle_demo_simulation
+
+        # 1. Default demo portfolio: 300k pre-tax, 100k tax-free, 100k taxable = 500k
+        res_def = _handle_demo_simulation(None)
+        self.assertEqual(res_def["current_portfolio"], 500_000.0)
+        by_bucket_def = {a["taxBucket"]: a["balance"] for a in res_def["account_breakdown"]}
+        self.assertEqual(by_bucket_def["pre_tax"], 300_000.0)
+        self.assertEqual(by_bucket_def["tax_free"], 100_000.0)
+        self.assertEqual(by_bucket_def["taxable"], 100_000.0)
+
+        # 2. Explicit bucket overrides change total portfolio & suggested tax rate
+        res_roth_only = _handle_demo_simulation(
+            SimulateRequest(is_demo=True, demo_pre_tax=0, demo_tax_free=600_000, demo_taxable=0)
+        )
+        self.assertEqual(res_roth_only["current_portfolio"], 600_000.0)
+        self.assertEqual(res_roth_only["tax_bucket_summary"]["tax_free"], 600_000.0)
+        self.assertEqual(res_roth_only["tax_bucket_summary"]["suggested_effective_tax_rate"], 0.0)
+
+        res_pretax_only = _handle_demo_simulation(
+            SimulateRequest(is_demo=True, demo_pre_tax=600_000, demo_tax_free=0, demo_taxable=0)
+        )
+        self.assertEqual(res_pretax_only["current_portfolio"], 600_000.0)
+        self.assertEqual(res_pretax_only["tax_bucket_summary"]["pre_tax"], 600_000.0)
+        self.assertGreater(res_pretax_only["tax_bucket_summary"]["suggested_effective_tax_rate"], 0.0)
+
+        # 3. Legacy current_portfolio-only request falls back to 60/20/20 split
+        res_legacy = _handle_demo_simulation(SimulateRequest(is_demo=True, current_portfolio=1_000_000))
+        self.assertEqual(res_legacy["current_portfolio"], 1_000_000.0)
+        by_bucket_leg = {a["taxBucket"]: a["balance"] for a in res_legacy["account_breakdown"]}
+        self.assertEqual(by_bucket_leg["pre_tax"], 600_000.0)
+        self.assertEqual(by_bucket_leg["tax_free"], 200_000.0)
+        self.assertEqual(by_bucket_leg["taxable"], 200_000.0)
+
 
 if __name__ == "__main__":
     unittest.main()
