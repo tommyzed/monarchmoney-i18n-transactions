@@ -63,6 +63,23 @@ DEMO_DEFAULTS = {
     "post_75_spend_change": 0.0,
     "ss_stop_work_adjust": False,
     "tax_regime": "us_federal",
+    "barista_annual_income": 0,
+    "barista_until_age": 65,
+    "withdrawal_strategy": "fixed",
+    "guardrail_cut_pct": 0.15,
+    "return_model": "normal",
+    "glidepath_enabled": False,
+    "custom_return": 0.07,
+    "custom_volatility": 0.14,
+    "cashflow_events": [],
+    "ss_spouse_enabled": False,
+    "ss_spouse_pia": 0,
+    "ss_spouse_fra": 67,
+    "ss_spouse_birth_month": 1,
+    "ss_spouse_birth_year": 1981,
+    "ss_spouse_withdrawal_month": 1,
+    "ss_spouse_withdrawal_year": 2048,
+    "ss_spouse_stop_work_adjust": False,
 }
 
 
@@ -79,6 +96,23 @@ def _ensure_fire_settings_columns(sync_conn):
         ("post_75_spend_change", "FLOAT DEFAULT 0.0"),
         ("ss_stop_work_adjust", "BOOLEAN DEFAULT FALSE"),
         ("tax_regime", "VARCHAR DEFAULT 'us_federal'"),
+        ("barista_annual_income", "INTEGER DEFAULT 0"),
+        ("barista_until_age", "INTEGER DEFAULT 65"),
+        ("withdrawal_strategy", "VARCHAR DEFAULT 'fixed'"),
+        ("guardrail_cut_pct", "FLOAT DEFAULT 0.15"),
+        ("return_model", "VARCHAR DEFAULT 'normal'"),
+        ("glidepath_enabled", "BOOLEAN DEFAULT FALSE"),
+        ("custom_return", "FLOAT DEFAULT 0.07"),
+        ("custom_volatility", "FLOAT DEFAULT 0.14"),
+        ("cashflow_events", "JSON"),
+        ("ss_spouse_enabled", "BOOLEAN DEFAULT FALSE"),
+        ("ss_spouse_pia", "INTEGER DEFAULT 0"),
+        ("ss_spouse_fra", "INTEGER DEFAULT 67"),
+        ("ss_spouse_birth_month", "INTEGER DEFAULT 1"),
+        ("ss_spouse_birth_year", "INTEGER DEFAULT 1981"),
+        ("ss_spouse_withdrawal_month", "INTEGER DEFAULT 1"),
+        ("ss_spouse_withdrawal_year", "INTEGER DEFAULT 2048"),
+        ("ss_spouse_stop_work_adjust", "BOOLEAN DEFAULT FALSE"),
     ]
     for col_name, ddl in migrations:
         if col_name not in existing:
@@ -4565,6 +4599,23 @@ class FireSettingsUpdate(BaseModel):
     post_75_spend_change: Optional[float] = None
     ss_stop_work_adjust: Optional[bool] = None
     tax_regime: Optional[str] = None
+    barista_annual_income: Optional[int] = None
+    barista_until_age: Optional[int] = None
+    withdrawal_strategy: Optional[str] = None
+    guardrail_cut_pct: Optional[float] = None
+    return_model: Optional[str] = None
+    glidepath_enabled: Optional[bool] = None
+    custom_return: Optional[float] = None
+    custom_volatility: Optional[float] = None
+    cashflow_events: Optional[List[dict]] = None
+    ss_spouse_enabled: Optional[bool] = None
+    ss_spouse_pia: Optional[int] = None
+    ss_spouse_fra: Optional[int] = None
+    ss_spouse_birth_month: Optional[int] = None
+    ss_spouse_birth_year: Optional[int] = None
+    ss_spouse_withdrawal_month: Optional[int] = None
+    ss_spouse_withdrawal_year: Optional[int] = None
+    ss_spouse_stop_work_adjust: Optional[bool] = None
 
 
 def _fire_settings_to_dict(settings_obj: Any) -> dict:
@@ -4592,6 +4643,23 @@ def _fire_settings_to_dict(settings_obj: Any) -> dict:
         "post_75_spend_change": float(_val("post_75_spend_change", 0.0)),
         "ss_stop_work_adjust": bool(_val("ss_stop_work_adjust", False)),
         "tax_regime": _val("tax_regime", "us_federal"),
+        "barista_annual_income": int(_val("barista_annual_income", 0)),
+        "barista_until_age": int(_val("barista_until_age", 65)),
+        "withdrawal_strategy": _val("withdrawal_strategy", "fixed"),
+        "guardrail_cut_pct": float(_val("guardrail_cut_pct", 0.15)),
+        "return_model": _val("return_model", "normal"),
+        "glidepath_enabled": bool(_val("glidepath_enabled", False)),
+        "custom_return": float(_val("custom_return", 0.07)),
+        "custom_volatility": float(_val("custom_volatility", 0.14)),
+        "cashflow_events": list(_val("cashflow_events", [])),
+        "ss_spouse_enabled": bool(_val("ss_spouse_enabled", False)),
+        "ss_spouse_pia": int(_val("ss_spouse_pia", 0)),
+        "ss_spouse_fra": int(_val("ss_spouse_fra", 67)),
+        "ss_spouse_birth_month": int(_val("ss_spouse_birth_month", 1)),
+        "ss_spouse_birth_year": int(_val("ss_spouse_birth_year", 1981)),
+        "ss_spouse_withdrawal_month": int(_val("ss_spouse_withdrawal_month", 1)),
+        "ss_spouse_withdrawal_year": int(_val("ss_spouse_withdrawal_year", 2048)),
+        "ss_spouse_stop_work_adjust": bool(_val("ss_spouse_stop_work_adjust", False)),
     }
 
 
@@ -4681,6 +4749,12 @@ def _build_simulation_response(
         "required_spend_for_target": result.required_spend_for_target,
         "effective_ss_pia": result.effective_ss_pia,
         "effective_ss_mba": result.effective_ss_mba,
+        "effective_spouse_pia": result.effective_spouse_pia,
+        "effective_spouse_mba": result.effective_spouse_mba,
+        "fi_number": result.fi_number,
+        "fi_progress_pct": result.fi_progress_pct,
+        "coast_fire_number": result.coast_fire_number,
+        "coast_fire_age": result.coast_fire_age,
         "current_portfolio": current_portfolio,
         "risk_profile_label": result.risk_profile_label,
         "account_breakdown": account_breakdown,
@@ -4716,6 +4790,23 @@ def _build_sim_input_from_dict(settings_dict: dict, portfolio: float) -> "Simula
         post_75_spend_change=settings_dict.get("post_75_spend_change", 0.0),
         ss_stop_work_adjust=settings_dict.get("ss_stop_work_adjust", False),
         tax_regime=settings_dict.get("tax_regime", "us_federal"),
+        barista_annual_income=settings_dict.get("barista_annual_income", 0),
+        barista_until_age=settings_dict.get("barista_until_age", 65),
+        withdrawal_strategy=settings_dict.get("withdrawal_strategy", "fixed"),
+        guardrail_cut_pct=settings_dict.get("guardrail_cut_pct", 0.15),
+        return_model=settings_dict.get("return_model", "normal"),
+        glidepath_enabled=settings_dict.get("glidepath_enabled", False),
+        custom_return=settings_dict.get("custom_return", 0.07),
+        custom_volatility=settings_dict.get("custom_volatility", 0.14),
+        cashflow_events=settings_dict.get("cashflow_events") or [],
+        ss_spouse_enabled=settings_dict.get("ss_spouse_enabled", False),
+        ss_spouse_pia=settings_dict.get("ss_spouse_pia", 0),
+        ss_spouse_fra=settings_dict.get("ss_spouse_fra", 67),
+        ss_spouse_birth_month=settings_dict.get("ss_spouse_birth_month", 1),
+        ss_spouse_birth_year=settings_dict.get("ss_spouse_birth_year", 1981),
+        ss_spouse_withdrawal_month=settings_dict.get("ss_spouse_withdrawal_month", 1),
+        ss_spouse_withdrawal_year=settings_dict.get("ss_spouse_withdrawal_year", 2048),
+        ss_spouse_stop_work_adjust=settings_dict.get("ss_spouse_stop_work_adjust", False),
     )
 
 

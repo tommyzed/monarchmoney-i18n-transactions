@@ -779,5 +779,238 @@ class TestPhase2FireFeatures(unittest.TestCase):
         self.assertAlmostEqual(sum2["suggested_effective_tax_rate"], tau, places=2)
 
 
+class TestPhase3FireFeatures(unittest.TestCase):
+    """Phase 3 tests: FI milestones, Barista income, guardrails, events, fat-tails/glidepath/custom risk, spousal SS."""
+
+    def test_fi_milestones_and_coast_fire(self):
+        # Moderate portfolio still building toward FI and Coast FIRE
+        inp_low = SimulationInput(
+            current_portfolio=400_000,
+            current_age=35,
+            retirement_age=60,
+            final_age=90,
+            annual_contribution=35_000,
+            annual_retirement_spending=100_000,
+            risk_tolerance="moderate",
+            iterations=400,
+        )
+        res_low = simulate(inp_low)
+        self.assertIsNotNone(res_low.fi_number)
+        self.assertGreater(res_low.fi_number, 0)
+        self.assertIsNotNone(res_low.fi_progress_pct)
+        self.assertAlmostEqual(
+            res_low.fi_progress_pct,
+            round((400_000 / res_low.fi_number) * 100.0, 1),
+            places=1,
+        )
+        self.assertIsNotNone(res_low.coast_fire_number)
+        self.assertGreater(res_low.coast_fire_number, 0)
+        self.assertLess(res_low.coast_fire_number, res_low.fi_number)
+
+        # Portfolio already well above Coast FIRE & FI
+        inp_high = SimulationInput(
+            current_portfolio=4_000_000,
+            current_age=35,
+            retirement_age=60,
+            final_age=90,
+            annual_contribution=35_000,
+            annual_retirement_spending=100_000,
+            risk_tolerance="moderate",
+            iterations=400,
+        )
+        res_high = simulate(inp_high)
+        self.assertEqual(res_high.coast_fire_age, 35)
+        self.assertGreaterEqual(res_high.fi_progress_pct, 100.0)
+
+    def test_barista_income_increases_safe_spend_and_probability(self):
+        base = SimulationInput(
+            current_portfolio=1_100_000,
+            current_age=45,
+            retirement_age=50,
+            final_age=90,
+            annual_contribution=20_000,
+            annual_retirement_spending=95_000,
+            barista_annual_income=0.0,
+            iterations=500,
+        )
+        barista = SimulationInput(
+            current_portfolio=1_100_000,
+            current_age=45,
+            retirement_age=50,
+            final_age=90,
+            annual_contribution=20_000,
+            annual_retirement_spending=95_000,
+            barista_annual_income=30_000.0,
+            barista_until_age=62,
+            iterations=500,
+        )
+        res_base = simulate(base)
+        res_barista = simulate(barista)
+        self.assertGreater(res_barista.retirement_probability, res_base.retirement_probability)
+        self.assertGreater(res_barista.required_spend_for_target, res_base.required_spend_for_target)
+
+    def test_guardrails_strategy_improves_survival_and_safe_spend(self):
+        fixed_inp = SimulationInput(
+            current_portfolio=1_400_000,
+            current_age=55,
+            retirement_age=55,
+            final_age=90,
+            annual_contribution=0,
+            annual_retirement_spending=85_000,
+            withdrawal_strategy="fixed",
+            iterations=600,
+        )
+        guard_inp = SimulationInput(
+            current_portfolio=1_400_000,
+            current_age=55,
+            retirement_age=55,
+            final_age=90,
+            annual_contribution=0,
+            annual_retirement_spending=85_000,
+            withdrawal_strategy="guardrails",
+            guardrail_cut_pct=0.20,
+            iterations=600,
+        )
+        res_fixed = simulate(fixed_inp)
+        res_guard = simulate(guard_inp)
+        self.assertGreater(res_guard.retirement_probability, res_fixed.retirement_probability)
+        self.assertGreater(res_guard.required_spend_for_target, res_fixed.required_spend_for_target)
+
+    def test_one_time_cashflow_events_windfall_and_expense(self):
+        common = dict(
+            current_portfolio=1_200_000,
+            current_age=45,
+            retirement_age=55,
+            final_age=90,
+            annual_contribution=25_000,
+            annual_retirement_spending=85_000,
+            iterations=500,
+        )
+        res_base = simulate(SimulationInput(**common, cashflow_events=[]))
+        res_windfall = simulate(
+            SimulationInput(**common, cashflow_events=[{"label": "Inheritance", "age": 52, "amount": 500_000}])
+        )
+        res_expense = simulate(
+            SimulationInput(**common, cashflow_events=[{"label": "College", "age": 52, "amount": -350_000}])
+        )
+        self.assertGreater(res_windfall.percentile_50[-1], res_base.percentile_50[-1])
+        self.assertGreater(res_windfall.required_spend_for_target, res_base.required_spend_for_target)
+        self.assertLess(res_expense.percentile_50[-1], res_base.percentile_50[-1])
+        self.assertLess(res_expense.required_spend_for_target, res_base.required_spend_for_target)
+
+    def test_fat_tailed_and_custom_risk_and_glidepath(self):
+        normal_inp = SimulationInput(
+            current_portfolio=1_500_000,
+            current_age=50,
+            retirement_age=55,
+            final_age=90,
+            annual_contribution=20_000,
+            annual_retirement_spending=75_000,
+            return_model="normal",
+            glidepath_enabled=False,
+            iterations=600,
+        )
+        fat_inp = SimulationInput(
+            current_portfolio=1_500_000,
+            current_age=50,
+            retirement_age=55,
+            final_age=90,
+            annual_contribution=20_000,
+            annual_retirement_spending=75_000,
+            return_model="fat_tailed",
+            glidepath_enabled=True,
+            iterations=600,
+        )
+        res_normal = simulate(normal_inp)
+        res_fat = simulate(fat_inp)
+        self.assertNotEqual(res_fat.percentile_50[-1], res_normal.percentile_50[-1])
+        self.assertTrue(0.0 <= res_fat.retirement_probability <= 100.0)
+
+        custom_low = SimulationInput(
+            current_portfolio=1_000_000,
+            current_age=45,
+            retirement_age=60,
+            final_age=90,
+            annual_contribution=20_000,
+            annual_retirement_spending=70_000,
+            risk_tolerance="custom",
+            custom_return=0.04,
+            custom_volatility=0.10,
+            iterations=400,
+        )
+        custom_high = SimulationInput(
+            current_portfolio=1_000_000,
+            current_age=45,
+            retirement_age=60,
+            final_age=90,
+            annual_contribution=20_000,
+            annual_retirement_spending=70_000,
+            risk_tolerance="custom",
+            custom_return=0.09,
+            custom_volatility=0.10,
+            iterations=400,
+        )
+        res_clow = simulate(custom_low)
+        res_chigh = simulate(custom_high)
+        self.assertGreater(res_chigh.percentile_50[-1], res_clow.percentile_50[-1])
+        self.assertGreater(res_chigh.required_spend_for_target, res_clow.required_spend_for_target)
+
+    def test_spousal_social_security_integration(self):
+        primary_only = SimulationInput(
+            current_portfolio=1_200_000,
+            current_age=50,
+            retirement_age=55,
+            final_age=90,
+            annual_contribution=20_000,
+            annual_retirement_spending=85_000,
+            social_security_enabled=True,
+            social_security_pia=2400.0,
+            social_security_fra=67,
+            social_security_birth_month=1,
+            social_security_birth_year=1976,
+            social_security_withdrawal_month=1,
+            social_security_withdrawal_year=2043,
+            ss_spouse_enabled=False,
+            iterations=400,
+        )
+        household = SimulationInput(
+            current_portfolio=1_200_000,
+            current_age=50,
+            retirement_age=55,
+            final_age=90,
+            annual_contribution=20_000,
+            annual_retirement_spending=85_000,
+            social_security_enabled=True,
+            social_security_pia=2400.0,
+            social_security_fra=67,
+            social_security_birth_month=1,
+            social_security_birth_year=1976,
+            social_security_withdrawal_month=1,
+            social_security_withdrawal_year=2043,
+            ss_spouse_enabled=True,
+            ss_spouse_pia=1600.0,
+            ss_spouse_fra=67,
+            ss_spouse_birth_month=1,
+            ss_spouse_birth_year=1978,
+            ss_spouse_withdrawal_month=1,
+            ss_spouse_withdrawal_year=2045,
+            ss_spouse_stop_work_adjust=False,
+            iterations=400,
+        )
+        res_primary = simulate(primary_only)
+        res_house = simulate(household)
+        self.assertEqual(res_primary.effective_spouse_pia, 0.0)
+        self.assertAlmostEqual(res_house.effective_spouse_pia, 1600.0, places=2)
+        self.assertGreater(res_house.effective_spouse_mba, 0.0)
+        self.assertGreater(res_house.required_spend_for_target, res_primary.required_spend_for_target)
+
+        breakdown = [
+            {"name": "401(k)", "balance": 600_000, "isAsset": True, "taxBucket": "pre_tax"},
+            {"name": "Brokerage", "balance": 600_000, "isAsset": True, "taxBucket": "taxable"},
+        ]
+        tax_summary = summarize_tax_buckets(breakdown, inp=household, safe_spend=res_house.required_spend_for_target)
+        self.assertGreaterEqual(tax_summary["suggested_effective_tax_rate"], 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()

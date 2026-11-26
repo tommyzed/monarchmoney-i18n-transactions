@@ -588,6 +588,47 @@
             font-weight: 600;
         }
 
+        .form-label-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 6px;
+        }
+
+        .form-label-row .form-label {
+            margin-bottom: 0;
+        }
+
+        .setting-info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.15s, transform 0.15s;
+            flex-shrink: 0;
+        }
+
+        .setting-info-btn:hover,
+        .setting-info-btn:focus-visible {
+            color: var(--accent-blue);
+            transform: scale(1.1);
+            outline: none;
+        }
+
+        #settingHelpModal {
+            z-index: 2200;
+        }
+
+        #settingHelpModal .modal-card {
+            max-width: 440px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
         .form-input,
         .form-select {
             width: 100%;
@@ -886,6 +927,148 @@
         .tax-regime-select option {
             background: #1a1a2e;
             color: var(--text-primary);
+        }
+
+        /* FIRE Milestones Card */
+        .milestones-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.15rem 1.4rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .milestones-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .fi-progress-track {
+            width: 100%;
+            height: 9px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .fi-progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--accent-fire), var(--accent-green));
+            transition: width 0.5s ease;
+        }
+
+        .milestones-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            font-size: 0.76rem;
+        }
+
+        @media (max-width: 600px) {
+            .milestones-strip {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .milestone-chip {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 10px;
+        }
+
+        .milestone-chip-label {
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .milestone-chip-val {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* What-If Strategy Toggle Pills */
+        .whatif-toggles-row {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+        }
+
+        .whatif-pill-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 5px 11px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .whatif-pill-toggle input {
+            accent-color: var(--accent-fire);
+            cursor: pointer;
+        }
+
+        .preset-pills {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 6px;
+        }
+
+        .preset-pill-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            border-radius: 5px;
+            padding: 1px 6px;
+            font-size: 0.66rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .preset-pill-btn:hover {
+            border-color: var(--accent-fire);
+            color: var(--text-primary);
+        }
+
+        /* Cashflow Events Modal Rows */
+        #eventsModal .modal-card {
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .event-row {
+            display: grid;
+            grid-template-columns: 1.4fr 68px 115px 105px 30px;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 560px) {
+            .event-row {
+                grid-template-columns: 1fr 1fr;
+            }
         }
 
         /* Responsive */
@@ -1283,6 +1466,10 @@
             <button class="ss-calc-btn" id="ssCalcBtn">
                 Calculate my Social Security Benefits!
             </button>
+            <button class="ss-calc-btn" id="eventsModalBtn"
+                style="border-color: var(--accent-purple); color: var(--accent-purple); background: rgba(167, 139, 250, 0.1);">
+                📅 Cashflow Events (0)
+            </button>
         </div>
 
         <div class="main">
@@ -1344,6 +1531,34 @@
                     </div>
                     <div class="metric-value color-blue" id="swrValue">--</div>
                     <div class="metric-sub" id="swrSub">annual rate</div>
+                </div>
+            </div>
+
+            <!-- FIRE Milestones & Progress -->
+            <div class="milestones-card fade-up" id="milestonesCard">
+                <div class="milestones-top">
+                    <div class="metric-label" style="margin-bottom: 0;">🏁 Progress to FI</div>
+                    <div style="font-size: 0.85rem; font-weight: 700;">
+                        <span id="fiProgressPct" class="color-green">--%</span>
+                        <span id="fiTargetSummary" style="color: var(--text-secondary); font-weight: 500; font-size: 0.76rem; margin-left: 6px;">--</span>
+                    </div>
+                </div>
+                <div class="fi-progress-track">
+                    <div class="fi-progress-fill" id="fiProgressBarFill"></div>
+                </div>
+                <div class="milestones-strip">
+                    <div class="milestone-chip">
+                        <div class="milestone-chip-label">🎯 Target FI Number</div>
+                        <div class="milestone-chip-val" id="fiNumberVal">--</div>
+                    </div>
+                    <div class="milestone-chip">
+                        <div class="milestone-chip-label">⛵ Coast FI</div>
+                        <div class="milestone-chip-val" id="coastFiVal">--</div>
+                    </div>
+                    <div class="milestone-chip">
+                        <div class="milestone-chip-label">🧭 Active Plan</div>
+                        <div class="milestone-chip-val" id="activeStrategySummary">Fixed</div>
+                    </div>
                 </div>
             </div>
 
@@ -1422,6 +1637,20 @@
                         </div>
                         <input type="range" class="whatif-slider" id="wiTaxRate" min="0" max="45" step="0.5"
                             oninput="onWhatIfInput()">
+                    </div>
+                    <div class="whatif-toggles-row">
+                        <label class="whatif-pill-toggle" title="Cut discretionary spending up to your guardrail limit during market downturns">
+                            <input type="checkbox" id="wiGuardrails" onchange="onWhatIfInput()">
+                            🛡️ Dynamic Guardrails
+                        </label>
+                        <label class="whatif-pill-toggle" title="Stress-test with fat-tailed Student-t market crashes instead of Normal returns">
+                            <input type="checkbox" id="wiFatTails" onchange="onWhatIfInput()">
+                            📉 Fat-Tailed Crash Stress
+                        </label>
+                        <label class="whatif-pill-toggle" title="De-risk around retirement age (bond tent) then glide back to target equities">
+                            <input type="checkbox" id="wiGlidepath" onchange="onWhatIfInput()">
+                            ⛺ Retirement Bond Tent
+                        </label>
                     </div>
                 </div>
             </div>
@@ -1539,19 +1768,104 @@
                     <input type="number" class="form-input" id="settHealthcare" min="0" step="500" placeholder="e.g. 12000">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Age 75+ Spend Shift (%)</label>
+                    <div class="form-label-row">
+                        <label class="form-label">Age 75+ Spend Shift (%)</label>
+                        <button type="button" class="setting-info-btn" onclick="openSettingHelp('post75', event)" aria-label="Learn about Age 75+ Spend Shift">
+                            <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                     <input type="number" class="form-input" id="settPost75Change" min="-50" max="100" step="5" placeholder="e.g. -15">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Final Year (☠️)</label>
+                    <label class="form-label">Barista / Side Income ($/yr)</label>
+                    <input type="number" class="form-input" id="settBaristaIncome" min="0" step="1000" placeholder="e.g. 15000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Barista Until Age</label>
+                    <input type="number" class="form-input" id="settBaristaAge" min="25" max="120" value="65">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label class="form-label" style="margin-bottom: 0;">Final Year (☠️)</label>
+                        <span class="preset-pills">
+                            <button type="button" class="preset-pill-btn" onclick="setFinalAgePreset(85)">85</button>
+                            <button type="button" class="preset-pill-btn" onclick="setFinalAgePreset(90)">90</button>
+                            <button type="button" class="preset-pill-btn" onclick="setFinalAgePreset(95)">95</button>
+                            <button type="button" class="preset-pill-btn" onclick="setFinalAgePreset(100)">100</button>
+                        </span>
+                    </div>
                     <input type="number" class="form-input" id="settFinalAge" min="40" max="150" value="85">
+                    <div style="font-size: 0.66rem; color: var(--text-muted); margin-top: 4px;">50% of 65-yr-old couples have 1 partner live past 92.</div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Inflation Rate (%)</label>
                     <input type="number" class="form-input" id="settInflation" min="0" max="15" step="0.5">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="form-label-row">
+                        <label class="form-label">Withdrawal Strategy</label>
+                        <button type="button" class="setting-info-btn" onclick="openSettingHelp('withdrawalStrategy', event)" aria-label="Learn about Withdrawal Strategy">
+                            <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                    <select class="form-select" id="settWithdrawalStrategy">
+                        <option value="fixed">📏 Fixed Constant-Dollar</option>
+                        <option value="guardrails">🛡️ Dynamic Guardrails</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <div class="form-label-row">
+                        <label class="form-label">Max Bear-Market Cut (%)</label>
+                        <button type="button" class="setting-info-btn" onclick="openSettingHelp('guardrailCut', event)" aria-label="Learn about Max Bear-Market Cut">
+                            <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                    <input type="number" class="form-input" id="settGuardrailCut" min="5" max="40" step="5" value="15">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="form-label-row">
+                        <label class="form-label">Return Distribution</label>
+                        <button type="button" class="setting-info-btn" onclick="openSettingHelp('returnModel', event)" aria-label="Learn about Return Distribution">
+                            <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                    <select class="form-select" id="settReturnModel">
+                        <option value="normal">📊 Standard Normal</option>
+                        <option value="fat_tailed">📉 Fat-Tailed Stress (Student-t)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 6px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">
+                            <input type="checkbox" id="settGlidepath" class="toggle-checkbox" style="width: 16px; height: 16px;">
+                            ⛺ Bond-Tent Glidepath
+                        </label>
+                        <button type="button" class="setting-info-btn" onclick="openSettingHelp('glidepath', event)" aria-label="Learn about Bond-Tent Glidepath">
+                            <svg style="width: 14px; height: 14px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1580,11 +1894,22 @@
             <div class="form-row">
                 <div class="form-group" style="grid-column: 1 / -1;">
                     <label class="form-label">Risk Tolerance</label>
-                    <select class="form-select" id="settRisk">
+                    <select class="form-select" id="settRisk" onchange="toggleCustomRiskRow()">
                         <option value="lean">🛡️ Lean (60/40)</option>
                         <option value="moderate">⚖️ Moderate (80/20)</option>
                         <option value="fat">🚀 Fat (100% Equity)</option>
+                        <option value="custom">🎛️ Custom Return &amp; Volatility</option>
                     </select>
+                    <div class="form-row" id="customRiskRow" style="display: none; margin-top: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Custom Real Return (%)</label>
+                            <input type="number" class="form-input" id="settCustomReturn" min="-5" max="25" step="0.5" value="7.0">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Custom Volatility (±%)</label>
+                            <input type="number" class="form-input" id="settCustomVol" min="1" max="50" step="1" value="14">
+                        </div>
+                    </div>
                     <div
                         style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; margin-top: 6px; background: rgba(255, 255, 255, 0.02); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
                         <strong>💡 Real Return &amp; Volatility Assumptions (Today's $):</strong>
@@ -1721,6 +2046,15 @@
         </div>
     </div>
 
+    <!-- Setting Help Info Modal -->
+    <div class="modal-overlay" id="settingHelpModal">
+        <div class="modal-card">
+            <div class="modal-close" id="settingHelpModalClose">✕</div>
+            <div class="modal-title" id="settingHelpTitle" style="color: var(--accent-blue); margin-bottom: 1rem;"></div>
+            <div id="settingHelpBody" style="font-size: 0.85rem; line-height: 1.55; color: var(--text-primary);"></div>
+        </div>
+    </div>
+
     <!-- Social Security Calculator Modal -->
     <div class="modal-overlay" id="ssModal">
         <div class="modal-card">
@@ -1799,6 +2133,64 @@
                         </div>
                     </div>
 
+                    <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 12px; margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <label style="font-weight: 600; font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); cursor: pointer;" for="ssSpouseEnabled">
+                                👥 Partner / Spouse SS
+                            </label>
+                            <input type="checkbox" id="ssSpouseEnabled" style="width: 16px; height: 16px; cursor: pointer;">
+                        </div>
+                        <div id="ssSpouseSection" style="display: none; padding: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-sm);">
+                            <div class="form-row">
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <label class="form-label">Partner FRA</label>
+                                    <select class="form-select" id="ssSpouseFra" style="padding: 6px 8px; font-size: 0.8rem;">
+                                        <option value="66">Age 66</option>
+                                        <option value="67" selected>Age 67</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                        <label class="form-label" style="margin-bottom: 0;">Partner PIA ($)</label>
+                                        <button type="button" class="btn-inline-accent" onclick="fillSpouseHalfPia()">50%</button>
+                                    </div>
+                                    <input type="number" class="form-input" id="ssSpousePia" placeholder="e.g. 1500" min="0" step="50" style="padding: 6px 8px; font-size: 0.8rem;">
+                                </div>
+                            </div>
+                            <label style="display: flex; align-items: center; justify-content: space-between; gap: 6px; cursor: pointer; font-size: 0.74rem; color: var(--text-secondary); margin-bottom: 8px;">
+                                <span>✂️ Adjust Partner PIA for early FIRE</span>
+                                <input type="checkbox" id="ssSpouseStopWorkAdjust" style="width: 14px; height: 14px; cursor: pointer;">
+                            </label>
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label class="form-label">Partner Birth Month &amp; Year</label>
+                                <div class="form-row">
+                                    <select class="form-select" id="ssSpouseBirthMonth" style="padding: 6px 8px; font-size: 0.8rem;">
+                                        <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                                        <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                                        <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                                        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                                    </select>
+                                    <input type="number" class="form-input" id="ssSpouseBirthYear" min="1930" max="2050" style="padding: 6px 8px; font-size: 0.8rem;">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 4px;">
+                                <label class="form-label">Partner First Withdrawal</label>
+                                <div class="form-row">
+                                    <select class="form-select" id="ssSpouseWithdrawMonth" style="padding: 6px 8px; font-size: 0.8rem;">
+                                        <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+                                        <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+                                        <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+                                        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                                    </select>
+                                    <input type="number" class="form-input" id="ssSpouseWithdrawYear" min="1990" max="2120" style="padding: 6px 8px; font-size: 0.8rem;">
+                                </div>
+                            </div>
+                            <div class="validation-error" id="ssSpouseValidationError">
+                                Partner Social Security cannot be claimed prior to age 62.
+                            </div>
+                        </div>
+                    </div>
+
                     <div
                         style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 12px; margin-bottom: 0.5rem;">
                         <div
@@ -1862,6 +2254,24 @@
         </div>
     </div>
 
+    <!-- One-Time Cashflow Events Modal -->
+    <div class="modal-overlay" id="eventsModal">
+        <div class="modal-card">
+            <div class="modal-close" id="eventsModalClose">✕</div>
+            <div class="modal-title" style="color: var(--accent-purple); margin-bottom: 0.5rem;">📅 One-Time Cashflow Events</div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.4;">
+                Add scheduled future inflows (windfalls, inheritances, downsizing) or lump-sum expenses (college, sabbatical, car) at specific ages in Today's $.
+            </p>
+            <div id="eventsListContainer"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 0.75rem; flex-wrap: wrap;">
+                <button type="button" class="btn-ghost" onclick="addEventRow()" style="padding: 7px 14px; font-size: 0.78rem;">+ Add Event</button>
+                <button type="button" class="save-btn" id="saveEventsBtn" onclick="saveEvents()" style="margin-top: 0; width: auto; padding: 0.75rem 1.5rem;">
+                    💾 Save Events & Re-run
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ===== State =====
         let chartInstance = null;
@@ -1882,6 +2292,7 @@
             if (window.IS_AUTHENTICATED === false) {
                 window.IS_DEMO = true;
                 document.getElementById('demoToggleContainer').style.display = 'none';
+                syncCashflowBannerVisibility();
 
                 // Remove back pathways since unauthorized users shouldn't navigate to the locked main app
                 const headerBackBtn = document.querySelector('.back-btn');
@@ -1925,6 +2336,21 @@
                 if (e.target === document.getElementById('spendInfoModal')) closeSpendInfoModal();
             };
 
+            // Setting Help Info modal
+            document.getElementById('settingHelpModalClose').onclick = () => closeSettingHelpModal();
+            document.getElementById('settingHelpModal').onclick = (e) => {
+                if (e.target === document.getElementById('settingHelpModal')) closeSettingHelpModal();
+            };
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const helpModal = document.getElementById('settingHelpModal');
+                    if (helpModal && helpModal.style.display === 'flex') {
+                        e.stopPropagation();
+                        closeSettingHelpModal();
+                    }
+                }
+            });
+
             // Social Security modal bindings
             document.getElementById('ssCalcBtn').onclick = () => openSsModal();
             document.getElementById('ssModalClose').onclick = () => closeSsModal();
@@ -1932,8 +2358,20 @@
                 if (e.target === document.getElementById('ssModal')) closeSsModal();
             };
 
+            // Cashflow Events modal bindings
+            document.getElementById('eventsModalBtn').onclick = () => openEventsModal();
+            document.getElementById('eventsModalClose').onclick = () => closeEventsModal();
+            document.getElementById('eventsModal').onclick = (e) => {
+                if (e.target === document.getElementById('eventsModal')) closeEventsModal();
+            };
+
             // Listeners for Social Security calculation updates
-            const ssInputs = ['ssPia', 'ssFra', 'ssBirthMonth', 'ssBirthYear', 'ssWithdrawMonth', 'ssWithdrawYear', 'ssEnabledToggle', 'ssGainsEnabled', 'ssGainsStrategy', 'ssStopWorkAdjust'];
+            const ssInputs = [
+                'ssPia', 'ssFra', 'ssBirthMonth', 'ssBirthYear', 'ssWithdrawMonth', 'ssWithdrawYear',
+                'ssEnabledToggle', 'ssGainsEnabled', 'ssGainsStrategy', 'ssStopWorkAdjust',
+                'ssSpouseEnabled', 'ssSpouseFra', 'ssSpousePia', 'ssSpouseStopWorkAdjust',
+                'ssSpouseBirthMonth', 'ssSpouseBirthYear', 'ssSpouseWithdrawMonth', 'ssSpouseWithdrawYear',
+            ];
             ssInputs.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -2078,11 +2516,56 @@
                 saveBtn.disabled = false;
             }
             const mba = calculateSocialSecurityMbaJS(pia, fra, birthYear, birthMonth, withdrawYear, withdrawMonth);
-            document.getElementById('ssCalculatedBenefit').textContent = '$' + formatNum(mba) + ' / mo';
-            document.getElementById('ssCalculatedAge').textContent = 'Claiming at Age ' + Math.floor(ageYears) + 'y ' + (ageMonths % 12) + 'm';
+
+            // Partner / Spouse SS UI sync & validation
+            const spouseEnabledEl = document.getElementById('ssSpouseEnabled');
+            const spouseEnabled = spouseEnabledEl ? spouseEnabledEl.checked : false;
+            const spouseSection = document.getElementById('ssSpouseSection');
+            if (spouseSection) spouseSection.style.display = spouseEnabled ? 'block' : 'none';
+
+            let spouseMba = 0;
+            const spErrEl = document.getElementById('ssSpouseValidationError');
+            if (spouseEnabled) {
+                const spRawPia = parseInt(document.getElementById('ssSpousePia').value) || 0;
+                const spFra = parseInt(document.getElementById('ssSpouseFra').value) || 67;
+                const spBirthMonth = parseInt(document.getElementById('ssSpouseBirthMonth').value) || 1;
+                const spBirthYear = parseInt(document.getElementById('ssSpouseBirthYear').value) || 1981;
+                const spWithdrawMonth = parseInt(document.getElementById('ssSpouseWithdrawMonth').value) || 1;
+                const spWithdrawYear = parseInt(document.getElementById('ssSpouseWithdrawYear').value) || 2048;
+                const spStopWork = document.getElementById('ssSpouseStopWorkAdjust').checked;
+                const spRetireAge = targetRetireAge + (birthYear - spBirthYear);
+                const spEffPia = spStopWork ? adjustPiaForEarlyRetirementJS(spRawPia, spRetireAge) : spRawPia;
+
+                const spAgeMonths = (spWithdrawYear * 12 + spWithdrawMonth) - (spBirthYear * 12 + spBirthMonth);
+                if (spAgeMonths < 62 * 12) {
+                    if (spErrEl) spErrEl.style.display = 'block';
+                    saveBtn.disabled = true;
+                } else {
+                    if (spErrEl) spErrEl.style.display = 'none';
+                    spouseMba = calculateSocialSecurityMbaJS(spEffPia, spFra, spBirthYear, spBirthMonth, spWithdrawYear, spWithdrawMonth);
+                }
+            } else if (spErrEl) {
+                spErrEl.style.display = 'none';
+            }
+
+            const combinedMba = mba + spouseMba;
+            document.getElementById('ssCalculatedBenefit').textContent = '$' + formatNum(combinedMba) + ' / mo';
+            const baseAgeText = 'Claiming at Age ' + Math.floor(ageYears) + 'y ' + (ageMonths % 12) + 'm';
+            document.getElementById('ssCalculatedAge').textContent = spouseEnabled && spouseMba > 0
+                ? `${baseAgeText} · You: $${formatNum(mba)} + Partner: $${formatNum(spouseMba)}`
+                : baseAgeText;
 
             // Draw/update chart
             renderSsChart(pia, fra, birthYear, birthMonth, Math.floor(ageYears), ageMonths % 12);
+        }
+
+        function fillSpouseHalfPia() {
+            const rawPia = parseInt(document.getElementById('ssPia').value) || 0;
+            const stopWork = document.getElementById('ssStopWorkAdjust')?.checked;
+            const targetRetireAge = getActiveSettings().retirement_age ?? 65;
+            const effPia = stopWork ? adjustPiaForEarlyRetirementJS(rawPia, targetRetireAge) : rawPia;
+            document.getElementById('ssSpousePia').value = Math.round(effPia * 0.5);
+            updateSsCalculation();
         }
 
         function getCurrentInvestmentParams() {
@@ -2360,6 +2843,23 @@
                 post_75_spend_change: 0.0,
                 ss_stop_work_adjust: false,
                 tax_regime: 'us_federal',
+                barista_annual_income: 0,
+                barista_until_age: 65,
+                withdrawal_strategy: 'fixed',
+                guardrail_cut_pct: 0.15,
+                return_model: 'normal',
+                glidepath_enabled: false,
+                custom_return: 0.07,
+                custom_volatility: 0.14,
+                cashflow_events: [],
+                ss_spouse_enabled: false,
+                ss_spouse_pia: 0,
+                ss_spouse_fra: 67,
+                ss_spouse_birth_month: 1,
+                ss_spouse_birth_year: 1981,
+                ss_spouse_withdrawal_month: 1,
+                ss_spouse_withdrawal_year: 2048,
+                ss_spouse_stop_work_adjust: false,
             };
             const base = (simData?.saved_settings || simData?.settings)
                 ? { ...defaults, ...(simData.saved_settings || simData.settings) }
@@ -2401,6 +2901,15 @@
                 document.getElementById('ssBirthYear').value = s.social_security_birth_year || 1981;
                 document.getElementById('ssWithdrawMonth').value = s.social_security_withdrawal_month || 1;
                 document.getElementById('ssWithdrawYear').value = s.social_security_withdrawal_year || 2048;
+
+                document.getElementById('ssSpouseEnabled').checked = !!s.ss_spouse_enabled;
+                document.getElementById('ssSpouseFra').value = s.ss_spouse_fra || 67;
+                document.getElementById('ssSpousePia').value = s.ss_spouse_pia || "";
+                document.getElementById('ssSpouseStopWorkAdjust').checked = !!s.ss_spouse_stop_work_adjust;
+                document.getElementById('ssSpouseBirthMonth').value = s.ss_spouse_birth_month || 1;
+                document.getElementById('ssSpouseBirthYear').value = s.ss_spouse_birth_year || (s.social_security_birth_year || 1981);
+                document.getElementById('ssSpouseWithdrawMonth').value = s.ss_spouse_withdrawal_month || 1;
+                document.getElementById('ssSpouseWithdrawYear').value = s.ss_spouse_withdrawal_year || (s.social_security_withdrawal_year || 2048);
 
                 if (!s.social_security_pia || s.social_security_pia === 0) {
                     const curYear = new Date().getFullYear();
@@ -2485,6 +2994,23 @@
                 return;
             }
 
+            const spEnabled = document.getElementById('ssSpouseEnabled').checked;
+            const spPia = parseInt(document.getElementById('ssSpousePia').value) || 0;
+            const spFra = parseInt(document.getElementById('ssSpouseFra').value) || 67;
+            const spStopWorkAdjust = document.getElementById('ssSpouseStopWorkAdjust').checked;
+            const spBirthMonth = parseInt(document.getElementById('ssSpouseBirthMonth').value) || 1;
+            const spBirthYear = parseInt(document.getElementById('ssSpouseBirthYear').value) || birthYear;
+            const spWithdrawMonth = parseInt(document.getElementById('ssSpouseWithdrawMonth').value) || 1;
+            const spWithdrawYear = parseInt(document.getElementById('ssSpouseWithdrawYear').value) || withdrawYear;
+
+            if (spEnabled) {
+                const spAgeMonths = (spWithdrawYear * 12 + spWithdrawMonth) - (spBirthYear * 12 + spBirthMonth);
+                if (spAgeMonths < 62 * 12) {
+                    alert('Partner Social Security retirement benefits cannot be claimed prior to age 62.');
+                    return;
+                }
+            }
+
             // Sync current_age with Birth Year so chart markers & cashflows align
             const curYear = new Date().getFullYear();
             const deducedAge = Math.min(100, Math.max(18, curYear - birthYear));
@@ -2499,7 +3025,15 @@
                 social_security_birth_month: birthMonth,
                 social_security_birth_year: birthYear,
                 social_security_withdrawal_month: withdrawMonth,
-                social_security_withdrawal_year: withdrawYear
+                social_security_withdrawal_year: withdrawYear,
+                ss_spouse_enabled: spEnabled,
+                ss_spouse_pia: spPia,
+                ss_spouse_fra: spFra,
+                ss_spouse_stop_work_adjust: spStopWorkAdjust,
+                ss_spouse_birth_month: spBirthMonth,
+                ss_spouse_birth_year: spBirthYear,
+                ss_spouse_withdrawal_month: spWithdrawMonth,
+                ss_spouse_withdrawal_year: spWithdrawYear,
             };
             if ((prevS.retirement_age ?? 65) < deducedAge) {
                 payload.retirement_age = deducedAge;
@@ -2636,6 +3170,14 @@
             const finalAge = parseInt(document.getElementById('settFinalAge').value, 10);
             const inflationPct = parseFloat(document.getElementById('settInflation').value);
             const riskTolerance = document.getElementById('settRisk').value;
+            const baristaIncome = parseInt(document.getElementById('settBaristaIncome').value || '0', 10);
+            const baristaAge = parseInt(document.getElementById('settBaristaAge').value || '65', 10);
+            const withdrawalStrategy = document.getElementById('settWithdrawalStrategy').value || 'fixed';
+            const guardrailCutPct = parseFloat(document.getElementById('settGuardrailCut').value || '15');
+            const returnModel = document.getElementById('settReturnModel').value || 'normal';
+            const glidepathEnabled = document.getElementById('settGlidepath').checked;
+            const customReturnPct = parseFloat(document.getElementById('settCustomReturn').value || '7');
+            const customVolPct = parseFloat(document.getElementById('settCustomVol').value || '14');
 
             if (Number.isNaN(currentAge) || currentAge < 18 || currentAge > 100) {
                 showValErr('Current Age must be between 18 and 100.');
@@ -2673,6 +3215,22 @@
                 showValErr('Inflation Rate must be between 0% and 25%.');
                 return;
             }
+            if (Number.isNaN(baristaIncome) || baristaIncome < 0) {
+                showValErr('Barista / Side Income must be $0 or greater.');
+                return;
+            }
+            if (Number.isNaN(baristaAge) || baristaAge < 18 || baristaAge > 120) {
+                showValErr('Barista Until Age must be between 18 and 120.');
+                return;
+            }
+            if (Number.isNaN(guardrailCutPct) || guardrailCutPct < 0 || guardrailCutPct > 40) {
+                showValErr('Max Bear-Market Cut must be between 0% and 40%.');
+                return;
+            }
+            if (riskTolerance === 'custom' && (Number.isNaN(customReturnPct) || customReturnPct < -5 || customReturnPct > 25 || Number.isNaN(customVolPct) || customVolPct < 1 || customVolPct > 50)) {
+                showValErr('Custom Return must be -5% to 25% and Volatility 1% to 50%.');
+                return;
+            }
 
             // Keep Social Security birth year & claiming year synced with Current Age
             const curYear = new Date().getFullYear();
@@ -2692,6 +3250,14 @@
                 post_75_spend_change: post75Pct / 100,
                 effective_tax_rate: taxRatePct / 100,
                 tax_regime: document.getElementById('settTaxRegime').value || 'us_federal',
+                barista_annual_income: baristaIncome,
+                barista_until_age: baristaAge,
+                withdrawal_strategy: withdrawalStrategy,
+                guardrail_cut_pct: guardrailCutPct / 100,
+                return_model: returnModel,
+                glidepath_enabled: glidepathEnabled,
+                custom_return: customReturnPct / 100,
+                custom_volatility: customVolPct / 100,
                 risk_tolerance: riskTolerance,
                 inflation_rate: inflationPct / 100,
                 final_age: finalAge,
@@ -2831,6 +3397,38 @@
             recText.innerHTML = recMessage;
             recText.style.color = recColor;
 
+            // Milestones & Progress Card
+            const fiNum = data.fi_number;
+            const fiPct = data.fi_progress_pct;
+            const coastNum = data.coast_fire_number;
+            const coastAge = data.coast_fire_age;
+            document.getElementById('fiProgressPct').textContent = fiPct !== null && fiPct !== undefined ? fiPct.toFixed(1) + '%' : '--%';
+            document.getElementById('fiProgressBarFill').style.width = fiPct !== null && fiPct !== undefined ? Math.min(100, Math.max(0, fiPct)).toFixed(1) + '%' : '0%';
+            document.getElementById('fiTargetSummary').textContent = fiNum !== null && fiNum !== undefined
+                ? `$${formatCompact(data.current_portfolio)} / $${formatCompact(fiNum)} FI Number`
+                : 'N/A';
+            document.getElementById('fiNumberVal').textContent = fiNum !== null && fiNum !== undefined
+                ? `$${formatNum(fiNum)} (Age ${s.retirement_age})`
+                : '--';
+
+            let coastText = 'Not yet on track';
+            if (coastAge !== null && coastAge !== undefined) {
+                coastText = coastAge <= s.current_age
+                    ? `🎉 Achieved! ($${formatCompact(coastNum ?? 0)} needed)`
+                    : `Age ${coastAge} ($${formatCompact(coastNum ?? 0)} today)`;
+            }
+            document.getElementById('coastFiVal').textContent = coastText;
+
+            const stratParts = [s.withdrawal_strategy === 'guardrails' ? `🛡️ Guardrails (-${Math.round((s.guardrail_cut_pct ?? 0.15) * 100)}%)` : '📏 Fixed'];
+            if (s.return_model === 'fat_tailed') stratParts.push('📉 Fat Tails');
+            if (s.glidepath_enabled) stratParts.push('⛺ Bond Tent');
+            if ((s.barista_annual_income || 0) > 0) stratParts.push(`☕ $${formatCompact(s.barista_annual_income)}/yr`);
+            document.getElementById('activeStrategySummary').textContent = stratParts.join(' · ');
+
+            const evCount = Array.isArray(s.cashflow_events) ? s.cashflow_events.length : 0;
+            const evBtn = document.getElementById('eventsModalBtn');
+            if (evBtn) evBtn.textContent = `📅 Cashflow Events (${evCount})`;
+
             // What-If Explorer controls
             syncWhatIfControls(data);
 
@@ -2846,7 +3444,7 @@
             if (ssToggleEl) {
                 ssToggleEl.checked = s.social_security_enabled || false;
             }
-            if (s.social_security_enabled && s.social_security_pia > 0) {
+            if (s.social_security_enabled && (s.social_security_pia > 0 || (s.ss_spouse_enabled && s.ss_spouse_pia > 0))) {
                 const mba = (data.effective_ss_mba !== undefined && data.effective_ss_mba > 0)
                     ? data.effective_ss_mba
                     : calculateSocialSecurityMbaJS(
@@ -2868,8 +3466,12 @@
                 const adjNote = (s.ss_stop_work_adjust && (data.effective_ss_pia ?? s.social_security_pia) < s.social_security_pia)
                     ? ` <span style="color: var(--accent-amber); font-size: 0.72rem;">(early-FIRE adj.)</span>`
                     : '';
+                const spMba = data.effective_spouse_mba || 0;
+                const spouseNote = (s.ss_spouse_enabled && spMba > 0)
+                    ? ` + Partner $${formatNum(spMba)}/mo`
+                    : '';
 
-                ssValEl.innerHTML = `<span style="color: var(--accent-green); font-weight: 600;">Active:</span> $${formatNum(mba)}/mo starting ${getMonthName(s.social_security_withdrawal_month)} ${s.social_security_withdrawal_year} (Age ${claimAgeStr})${adjNote}`;
+                ssValEl.innerHTML = `<span style="color: var(--accent-green); font-weight: 600;">Active:</span> $${formatNum(mba)}/mo starting ${getMonthName(s.social_security_withdrawal_month)} ${s.social_security_withdrawal_year} (Age ${claimAgeStr})${adjNote}${spouseNote}`;
                 ssBtnEl.textContent = '⚙️ Edit Benefits';
                 ssBtnEl.classList.add('is-active');
             } else {
@@ -2944,6 +3546,13 @@
                 wiTaxRegime.value = s.tax_regime || 'us_federal';
             }
 
+            const wiGuardrails = document.getElementById('wiGuardrails');
+            if (wiGuardrails) wiGuardrails.checked = (s.withdrawal_strategy === 'guardrails');
+            const wiFatTails = document.getElementById('wiFatTails');
+            if (wiFatTails) wiFatTails.checked = (s.return_model === 'fat_tailed');
+            const wiGlidepath = document.getElementById('wiGlidepath');
+            if (wiGlidepath) wiGlidepath.checked = !!s.glidepath_enabled;
+
             const suggestedPct = ((data.tax_bucket_summary?.suggested_effective_tax_rate || 0) * 100).toFixed(1);
             const autoBtn = document.getElementById('wiAutoTaxBtn');
             if (autoBtn) {
@@ -2964,6 +3573,9 @@
             const healthcare = parseInt(document.getElementById('wiHealthcare').value, 10);
             const taxRate = Math.round(parseFloat(document.getElementById('wiTaxRate').value) * 10) / 1000;
             const taxRegime = document.getElementById('wiTaxRegime')?.value || 'us_federal';
+            const guardrails = document.getElementById('wiGuardrails')?.checked ? 'guardrails' : 'fixed';
+            const returnModel = document.getElementById('wiFatTails')?.checked ? 'fat_tailed' : 'normal';
+            const glidepath = !!document.getElementById('wiGlidepath')?.checked;
 
             document.getElementById('wiRetireAgeVal').textContent = 'Age ' + retireAge;
             document.getElementById('wiContribVal').textContent = '$' + formatNum(contrib) + '/yr';
@@ -2978,6 +3590,9 @@
             if (healthcare !== (saved.pre_medicare_healthcare ?? 0)) nextOverrides.pre_medicare_healthcare = healthcare;
             if (Math.abs(taxRate - (saved.effective_tax_rate ?? 0)) > 0.0005) nextOverrides.effective_tax_rate = taxRate;
             if (taxRegime !== (saved.tax_regime || 'us_federal')) nextOverrides.tax_regime = taxRegime;
+            if (guardrails !== (saved.withdrawal_strategy || 'fixed')) nextOverrides.withdrawal_strategy = guardrails;
+            if (returnModel !== (saved.return_model || 'normal')) nextOverrides.return_model = returnModel;
+            if (glidepath !== !!saved.glidepath_enabled) nextOverrides.glidepath_enabled = glidepath;
 
             whatIfOverrides = nextOverrides;
             const actionsEl = document.getElementById('whatIfActions');
@@ -3126,9 +3741,17 @@
             }
         }
 
+        function syncCashflowBannerVisibility() {
+            const bannerEl = document.getElementById('cashflowImportBanner');
+            if (bannerEl) {
+                bannerEl.style.display = window.IS_DEMO ? 'none' : 'flex';
+            }
+        }
+
         function updateCashflowBanner() {
+            syncCashflowBannerVisibility();
             const textEl = document.getElementById('cashflowBannerText');
-            if (!textEl || !simData) return;
+            if (!textEl || !simData || window.IS_DEMO) return;
             const cf = simData.cashflow_metrics || {};
             const typicalAnnual = Math.round((cf.monthly_spend_avg ?? simData.monthly_spend_avg ?? 0) * 12);
             const savingsAnnual = Math.round(cf.annual_savings_avg ?? 0);
@@ -3353,6 +3976,14 @@
                                 html += `${p.marker} ${p.seriesName}: <strong>$${formatNum(p.absoluteValue)}</strong><br/>`;
                             }
                         });
+                        if (Array.isArray(s.cashflow_events) && s.cashflow_events.length > 0) {
+                            const matchingEvents = s.cashflow_events.filter(ev => Number(ev.age) === Number(age) && Number(ev.amount) !== 0);
+                            matchingEvents.forEach(ev => {
+                                const amt = Number(ev.amount);
+                                const safeLabel = String(ev.label || 'Event').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+                                html += `<div style="color: var(--accent-purple, #a855f7); margin-top: 2px;">📌 ${safeLabel}: ${amt >= 0 ? '+' : '-'}$${formatNum(Math.abs(amt))}</div>`;
+                            });
+                        }
                         return html;
                     }
                 },
@@ -3749,6 +4380,7 @@
             if (errEl) errEl.style.display = 'none';
             document.getElementById('settDemoMode').checked = window.IS_DEMO;
             document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
+            syncCashflowBannerVisibility();
             // Populate from active settings (preserving demo overrides)
             const s = getActiveSettings();
             if (s) {
@@ -3760,10 +4392,19 @@
                 document.getElementById('settPost75Change').value = Math.round((s.post_75_spend_change ?? 0) * 100);
                 document.getElementById('settTaxRate').value = ((s.effective_tax_rate ?? 0) * 100).toFixed(1);
                 document.getElementById('settTaxRegime').value = s.tax_regime || 'us_federal';
+                document.getElementById('settBaristaIncome').value = s.barista_annual_income ?? 0;
+                document.getElementById('settBaristaAge').value = s.barista_until_age ?? 65;
+                document.getElementById('settWithdrawalStrategy').value = s.withdrawal_strategy || 'fixed';
+                document.getElementById('settGuardrailCut').value = Math.round((s.guardrail_cut_pct ?? 0.15) * 100);
+                document.getElementById('settReturnModel').value = s.return_model || 'normal';
+                document.getElementById('settGlidepath').checked = !!s.glidepath_enabled;
+                document.getElementById('settCustomReturn').value = ((s.custom_return ?? 0.07) * 100).toFixed(1);
+                document.getElementById('settCustomVol').value = Math.round((s.custom_volatility ?? 0.14) * 100);
                 document.getElementById('settRisk').value = s.risk_tolerance;
                 document.getElementById('settInflation').value = (s.inflation_rate * 100).toFixed(1);
                 document.getElementById('settFinalAge').value = s.final_age || 85;
             }
+            toggleCustomRiskRow();
             updateSettingsTaxHint(document.getElementById('settTaxRegime').value || 'us_federal');
             updateCashflowBanner();
             if (window.IS_DEMO) {
@@ -3775,10 +4416,122 @@
             document.getElementById('settingsModal').style.display = 'none';
         }
 
+        function setFinalAgePreset(age) {
+            document.getElementById('settFinalAge').value = age;
+        }
+
+        function toggleCustomRiskRow() {
+            const risk = document.getElementById('settRisk').value;
+            const row = document.getElementById('customRiskRow');
+            if (row) row.style.display = (risk === 'custom') ? 'grid' : 'none';
+        }
+
+        // ===== One-Time Cashflow Events Modal =====
+        let draftEvents = [];
+
+        function openEventsModal() {
+            const s = getSavedSettings();
+            draftEvents = Array.isArray(s.cashflow_events)
+                ? s.cashflow_events.map(ev => ({ ...ev }))
+                : [];
+            renderEventRows();
+            document.getElementById('eventsModal').style.display = 'flex';
+        }
+
+        function closeEventsModal() {
+            document.getElementById('eventsModal').style.display = 'none';
+        }
+
+        function renderEventRows() {
+            const container = document.getElementById('eventsListContainer');
+            if (!container) return;
+            if (draftEvents.length === 0) {
+                container.innerHTML = `<div style="font-size: 0.78rem; color: var(--text-muted); padding: 14px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-sm);">No one-time cashflow events scheduled yet.</div>`;
+                return;
+            }
+            container.innerHTML = draftEvents.map((ev, idx) => {
+                const isExpense = Number(ev.amount) < 0;
+                const absAmt = Math.abs(Number(ev.amount) || 0);
+                return `
+                    <div class="event-row">
+                        <input type="text" class="form-input" placeholder="Label (e.g. College)" value="${String(ev.label || '').replace(/"/g, '&quot;')}"
+                            onchange="draftEvents[${idx}].label = this.value" style="padding: 7px 10px; font-size: 0.8rem;">
+                        <input type="number" class="form-input" placeholder="Age" min="18" max="120" value="${ev.age ?? 55}"
+                            onchange="draftEvents[${idx}].age = parseInt(this.value, 10) || 55" style="padding: 7px 8px; font-size: 0.8rem;">
+                        <select class="form-select" onchange="draftEvents[${idx}].amount = (this.value === 'out' ? -1 : 1) * Math.abs(Number(draftEvents[${idx}].amount) || 0)"
+                            style="padding: 7px 8px; font-size: 0.78rem;">
+                            <option value="in" ${!isExpense ? 'selected' : ''}>+ Windfall</option>
+                            <option value="out" ${isExpense ? 'selected' : ''}>- Expense</option>
+                        </select>
+                        <input type="number" class="form-input" placeholder="$ Amount" min="0" step="1000" value="${absAmt}"
+                            onchange="const sign = (Number(draftEvents[${idx}].amount) < 0) ? -1 : 1; draftEvents[${idx}].amount = sign * Math.abs(parseFloat(this.value) || 0)"
+                            style="padding: 7px 8px; font-size: 0.8rem;">
+                        <button type="button" class="btn-ghost" onclick="removeEventRow(${idx})" style="padding: 6px 8px; color: var(--accent-red);">✕</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addEventRow() {
+            if (draftEvents.length >= 10) {
+                alert('Maximum of 10 scheduled cashflow events supported.');
+                return;
+            }
+            const s = getActiveSettings();
+            draftEvents.push({
+                label: 'New Event',
+                age: Math.min((s.final_age || 85) - 1, (s.retirement_age || 60) + 2),
+                amount: 25000,
+            });
+            renderEventRows();
+        }
+
+        function removeEventRow(idx) {
+            draftEvents.splice(idx, 1);
+            renderEventRows();
+        }
+
+        async function saveEvents() {
+            const sanitized = draftEvents
+                .filter(ev => ev && !Number.isNaN(Number(ev.age)) && !Number.isNaN(Number(ev.amount)))
+                .map(ev => ({
+                    label: (ev.label || 'Event').trim().slice(0, 60) || 'Event',
+                    age: Math.min(120, Math.max(18, parseInt(ev.age, 10))),
+                    amount: Math.round(Number(ev.amount)),
+                }));
+
+            const payload = { cashflow_events: sanitized };
+            const btn = document.getElementById('saveEventsBtn');
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+            try {
+                if (window.IS_DEMO) {
+                    saveDemoSettingsPatch(payload);
+                    closeEventsModal();
+                    runSimulation();
+                } else {
+                    const res = await fetch('/api/fire/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    closeEventsModal();
+                    runSimulation();
+                }
+            } catch (e) {
+                alert('Failed to save events: ' + e.message);
+            } finally {
+                btn.textContent = '💾 Save Events & Re-run';
+                btn.disabled = false;
+            }
+        }
+
         function toggleDemoMode() {
             window.IS_DEMO = document.getElementById('settDemoMode').checked;
             localStorage.setItem('fire_is_demo', window.IS_DEMO);
             document.getElementById('demoPortfolioRow').style.display = window.IS_DEMO ? 'grid' : 'none';
+            syncCashflowBannerVisibility();
         }
 
         // ===== Info Modals =====
@@ -3808,6 +4561,90 @@
         }
         function closeSpendInfoModal() {
             document.getElementById('spendInfoModal').style.display = 'none';
+        }
+
+        const SETTING_HELP_TOPICS = {
+            withdrawalStrategy: {
+                title: 'ℹ️ Withdrawal Strategy',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        Controls whether your annual retirement lifestyle budget stays rigid every year or adapts when markets drop.
+                    </p>
+                    <p style="margin-bottom: 0.9rem; color: var(--text-secondary);">
+                        <strong>📏 Fixed Constant-Dollar:</strong> Classic "4% Rule" style—you withdraw the exact same inflation-adjusted lifestyle budget every year regardless of market booms or crashes. Predictable, but requires a larger nest egg to survive worst-case downturns.
+                    </p>
+                    <p style="color: var(--text-secondary);">
+                        <strong>🛡️ Dynamic Guardrails:</strong> Flexibly trims discretionary spending during major bear markets so you avoid selling depressed shares (<em>sequence-of-returns risk</em>), then restores 100% of your budget as soon as your portfolio recovers—significantly improving survival odds and safe starting spend.
+                    </p>
+                `
+            },
+            guardrailCut: {
+                title: 'ℹ️ Max Bear-Market Cut (%)',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        Sets how much your core lifestyle budget temporarily steps down during downturns when <strong>Dynamic Guardrails</strong> is selected (ignored under Fixed Constant-Dollar):
+                    </p>
+                    <ul style="margin: 0 0 0.9rem 1.2rem; color: var(--text-secondary);">
+                        <li style="margin-bottom: 0.45rem;"><strong>Moderate dip (&lt;80% of retirement-start portfolio):</strong> Lifestyle spend cuts by your chosen percentage (e.g., <strong>15%</strong>).</li>
+                        <li><strong>Severe crash (&lt;60% of retirement-start portfolio):</strong> Lifestyle spend cuts by <strong>1.5×</strong> that amount (capped at <strong>35%</strong> max).</li>
+                    </ul>
+                    <p style="color: var(--text-secondary);">
+                        Essential Pre-65 Healthcare and one-time events are <strong>not</strong> cut, and full spending automatically resumes once your portfolio rebounds to ≥80%.
+                    </p>
+                `
+            },
+            post75: {
+                title: 'ℹ️ Age 75+ Spend Shift (%)',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        Adjusts your baseline lifestyle budget starting at <strong>Age 75</strong> to reflect how spending changes later in retirement (the <em>"retirement spending smile"</em>):
+                    </p>
+                    <ul style="margin: 0 0 0.4rem 1.2rem; color: var(--text-secondary);">
+                        <li style="margin-bottom: 0.45rem;"><strong>Negative (e.g., <code>-15</code>):</strong> Cuts core lifestyle spend by 15% from age 75 onward as active travel (<em>Go-Go</em> years) slows down (<em>Slow-Go</em> years).</li>
+                        <li style="margin-bottom: 0.45rem;"><strong><code>0</code>:</strong> Keeps your inflation-adjusted lifestyle spending flat for life.</li>
+                        <li><strong>Positive (e.g., <code>+15</code>):</strong> Adds extra budget starting at 75 for senior care or assistance.</li>
+                    </ul>
+                `
+            },
+            returnModel: {
+                title: 'ℹ️ Return Distribution',
+                body: `
+                    <p style="margin-bottom: 0.9rem; color: var(--text-secondary);">
+                        <strong>📊 Standard Normal:</strong> Draws annual returns from a classic bell curve around your chosen average return and volatility—good for standard baseline projections.
+                    </p>
+                    <p style="color: var(--text-secondary);">
+                        <strong>📉 Fat-Tailed Stress (Student-t):</strong> Uses a heavier-tailed distribution (<em>Student-t, df = 5</em>) with the <strong>same average return and overall volatility</strong>, but <strong>more frequent severe market crashes and sharp rebounds</strong> (like 2000 or 2008). Ideal for stress-testing your plan against real-world black-swan events.
+                    </p>
+                `
+            },
+            glidepath: {
+                title: 'ℹ️ Bond-Tent Glidepath',
+                body: `
+                    <p style="margin-bottom: 0.9rem;">
+                        Temporarily shifts your portfolio into a safer, bond-heavy posture right around retirement—forming a protective "tent" against <strong>sequence-of-returns risk</strong> when your portfolio is largest and most vulnerable—before gliding back into stocks:
+                    </p>
+                    <ul style="margin: 0 0 0.4rem 1.2rem; color: var(--text-secondary);">
+                        <li style="margin-bottom: 0.45rem;">Ramps toward a conservative allocation (capped at <strong>6.0% real return / ±10% volatility</strong>) starting <strong>5 years before retirement</strong>.</li>
+                        <li style="margin-bottom: 0.45rem;">Holds peak protection from <strong>2 years before through 3 years after retirement</strong>.</li>
+                        <li>Smoothly glides back to your chosen stock/risk profile over the next <strong>10 years</strong>.</li>
+                    </ul>
+                `
+            }
+        };
+
+        function openSettingHelp(topicKey, evt) {
+            if (evt) {
+                evt.preventDefault();
+                evt.stopPropagation();
+            }
+            const topic = SETTING_HELP_TOPICS[topicKey];
+            if (!topic) return;
+            document.getElementById('settingHelpTitle').textContent = topic.title;
+            document.getElementById('settingHelpBody').innerHTML = topic.body;
+            document.getElementById('settingHelpModal').style.display = 'flex';
+        }
+        function closeSettingHelpModal() {
+            document.getElementById('settingHelpModal').style.display = 'none';
         }
 
         // ===== Helpers =====

@@ -162,7 +162,26 @@ class SimulationInput:
     post_75_spend_change: float = 0.0
     ss_stop_work_adjust: bool = False
     tax_regime: str = "us_federal"
+    barista_annual_income: float = 0.0
+    barista_until_age: int = 65
+    withdrawal_strategy: str = "fixed"
+    guardrail_cut_pct: float = 0.15
+    return_model: str = "normal"
+    glidepath_enabled: bool = False
+    custom_return: float = 0.07
+    custom_volatility: float = 0.14
+    cashflow_events: List[Dict] = field(default_factory=list)
+    ss_spouse_enabled: bool = False
+    ss_spouse_pia: float = 0.0
+    ss_spouse_fra: int = 67
+    ss_spouse_birth_month: int = 1
+    ss_spouse_birth_year: int = 1981
+    ss_spouse_withdrawal_month: int = 1
+    ss_spouse_withdrawal_year: int = 2048
+    ss_spouse_stop_work_adjust: bool = False
     effective_ss_pia: float = 0.0
+    effective_spouse_pia: float = 0.0
+    ss_spouse_mba: float = 0.0
 
     def __post_init__(self):
         if self.simulation_years == 0:
@@ -213,6 +232,69 @@ class SimulationInput:
         valid_regimes = {"us_federal", "us_mod_state", "us_high_state", "de_abgeltung", "de_etf"}
         self.tax_regime = self.tax_regime if self.tax_regime in valid_regimes else "us_federal"
 
+        self.barista_annual_income = max(
+            0.0,
+            float(self.barista_annual_income if self.barista_annual_income is not None else 0.0),
+        )
+        self.barista_until_age = min(
+            120,
+            max(18, int(self.barista_until_age if self.barista_until_age is not None else 65)),
+        )
+        self.withdrawal_strategy = (
+            self.withdrawal_strategy if self.withdrawal_strategy in {"fixed", "guardrails"} else "fixed"
+        )
+        self.guardrail_cut_pct = min(
+            0.40,
+            max(0.0, float(self.guardrail_cut_pct if self.guardrail_cut_pct is not None else 0.15)),
+        )
+        self.return_model = (
+            self.return_model if self.return_model in {"normal", "fat_tailed"} else "normal"
+        )
+        self.glidepath_enabled = bool(self.glidepath_enabled)
+        self.custom_return = min(
+            0.25,
+            max(-0.05, float(self.custom_return if self.custom_return is not None else 0.07)),
+        )
+        self.custom_volatility = min(
+            0.50,
+            max(0.01, float(self.custom_volatility if self.custom_volatility is not None else 0.14)),
+        )
+
+        cleaned_events: List[Dict] = []
+        for ev in (self.cashflow_events or [])[:15]:
+            if not isinstance(ev, dict):
+                continue
+            try:
+                ev_age = int(ev.get("age"))
+                ev_amt = float(ev.get("amount", 0.0))
+            except (TypeError, ValueError):
+                continue
+            cleaned_events.append(
+                {
+                    "label": str(ev.get("label") or "Event")[:60],
+                    "age": ev_age,
+                    "amount": ev_amt,
+                }
+            )
+        self.cashflow_events = cleaned_events
+
+        self.ss_spouse_enabled = bool(self.ss_spouse_enabled)
+        self.ss_spouse_pia = float(self.ss_spouse_pia if self.ss_spouse_pia is not None else 0.0)
+        self.ss_spouse_fra = int(self.ss_spouse_fra if self.ss_spouse_fra is not None else 67)
+        self.ss_spouse_birth_month = int(
+            self.ss_spouse_birth_month if self.ss_spouse_birth_month is not None else 1
+        )
+        self.ss_spouse_birth_year = int(
+            self.ss_spouse_birth_year if self.ss_spouse_birth_year is not None else 1981
+        )
+        self.ss_spouse_withdrawal_month = int(
+            self.ss_spouse_withdrawal_month if self.ss_spouse_withdrawal_month is not None else 1
+        )
+        self.ss_spouse_withdrawal_year = int(
+            self.ss_spouse_withdrawal_year if self.ss_spouse_withdrawal_year is not None else 2048
+        )
+        self.ss_spouse_stop_work_adjust = bool(self.ss_spouse_stop_work_adjust)
+
         self.effective_ss_pia = (
             adjust_pia_for_early_retirement(self.social_security_pia, self.retirement_age)
             if self.ss_stop_work_adjust
@@ -226,6 +308,22 @@ class SimulationInput:
             birth_month=self.social_security_birth_month,
             withdrawal_year=self.social_security_withdrawal_year,
             withdrawal_month=self.social_security_withdrawal_month,
+        )
+
+        age_diff = self.social_security_birth_year - self.ss_spouse_birth_year
+        spouse_retire_age = self.retirement_age + age_diff
+        self.effective_spouse_pia = (
+            adjust_pia_for_early_retirement(self.ss_spouse_pia, spouse_retire_age)
+            if self.ss_spouse_stop_work_adjust
+            else float(self.ss_spouse_pia)
+        )
+        self.ss_spouse_mba = calculate_social_security_mba(
+            pia=self.effective_spouse_pia,
+            fra=self.ss_spouse_fra,
+            birth_year=self.ss_spouse_birth_year,
+            birth_month=self.ss_spouse_birth_month,
+            withdrawal_year=self.ss_spouse_withdrawal_year,
+            withdrawal_month=self.ss_spouse_withdrawal_month,
         )
 
 
@@ -251,6 +349,23 @@ class SimulationResult:
     account_breakdown: List[Dict] = field(default_factory=list)
     effective_ss_pia: float = 0.0
     effective_ss_mba: float = 0.0
+    effective_spouse_pia: float = 0.0
+    effective_spouse_mba: float = 0.0
+    fi_number: Optional[int] = None
+    fi_progress_pct: Optional[float] = None
+    coast_fire_number: Optional[int] = None
+    coast_fire_age: Optional[int] = None
+
+
+def _resolve_profile(inp: SimulationInput) -> dict:
+    """Return mean/std/label dict for the configured risk profile or custom parameters."""
+    if inp.risk_tolerance == "custom":
+        return {
+            "mean_return": inp.custom_return,
+            "std_return": inp.custom_volatility,
+            "label": f"Custom ({inp.custom_return * 100:.1f}% / ±{inp.custom_volatility * 100:.0f}%)",
+        }
+    return RISK_PROFILES.get(inp.risk_tolerance, RISK_PROFILES["moderate"])
 
 
 def _generate_return_cols(profile: dict, n_iter: int, n_years: int) -> List[np.ndarray]:
@@ -265,46 +380,189 @@ def _generate_return_cols(profile: dict, n_iter: int, n_years: int) -> List[np.n
     return [returns_plus_one[:, yr] for yr in range(n_years)]
 
 
+def _generate_sim_return_cols(
+    inp: SimulationInput,
+    profile: dict,
+    n_years: int,
+    retire_yr_override: Optional[int] = None,
+) -> List[np.ndarray]:
+    """
+    Generate clamped (1 + r) return columns honoring return_model ('normal' vs
+    'fat_tailed' Student-t df=5) and optional retirement bond-tent glidepath.
+    """
+    if n_years <= 0:
+        return []
+
+    if inp.return_model == "normal" and not inp.glidepath_enabled:
+        return _generate_return_cols(profile, inp.iterations, n_years)
+
+    rng = _get_rng()
+    if inp.return_model == "fat_tailed":
+        z = rng.standard_t(df=5, size=(inp.iterations, n_years)) / np.sqrt(5.0 / 3.0)
+    else:
+        z = rng.normal(0.0, 1.0, size=(inp.iterations, n_years))
+
+    base_mu = profile["mean_return"]
+    base_sigma = profile["std_return"]
+    r_yr = (
+        retire_yr_override
+        if retire_yr_override is not None
+        else max(inp.retirement_age - inp.current_age, 0)
+    )
+    tent_mu = min(base_mu, 0.06)
+    tent_sigma = min(base_sigma, 0.10)
+
+    cols: List[np.ndarray] = []
+    for yr in range(n_years):
+        mu = base_mu
+        sigma = base_sigma
+        if inp.glidepath_enabled:
+            if r_yr - 2 <= yr <= r_yr + 3:
+                w_tent = 1.0
+            elif r_yr + 3 < yr < r_yr + 13:
+                w_tent = max(0.0, 1.0 - (yr - (r_yr + 3)) / 10.0)
+            elif r_yr - 5 <= yr < r_yr - 2:
+                w_tent = 1.0 - ((r_yr - 2) - yr) / 3.0
+            else:
+                w_tent = 0.0
+            mu = (1.0 - w_tent) * base_mu + w_tent * tent_mu
+            sigma = (1.0 - w_tent) * base_sigma + w_tent * tent_sigma
+        cols.append(np.maximum(1.0 + mu + sigma * z[:, yr], 0.0))
+    return cols
+
+
 def _calc_ss_incomes(
     inp: SimulationInput,
     n_years: int,
     override_retirement_age: Optional[int] = None,
 ) -> np.ndarray:
-    """Precompute real (today's-dollar) Social Security income for each simulation year."""
+    """Precompute real (today's-dollar) household Social Security income for each simulation year."""
     ss_incomes = np.zeros(n_years)
-    if not inp.social_security_enabled:
-        return ss_incomes
+    primary_birth_months = inp.social_security_birth_year * 12 + inp.social_security_birth_month
 
-    if override_retirement_age is not None and inp.ss_stop_work_adjust:
-        eff_pia = adjust_pia_for_early_retirement(inp.social_security_pia, override_retirement_age)
-        mba = calculate_social_security_mba(
-            pia=eff_pia,
-            fra=inp.social_security_fra,
-            birth_year=inp.social_security_birth_year,
-            birth_month=inp.social_security_birth_month,
-            withdrawal_year=inp.social_security_withdrawal_year,
-            withdrawal_month=inp.social_security_withdrawal_month,
-        )
-    else:
-        mba = inp.social_security_mba
+    if inp.social_security_enabled:
+        if override_retirement_age is not None and inp.ss_stop_work_adjust:
+            eff_pia = adjust_pia_for_early_retirement(inp.social_security_pia, override_retirement_age)
+            mba = calculate_social_security_mba(
+                pia=eff_pia,
+                fra=inp.social_security_fra,
+                birth_year=inp.social_security_birth_year,
+                birth_month=inp.social_security_birth_month,
+                withdrawal_year=inp.social_security_withdrawal_year,
+                withdrawal_month=inp.social_security_withdrawal_month,
+            )
+        else:
+            mba = inp.social_security_mba
 
-    if mba > 0:
-        birth_months = inp.social_security_birth_year * 12 + inp.social_security_birth_month
-        withdraw_months = inp.social_security_withdrawal_year * 12 + inp.social_security_withdrawal_month
-        claim_age_months = withdraw_months - birth_months
-        if claim_age_months >= 62 * 12:
-            claim_age_year = claim_age_months // 12
-            rem_months = claim_age_months % 12
-            first_year_months = 12 - rem_months
-            annual_ss = mba * 12.0
-            partial_ss = mba * first_year_months
+        if mba > 0:
+            withdraw_months = inp.social_security_withdrawal_year * 12 + inp.social_security_withdrawal_month
+            claim_age_months = withdraw_months - primary_birth_months
+            if claim_age_months >= 62 * 12:
+                claim_age_year = claim_age_months // 12
+                rem_months = claim_age_months % 12
+                first_year_months = 12 - rem_months
+                annual_ss = mba * 12.0
+                partial_ss = mba * first_year_months
+                for yr in range(n_years):
+                    sim_age = inp.current_age + yr
+                    if sim_age > claim_age_year:
+                        ss_incomes[yr] += annual_ss
+                    elif sim_age == claim_age_year:
+                        ss_incomes[yr] += partial_ss
+
+    if inp.ss_spouse_enabled:
+        if override_retirement_age is not None and inp.ss_spouse_stop_work_adjust:
+            age_diff = inp.social_security_birth_year - inp.ss_spouse_birth_year
+            sp_eff_pia = adjust_pia_for_early_retirement(
+                inp.ss_spouse_pia, override_retirement_age + age_diff
+            )
+            sp_mba = calculate_social_security_mba(
+                pia=sp_eff_pia,
+                fra=inp.ss_spouse_fra,
+                birth_year=inp.ss_spouse_birth_year,
+                birth_month=inp.ss_spouse_birth_month,
+                withdrawal_year=inp.ss_spouse_withdrawal_year,
+                withdrawal_month=inp.ss_spouse_withdrawal_month,
+            )
+        else:
+            sp_mba = inp.ss_spouse_mba
+
+        sp_birth_months = inp.ss_spouse_birth_year * 12 + inp.ss_spouse_birth_month
+        sp_withdraw_months = inp.ss_spouse_withdrawal_year * 12 + inp.ss_spouse_withdrawal_month
+        sp_own_claim_months = sp_withdraw_months - sp_birth_months
+        if sp_mba > 0 and sp_own_claim_months >= 62 * 12:
+            sp_timeline_months = sp_withdraw_months - primary_birth_months
+            sp_claim_sim_age = sp_timeline_months // 12
+            sp_rem_months = sp_timeline_months % 12
+            sp_first_months = 12 - sp_rem_months
+            sp_annual = sp_mba * 12.0
+            sp_partial = sp_mba * sp_first_months
             for yr in range(n_years):
                 sim_age = inp.current_age + yr
-                if sim_age > claim_age_year:
-                    ss_incomes[yr] = annual_ss
-                elif sim_age == claim_age_year:
-                    ss_incomes[yr] = partial_ss
+                if sim_age > sp_claim_sim_age:
+                    ss_incomes[yr] += sp_annual
+                elif sim_age == sp_claim_sim_age:
+                    ss_incomes[yr] += sp_partial
+
     return ss_incomes
+
+
+def _calc_event_cashflows(inp: SimulationInput, n_years: int) -> np.ndarray:
+    """Precompute net one-time cashflow events indexed by simulation year."""
+    events_vec = np.zeros(n_years)
+    for ev in inp.cashflow_events:
+        yr_idx = int(ev.get("age", -1)) - inp.current_age
+        if 0 <= yr_idx < n_years:
+            events_vec[yr_idx] += float(ev.get("amount", 0.0))
+    return events_vec
+
+
+def _barista_for_age(inp: SimulationInput, sim_age: int) -> float:
+    """Return net annual Barista/side income if active at sim_age."""
+    if inp.barista_annual_income > 0 and sim_age < inp.barista_until_age:
+        return inp.barista_annual_income
+    return 0.0
+
+
+def _step_post_retirement(
+    port: np.ndarray,
+    alive: np.ndarray,
+    retire_port: np.ndarray,
+    return_col: np.ndarray,
+    sim_age: int,
+    base_spend: float,
+    non_port_income: float,
+    extra_outflow: float,
+    inp: SimulationInput,
+) -> tuple:
+    """
+    Advance one post-retirement year across all iterations, applying Age 75+ shift,
+    pre-65 healthcare, dynamic guardrails, one-time events, and withdrawal tax drag.
+    """
+    phase_factor = (1.0 + inp.post_75_spend_change) if sim_age >= 75 else 1.0
+    hc_adder = inp.pre_medicare_healthcare if sim_age < 65 else 0.0
+
+    if inp.withdrawal_strategy == "guardrails" and inp.guardrail_cut_pct > 0:
+        ratio = port / np.maximum(retire_port, 1.0)
+        severe_cut = min(0.35, 1.5 * inp.guardrail_cut_pct)
+        mult = np.where(
+            ratio < 0.60,
+            1.0 - severe_cut,
+            np.where(ratio < 0.80, 1.0 - inp.guardrail_cut_pct, 1.0),
+        )
+        lifestyle_spend = base_spend * phase_factor * mult
+    else:
+        lifestyle_spend = base_spend * phase_factor
+
+    total_after_tax_spend = np.maximum(0.0, lifestyle_spend + hc_adder + extra_outflow)
+    deficit = total_after_tax_spend - non_port_income
+    tax_div = max(1.0 - inp.effective_tax_rate, 0.01)
+    net_cashflow = np.where(deficit > 0.0, -deficit / tax_div, -deficit)
+
+    raw_next = port * return_col + net_cashflow
+    new_alive = alive & (raw_next > 0)
+    new_port = np.where(new_alive, raw_next, 0.0)
+    return new_port, new_alive
 
 
 def _post_retire_cashflow_for_age(
@@ -335,48 +593,50 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     Returns percentile bands of portfolio value for each year,
     plus key FIRE metrics.
     """
-    profile = RISK_PROFILES.get(inp.risk_tolerance, RISK_PROFILES["moderate"])
-    mean_r = profile["mean_return"]
-    std_r = profile["std_return"]
+    profile = _resolve_profile(inp)
 
     n_years = inp.simulation_years
     n_iter = inp.iterations
     years_to_retire = max(inp.retirement_age - inp.current_age, 0)
 
-    # Generate random real annual returns once: shape (n_iter, n_years)
-    rng = _get_rng()
-    returns = rng.normal(mean_r, std_r, size=(n_iter, n_years))
-    returns_plus_one = np.maximum(1.0 + returns, 0.0)
-    return_cols = [returns_plus_one[:, yr] for yr in range(n_years)]
+    return_cols = _generate_sim_return_cols(inp, profile, n_years)
 
     current_year = datetime.now().year
     ss_incomes = _calc_ss_incomes(inp, n_years)
+    event_cashflows = _calc_event_cashflows(inp, n_years)
 
     # Portfolio simulation — vectorized across all iterations (in Today's $)
     portfolios = np.zeros((n_iter, n_years + 1))
     portfolios[:, 0] = inp.current_portfolio
     port = np.full(n_iter, float(inp.current_portfolio))
     alive = np.ones(n_iter, dtype=bool)
+    retire_port = port.copy() if years_to_retire == 0 else None
 
     for yr in range(n_years):
+        if yr == years_to_retire and retire_port is None:
+            retire_port = port.copy()
+
         if yr < years_to_retire:
             # Pre-retirement: annual_contribution is net annual savings/contributions
-            net_cashflow = inp.annual_contribution + ss_incomes[yr]
+            net_cashflow = inp.annual_contribution + ss_incomes[yr] + event_cashflows[yr]
             port = np.maximum(port * return_cols[yr] + net_cashflow, 0.0)
         else:
             # Post-retirement: once a portfolio is depleted, it stays ruined permanently
             sim_age = inp.current_age + yr
-            net_cashflow = _post_retire_cashflow_for_age(
+            ev_amt = float(event_cashflows[yr])
+            non_port_inc = float(ss_incomes[yr]) + _barista_for_age(inp, sim_age) + max(ev_amt, 0.0)
+            extra_out = max(-ev_amt, 0.0)
+            port, alive = _step_post_retirement(
+                port=port,
+                alive=alive,
+                retire_port=retire_port if retire_port is not None else port,
+                return_col=return_cols[yr],
                 sim_age=sim_age,
                 base_spend=inp.annual_retirement_spending,
-                ss_income=float(ss_incomes[yr]),
-                effective_tax_rate=inp.effective_tax_rate,
-                pre_medicare_healthcare=inp.pre_medicare_healthcare,
-                post_75_spend_change=inp.post_75_spend_change,
+                non_port_income=non_port_inc,
+                extra_outflow=extra_out,
+                inp=inp,
             )
-            raw_next = port * return_cols[yr] + net_cashflow
-            alive &= raw_next > 0
-            port = np.where(alive, raw_next, 0.0)
 
         portfolios[:, yr + 1] = port
 
@@ -392,7 +652,6 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     fire_age = _calc_fire_date(
         inp,
         profile,
-        returns_plus_one=returns_plus_one,
         sim_portfolios=portfolios,
         return_cols=return_cols,
     )
@@ -402,16 +661,20 @@ def simulate(inp: SimulationInput) -> SimulationResult:
     swr = _calc_swr(
         inp,
         profile,
-        returns_plus_one=returns_plus_one,
         portfolio_at_retire=portfolio_at_retire,
         return_cols=return_cols,
     )
     required_spend = _calc_required_spend(
         inp,
         profile,
-        returns_plus_one=returns_plus_one,
         portfolio_at_retire=portfolio_at_retire,
         return_cols=return_cols,
+    )
+    fi_num, fi_progress, coast_num, coast_age = _calc_fi_metrics(
+        inp=inp,
+        return_cols=return_cols,
+        ss_incomes=ss_incomes,
+        event_cashflows=event_cashflows,
     )
     years_post = max(inp.final_age - inp.retirement_age, 0)
     actual_years_post = min(years_post, max(n_years - years_to_retire, 0)) if n_years > 0 else 0
@@ -437,6 +700,12 @@ def simulate(inp: SimulationInput) -> SimulationResult:
         risk_profile_label=profile["label"],
         effective_ss_pia=inp.effective_ss_pia,
         effective_ss_mba=inp.social_security_mba if inp.social_security_enabled else 0.0,
+        effective_spouse_pia=inp.effective_spouse_pia,
+        effective_spouse_mba=inp.ss_spouse_mba if inp.ss_spouse_enabled else 0.0,
+        fi_number=fi_num,
+        fi_progress_pct=fi_progress,
+        coast_fire_number=coast_num,
+        coast_fire_age=coast_age,
     )
 
 
@@ -483,24 +752,26 @@ def _calc_fire_date(
         ):
             return_cols = [np.maximum(returns_plus_one[:, yr], 0.0) for yr in range(total_years)]
         else:
-            return_cols = _generate_return_cols(profile, inp.iterations, total_years)
+            return_cols = _generate_sim_return_cols(inp, profile, total_years)
 
     ss_incomes = _calc_ss_incomes(inp, total_years)
+    event_cashflows = _calc_event_cashflows(inp, total_years)
 
     pre_retire_cashflows = np.zeros(total_years)
-    post_retire_cashflows = np.zeros(total_years)
     for yr in range(total_years):
-        post_income = ss_incomes[yr]
-        pre_retire_cashflows[yr] = inp.annual_contribution + post_income
-        post_retire_cashflows[yr] = post_income - inp.annual_retirement_spending
+        pre_retire_cashflows[yr] = inp.annual_contribution + ss_incomes[yr] + event_cashflows[yr]
 
     # Lazily extended pre-retirement accumulation trajectory: accum_cols[yr] is
     # the 1D portfolio vector at age (current_age + yr) when working up to that age.
     sim_retire_yr = min(max(inp.retirement_age - inp.current_age, 0), total_years)
-    if (
+    use_cached_accum = (
         sim_portfolios is not None
         and sim_portfolios.shape == (inp.iterations, total_years + 1)
-    ):
+        and not inp.glidepath_enabled
+        and not (inp.ss_stop_work_adjust and inp.social_security_enabled)
+        and not (inp.ss_spouse_stop_work_adjust and inp.ss_spouse_enabled)
+    )
+    if use_cached_accum:
         accum_cols: List[np.ndarray] = [
             sim_portfolios[:, yr] for yr in range(sim_retire_yr + 1)
         ]
@@ -518,26 +789,47 @@ def _calc_fire_date(
 
     def _survives(retire_yr: int) -> bool:
         cand_retire_age = inp.current_age + retire_yr
+        recalc_ss = (
+            (inp.ss_stop_work_adjust and inp.social_security_enabled)
+            or (inp.ss_spouse_stop_work_adjust and inp.ss_spouse_enabled)
+        )
         ss_vec = (
             _calc_ss_incomes(inp, total_years, override_retirement_age=cand_retire_age)
-            if (inp.ss_stop_work_adjust and inp.social_security_enabled)
+            if recalc_ss
             else ss_incomes
         )
-        port = _get_accum(retire_yr).copy()
+        if inp.glidepath_enabled or recalc_ss:
+            cand_cols = (
+                _generate_sim_return_cols(inp, profile, total_years, retire_yr_override=retire_yr)
+                if inp.glidepath_enabled
+                else return_cols
+            )
+            port = np.full(inp.iterations, float(inp.current_portfolio))
+            for yr in range(retire_yr):
+                pre_cf = inp.annual_contribution + ss_vec[yr] + event_cashflows[yr]
+                port = np.maximum(port * cand_cols[yr] + pre_cf, 0.0)
+        else:
+            cand_cols = return_cols
+            port = _get_accum(retire_yr).copy()
+
+        retire_port = port.copy()
         alive = np.ones(inp.iterations, dtype=bool)
         for yr in range(retire_yr, total_years):
             sim_age = inp.current_age + yr
-            net_cf = _post_retire_cashflow_for_age(
+            ev_amt = float(event_cashflows[yr])
+            non_port_inc = float(ss_vec[yr]) + _barista_for_age(inp, sim_age) + max(ev_amt, 0.0)
+            extra_out = max(-ev_amt, 0.0)
+            port, alive = _step_post_retirement(
+                port=port,
+                alive=alive,
+                retire_port=retire_port,
+                return_col=cand_cols[yr],
                 sim_age=sim_age,
                 base_spend=inp.annual_retirement_spending,
-                ss_income=float(ss_vec[yr]),
-                effective_tax_rate=inp.effective_tax_rate,
-                pre_medicare_healthcare=inp.pre_medicare_healthcare,
-                post_75_spend_change=inp.post_75_spend_change,
+                non_port_income=non_port_inc,
+                extra_outflow=extra_out,
+                inp=inp,
             )
-            raw_next = port * return_cols[yr] + net_cf
-            alive &= raw_next > 0
-            port = np.where(alive, raw_next, 0.0)
         survived = np.sum(alive) / inp.iterations
         # Round to align with the UI's probability display (which rounds to 1 decimal, i.e 94.95% -> 95.0%)
         return round(survived, 3) >= 0.950
@@ -603,7 +895,7 @@ def _calc_swr(
         ):
             return_cols = [np.maximum(returns_plus_one[:, yr], 0.0) for yr in range(total_years)]
         else:
-            return_cols = _generate_return_cols(profile, inp.iterations, total_years)
+            return_cols = _generate_sim_return_cols(inp, profile, total_years)
 
     post_return_cols = return_cols[years_to_retire : years_to_retire + actual_years_post]
 
@@ -663,19 +955,21 @@ def _calc_required_spend(
         ):
             return_cols = [np.maximum(returns_plus_one[:, yr], 0.0) for yr in range(total_years)]
         else:
-            return_cols = _generate_return_cols(profile, inp.iterations, total_years)
+            return_cols = _generate_sim_return_cols(inp, profile, total_years)
 
     ss_incomes = _calc_ss_incomes(inp, needed_years)
+    event_cashflows = _calc_event_cashflows(inp, needed_years)
 
     if portfolio_at_retire is None or portfolio_at_retire.shape != (inp.iterations,):
         port = np.full(inp.iterations, float(inp.current_portfolio))
         for yr in range(years_to_retire):
-            net_cashflow = inp.annual_contribution + ss_incomes[yr]
+            net_cashflow = inp.annual_contribution + ss_incomes[yr] + event_cashflows[yr]
             port = np.maximum(port * return_cols[yr] + net_cashflow, 0.0)
         portfolio_at_retire = port
 
     post_return_cols = return_cols[years_to_retire : years_to_retire + actual_years_post]
     post_ss_incomes = ss_incomes[years_to_retire : years_to_retire + actual_years_post]
+    post_events = event_cashflows[years_to_retire : years_to_retire + actual_years_post]
 
     low, high = 0.0, 10_000_000.0  # Search up to $10M/yr real spend
     best_spend = 0.0
@@ -690,17 +984,20 @@ def _calc_required_spend(
 
         for yr in range(actual_years_post):
             sim_age = inp.current_age + years_to_retire + yr
-            net_cf = _post_retire_cashflow_for_age(
+            ev_amt = float(post_events[yr])
+            non_port_inc = float(post_ss_incomes[yr]) + _barista_for_age(inp, sim_age) + max(ev_amt, 0.0)
+            extra_out = max(-ev_amt, 0.0)
+            port, alive = _step_post_retirement(
+                port=port,
+                alive=alive,
+                retire_port=portfolio_at_retire,
+                return_col=post_return_cols[yr],
                 sim_age=sim_age,
                 base_spend=test_spend,
-                ss_income=float(post_ss_incomes[yr]),
-                effective_tax_rate=inp.effective_tax_rate,
-                pre_medicare_healthcare=inp.pre_medicare_healthcare,
-                post_75_spend_change=inp.post_75_spend_change,
+                non_port_income=non_port_inc,
+                extra_outflow=extra_out,
+                inp=inp,
             )
-            raw_next = port * post_return_cols[yr] + net_cf
-            alive &= raw_next > 0
-            port = np.where(alive, raw_next, 0.0)
 
         survival_rate = np.sum(alive) / inp.iterations
         if round(survival_rate, 3) >= 0.950:
@@ -710,6 +1007,126 @@ def _calc_required_spend(
             high = test_spend
 
     return best_spend
+
+
+def _calc_fi_metrics(
+    inp: SimulationInput,
+    return_cols: List[np.ndarray],
+    ss_incomes: np.ndarray,
+    event_cashflows: np.ndarray,
+) -> tuple:
+    """
+    Compute (fi_number, fi_progress_pct, coast_fire_number, coast_fire_age)
+    under the active return, tax, healthcare, Barista, event, and guardrail assumptions.
+    """
+    years_to_retire = max(inp.retirement_age - inp.current_age, 0)
+    years_post = max(inp.final_age - inp.retirement_age, 0)
+    n_years = len(return_cols)
+    actual_years_post = min(years_post, max(n_years - years_to_retire, 0))
+
+    if actual_years_post <= 0:
+        return (None, None, None, None)
+
+    def _survives_post(port: np.ndarray) -> bool:
+        retire_port = port.copy()
+        alive = np.ones(inp.iterations, dtype=bool)
+        for yr in range(years_to_retire, years_to_retire + actual_years_post):
+            sim_age = inp.current_age + yr
+            ev_amt = float(event_cashflows[yr])
+            non_port_inc = float(ss_incomes[yr]) + _barista_for_age(inp, sim_age) + max(ev_amt, 0.0)
+            extra_out = max(-ev_amt, 0.0)
+            port, alive = _step_post_retirement(
+                port=port,
+                alive=alive,
+                retire_port=retire_port,
+                return_col=return_cols[yr],
+                sim_age=sim_age,
+                base_spend=inp.annual_retirement_spending,
+                non_port_income=non_port_inc,
+                extra_outflow=extra_out,
+                inp=inp,
+            )
+        return round(np.sum(alive) / inp.iterations, 3) >= 0.950
+
+    def _survives_from_retire_balance(start_bal: float) -> bool:
+        return _survives_post(np.full(inp.iterations, float(start_bal)))
+
+    # 1. FI Number (minimum retirement balance giving ≥95% survival)
+    if _survives_from_retire_balance(0.0):
+        fi_num = 0
+    else:
+        low, high = 0.0, 50_000_000.0
+        best_bal = high
+        for _ in range(38):
+            if high - low < 10.0:
+                break
+            mid = (low + high) / 2.0
+            if _survives_from_retire_balance(mid):
+                best_bal = mid
+                high = mid
+            else:
+                low = mid
+        fi_num = int(round(best_bal))
+
+    fi_progress = (
+        round(min(999.9, (inp.current_portfolio / fi_num) * 100.0), 1)
+        if fi_num > 0
+        else 100.0
+    )
+
+    # 2. Coast FIRE Number (portfolio needed TODAY with $0 future contributions)
+    def _survives_coast_from_today(start_today: float) -> bool:
+        port = np.full(inp.iterations, float(start_today))
+        for yr in range(years_to_retire):
+            port = np.maximum(port * return_cols[yr] + ss_incomes[yr] + event_cashflows[yr], 0.0)
+        return _survives_post(port)
+
+    if years_to_retire == 0:
+        coast_num = fi_num
+    elif _survives_coast_from_today(0.0):
+        coast_num = 0
+    else:
+        low, high = 0.0, max(float(fi_num) * 2.0, 10_000_000.0)
+        best_coast = high
+        for _ in range(36):
+            if high - low < 10.0:
+                break
+            mid = (low + high) / 2.0
+            if _survives_coast_from_today(mid):
+                best_coast = mid
+                high = mid
+            else:
+                low = mid
+        coast_num = int(round(best_coast))
+
+    # 3. Coast FIRE Age (earliest age <= retirement_age to stop contributions)
+    def _survives_stopping_contrib_at(stop_yr: int) -> bool:
+        port = np.full(inp.iterations, float(inp.current_portfolio))
+        for yr in range(years_to_retire):
+            contrib = inp.annual_contribution if yr < stop_yr else 0.0
+            port = np.maximum(
+                port * return_cols[yr] + contrib + ss_incomes[yr] + event_cashflows[yr],
+                0.0,
+            )
+        return _survives_post(port)
+
+    if _survives_stopping_contrib_at(0):
+        coast_age: Optional[int] = inp.current_age
+    elif years_to_retire == 0 or not _survives_stopping_contrib_at(years_to_retire):
+        coast_age = None
+    else:
+        low_yr, high_yr = 1, years_to_retire
+        best_yr = years_to_retire
+        while low_yr <= high_yr:
+            mid_yr = (low_yr + high_yr) // 2
+            if _survives_stopping_contrib_at(mid_yr):
+                best_yr = mid_yr
+                high_yr = mid_yr - 1
+            else:
+                low_yr = mid_yr + 1
+        coast_age = inp.current_age + best_yr
+
+    return (fi_num, fi_progress, coast_num, coast_age)
 
 
 _TAX_FREE_SUBTYPES = {
@@ -789,7 +1206,7 @@ def estimate_gain_fraction(inp: Optional[SimulationInput]) -> float:
     if inp is None:
         return 0.65
 
-    profile = RISK_PROFILES.get(inp.risk_tolerance, RISK_PROFILES["moderate"])
+    profile = _resolve_profile(inp)
     g = max(0.01, profile["mean_return"] - 0.5 * (profile["std_return"] ** 2))
     y_pre = max(inp.retirement_age - inp.current_age, 0)
     p0 = max(float(inp.current_portfolio), 0.0)
@@ -957,7 +1374,12 @@ def summarize_tax_buckets(
 
     pre_share = pre_tax / total_pos
     tax_share = taxable / total_pos
-    annual_ss = (inp.social_security_mba * 12.0) if (inp is not None and inp.social_security_enabled) else 0.0
+    annual_ss = 0.0
+    if inp is not None:
+        if inp.social_security_enabled:
+            annual_ss += inp.social_security_mba * 12.0
+        if inp.ss_spouse_enabled:
+            annual_ss += inp.ss_spouse_mba * 12.0
 
     if inp is not None:
         cur_tau = min(0.49, max(0.0, float(inp.effective_tax_rate)))
